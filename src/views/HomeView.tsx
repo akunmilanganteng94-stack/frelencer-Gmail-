@@ -88,11 +88,11 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               Halo, {userProfile?.displayName || 'Freelancer'} 👋
             </h1>
             <p className="text-blue-100 text-sm max-w-xl">
-              Kirimkan akun Gmail fresh kamu dengan password wajib:{' '}
+              buat akun Gmail fresh dengan password wajib:{' '}
               <span className="font-mono font-bold bg-white/20 text-white px-2 py-0.5 rounded">
                 {settings.gmailDefaultPassword || 'sgsg1122'}
               </span>
-              . Saldo otomatis masuk setelah diverifikasi admin.
+              . Saldo otomatis masuk setelah diverifikasi admin
             </p>
           </div>
 

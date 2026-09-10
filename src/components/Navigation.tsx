@@ -11,9 +11,9 @@ import {
   User as UserIcon,
   ShieldCheck,
   LogOut,
-  Sparkles,
   Clock,
   MessageCircle,
+  Banknote,
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -45,8 +45,8 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
               onClick={() => onSelectTab('home')}
               className="flex items-center gap-2.5 text-left focus:outline-none"
             >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-                <Sparkles className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-700 via-purple-600 to-fuchsia-500 flex items-center justify-center text-white shadow-md shadow-purple-600/25 border border-purple-400/30">
+                <Banknote className="w-5 h-5" />
               </div>
               <div>
                 <div className="font-extrabold text-base tracking-tight bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent leading-none">

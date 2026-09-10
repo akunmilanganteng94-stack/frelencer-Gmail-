@@ -1,0 +1,6 @@
+{
+  "name": "Freelancer Akun Gmail",
+  "description": "Platform freelance storan akun Gmail / Google terpercaya dengan generator akun otomatis, reward per akun valid, dan penarikan saldo e-wallet.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

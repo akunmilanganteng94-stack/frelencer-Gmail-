@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { useGmailStock } from '../hooks/useGmailStock';
@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Clock,
   Ban,
+  Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -28,6 +29,7 @@ interface ResultItem {
   id: string;
   email: string;
   password: string;
+  generatedAt?: string;
 }
 
 export function GmailGenerator({ onOpenContactAdmin, submittedEmails = [] }: GmailGeneratorProps) {
@@ -44,6 +46,33 @@ export function GmailGenerator({ onOpenContactAdmin, submittedEmails = [] }: Gma
 
   const activePassword = settings.gmailDefaultPassword || 'sgsg1122';
   const isFeatureOpen = settings.generatorOpen !== false;
+
+  const storageKey = currentUser?.uid
+    ? `gmail_gen_saved_${currentUser.uid}`
+    : 'gmail_gen_saved_guest';
+
+  // Load saved generated accounts on mount / when storageKey or submittedEmails change
+  // Filter out any accounts that have already been submitted ("kecuali udah di stor")
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed: ResultItem[] = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const unsubmitted = parsed.filter(
+            (item) =>
+              !submittedEmails.some(
+                (sub) => sub.trim().toLowerCase() === item.email.trim().toLowerCase()
+              )
+          );
+          setResults(unsubmitted);
+          localStorage.setItem(storageKey, JSON.stringify(unsubmitted));
+        }
+      }
+    } catch (e) {
+      console.warn('Gagal memuat akun yang tersimpan:', e);
+    }
+  }, [storageKey, submittedEmails]);
 
   const handleAdjustCount = (newCount: number) => {
     const clamped = Math.max(1, Math.min(25, newCount));
@@ -72,19 +101,47 @@ export function GmailGenerator({ onOpenContactAdmin, submittedEmails = [] }: Gma
         id: item.id,
         email: item.email,
         password: item.password || activePassword,
+        generatedAt: new Date().toISOString(),
       }));
-      setResults(mapped);
+
+      // Combine with existing unsubmitted accounts, filtering out already submitted ones
+      setResults((prev) => {
+        const existingEmails = new Set(prev.map((r) => r.email.toLowerCase()));
+        const newUnique = mapped.filter((m) => !existingEmails.has(m.email.toLowerCase()));
+        const updated = [...prev, ...newUnique].filter(
+          (item) =>
+            !submittedEmails.some(
+              (sub) => sub.trim().toLowerCase() === item.email.trim().toLowerCase()
+            )
+        );
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(updated));
+        } catch (e) {
+          console.warn('Gagal menyimpan ke localStorage:', e);
+        }
+        return updated;
+      });
 
       showToast(
         'success',
         'Akun Berhasil Digenerate',
-        `Berhasil mengambil ${mapped.length} akun Gmail dari stok admin.`
+        `Berhasil mengambil ${mapped.length} akun Gmail dari stok admin. Akun akan tersimpan otomatis sampai Anda menyetorkannya.`
       );
     } catch (err: unknown) {
       showToast('error', 'Gagal Generate', err instanceof Error ? err.message : String(err));
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleClearResults = () => {
+    setResults([]);
+    try {
+      localStorage.removeItem(storageKey);
+    } catch (e) {
+      console.warn(e);
+    }
+    showToast('info', 'Dibersihkan', 'Daftar akun yang digenerate telah dikosongkan.');
   };
 
   const handleCopyText = (text: string, id: string, type: string) => {
@@ -284,13 +341,18 @@ export function GmailGenerator({ onOpenContactAdmin, submittedEmails = [] }: Gma
             {/* Action Bar for Generated Accounts */}
             <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-indigo-600" />
-                <span className="text-xs font-extrabold text-indigo-950">
-                  {results.length} Akun Berhasil Diambil
-                </span>
+                <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                <div>
+                  <span className="text-xs font-extrabold text-indigo-950 block">
+                    {results.length} Akun Belum Disetor (Tersimpan)
+                  </span>
+                  <span className="text-[10px] text-slate-500 block">
+                    Tersimpan otomatis saat keluar web, hilang otomatis jika sudah disetor
+                  </span>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => handleCopyAll('email_only')}
@@ -306,6 +368,14 @@ export function GmailGenerator({ onOpenContactAdmin, submittedEmails = [] }: Gma
                 >
                   <Copy className="w-3 h-3" />
                   <span>Salin (Email|PW)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearResults}
+                  className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                  title="Hapus / Kosongkan Daftar Akun"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>

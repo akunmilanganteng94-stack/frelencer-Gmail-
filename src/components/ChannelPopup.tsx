@@ -4,34 +4,51 @@ import { Megaphone, ExternalLink, X } from 'lucide-react';
 
 const STORAGE_KEY = 'freelancer_storan_channel_popup_dismissed';
 
-export function ChannelPopup() {
-  const [isOpen, setIsOpen] = useState(false);
+interface ChannelPopupProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function ChannelPopup({ isOpen: controlledIsOpen, onClose }: ChannelPopupProps) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
 
   useEffect(() => {
-    const isDismissed = localStorage.getItem(STORAGE_KEY);
-    if (!isDismissed) {
-      // Show after a brief delay for pleasant UX
-      const timer = setTimeout(() => {
-        setIsOpen(true);
-      }, 1000);
-      return () => clearTimeout(timer);
+    // Only auto-show if not externally controlled
+    if (controlledIsOpen === undefined) {
+      const isDismissed = localStorage.getItem(STORAGE_KEY);
+      if (!isDismissed) {
+        const timer = setTimeout(() => {
+          setInternalIsOpen(true);
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
     }
-  }, []);
+  }, [controlledIsOpen]);
+
+  const isModalOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
 
   const handleDismiss = () => {
     localStorage.setItem(STORAGE_KEY, 'true');
-    setIsOpen(false);
+    if (onClose) {
+      onClose();
+    } else {
+      setInternalIsOpen(false);
+    }
   };
 
   const handleJoin = () => {
     localStorage.setItem(STORAGE_KEY, 'true');
-    setIsOpen(false);
+    if (onClose) {
+      onClose();
+    } else {
+      setInternalIsOpen(false);
+    }
     window.open('https://whatsapp.com/channel/0029VbCwLl7J3jv1QSig1V0C', '_blank', 'noopener,noreferrer');
   };
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -53,8 +70,8 @@ export function ChannelPopup() {
               <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center mb-3 shadow-inner">
                 <Megaphone className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-bold tracking-tight">📢 Gabung Saluran Kami</h3>
-              <p className="text-blue-100 text-sm mt-1">Saluran Resmi Komunitas Freelancer Storan</p>
+              <h3 className="text-xl font-bold tracking-tight">📢 Saluran Informasi Resmi</h3>
+              <p className="text-blue-100 text-sm mt-1">Komunitas Freelancer Storan WhatsApp</p>
             </div>
 
             {/* Content body */}

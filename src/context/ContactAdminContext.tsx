@@ -1,24 +1,37 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 import { ContactAdminModal, ContactAdminFloatingButton } from '../components/ContactAdminModal';
+import { ChannelPopup } from '../components/ChannelPopup';
 
 interface ContactAdminContextType {
   openContactModal: () => void;
   closeContactModal: () => void;
+  openChannelModal: () => void;
+  closeChannelModal: () => void;
 }
 
 const ContactAdminContext = createContext<ContactAdminContextType | undefined>(undefined);
 
 export function ContactAdminProvider({ children }: { children: ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isChannelOpen, setIsChannelOpen] = useState(false);
 
-  const openContactModal = () => setIsOpen(true);
-  const closeContactModal = () => setIsOpen(false);
+  const openContactModal = () => setIsAdminOpen(true);
+  const closeContactModal = () => setIsAdminOpen(false);
+
+  const openChannelModal = () => setIsChannelOpen(true);
+  const closeChannelModal = () => setIsChannelOpen(false);
 
   return (
-    <ContactAdminContext.Provider value={{ openContactModal, closeContactModal }}>
+    <ContactAdminContext.Provider
+      value={{ openContactModal, closeContactModal, openChannelModal, closeChannelModal }}
+    >
       {children}
-      <ContactAdminModal isOpen={isOpen} onClose={closeContactModal} />
-      <ContactAdminFloatingButton onClick={openContactModal} />
+      <ContactAdminModal isOpen={isAdminOpen} onClose={closeContactModal} />
+      <ChannelPopup isOpen={isChannelOpen} onClose={closeChannelModal} />
+      <ContactAdminFloatingButton
+        onClickAdmin={openContactModal}
+        onClickChannel={openChannelModal}
+      />
     </ContactAdminContext.Provider>
   );
 }
@@ -30,3 +43,4 @@ export function useContactAdmin() {
   }
   return context;
 }
+

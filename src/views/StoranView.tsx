@@ -3,26 +3,28 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { useContactAdmin } from '../context/ContactAdminContext';
-import { formatRupiah, formatIndonesianDateTime } from '../lib/utils';
+import { formatRupiah } from '../lib/utils';
 import { Submission, OperationType } from '../types';
 import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { db, handleFirestoreError } from '../lib/firebase';
 import { RulesCard } from '../components/RulesCard';
-import { GmailGenerator } from '../components/GmailGenerator';
 import {
-  UploadCloud,
+  GmailGenerator,
+  checkIsEmailGenerated,
+  getSavedGeneratedAccounts,
+  GeneratedResultItem,
+} from '../components/GmailGenerator';
+import {
   Clock,
   CheckCircle2,
-  XCircle,
   AlertTriangle,
   Info,
   ShieldAlert,
   Send,
   HelpCircle,
-  Sparkles,
   KeyRound,
   Mail,
-  MessageCircle,
+  Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -37,8 +39,8 @@ export function StoranView() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(true);
   const [inputError, setInputError] = useState('');
+  const [savedAccounts, setSavedAccounts] = useState<GeneratedResultItem[]>([]);
 
   // Real-time listener for user's submissions
   useEffect(() => {
@@ -58,16 +60,36 @@ export function StoranView() {
         });
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setSubmissions(list);
-        setLoadingHistory(false);
       },
       (err) => {
         console.warn('Snapshot error:', err);
-        setLoadingHistory(false);
       }
     );
 
     return () => unsubscribe();
   }, [currentUser]);
+
+  // Sync unsubmitted generated accounts
+  useEffect(() => {
+    const updateSaved = () => {
+      const list = getSavedGeneratedAccounts(currentUser?.uid);
+      const unsubmitted = list.filter(
+        (acc) =>
+          !submissions.some(
+            (sub) => sub.dataContent.trim().toLowerCase() === acc.email.trim().toLowerCase()
+          )
+      );
+      setSavedAccounts(unsubmitted);
+    };
+
+    updateSaved();
+    const interval = setInterval(updateSaved, 1500);
+    window.addEventListener('storage', updateSaved);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', updateSaved);
+    };
+  }, [currentUser?.uid, submissions]);
 
   const handleOpenConfirm = (e: FormEvent) => {
     e.preventDefault();
@@ -100,8 +122,19 @@ export function StoranView() {
     // Gmail domain check
     const lower = trimmed.toLowerCase();
     if (!lower.includes('@gmail.com') && !lower.includes('@googlemail.com')) {
-      setInputError('Format harus berupa akun Gmail (mengandung @gmail.com). Contoh: nama@gmail.com');
+      setInputError('Format harus berupa akun Gmail (mengandung @gmail.com). Contoh: contoh@gmail.com');
       showToast('warning', 'Domain Salah', 'Hanya menerima akun Gmail (@gmail.com).');
+      return;
+    }
+
+    // WAJIB DARI GENERATE: Validasi apakah akun sudah digenerate
+    if (!checkIsEmailGenerated(trimmed, currentUser?.uid)) {
+      setInputError('STOR Gmail wajib generate dlu! Akun ini belum pernah Anda generate melalui sistem.');
+      showToast(
+        'error',
+        'STOR Gmail Wajib Generate Dulu',
+        'Akun yang disetor wajib berasal dari hasil generate pada generator di atas.'
+      );
       return;
     }
 
@@ -124,6 +157,27 @@ export function StoranView() {
       };
 
       await addDoc(collection(db, 'submissions'), newSubmissionData);
+
+      // Bersihkan akun yang disetor dari unsubmitted local list
+      try {
+        const activeKey = currentUser.uid
+          ? `gmail_gen_saved_${currentUser.uid}`
+          : 'gmail_gen_saved_guest';
+        const raw = localStorage.getItem(activeKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const remaining = parsed.filter(
+              (item: any) =>
+                (item.email || '').trim().toLowerCase() !== inputData.trim().toLowerCase()
+            );
+            localStorage.setItem(activeKey, JSON.stringify(remaining));
+            setSavedAccounts(remaining);
+          }
+        }
+      } catch (cleanErr) {
+        console.warn('Gagal update storage setelah stor:', cleanErr);
+      }
 
       showToast(
         'success',
@@ -218,11 +272,12 @@ export function StoranView() {
           <GmailGenerator
             onOpenContactAdmin={openContactModal}
             submittedEmails={submissions.map((s) => s.dataContent.trim().toLowerCase())}
+            onSelectEmailForStoran={handleSelectFromGenerator}
           />
 
           {/* Submission Input Box */}
-          <div id="submission-form-card" className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs">
-            <div className="flex items-center justify-between mb-4">
+          <div id="submission-form-card" className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <span>Form Setor Akun Gmail</span>
               </h2>
@@ -230,6 +285,52 @@ export function StoranView() {
                 1 Baris = 1 Akun
               </span>
             </div>
+
+            {/* Banner Peringatan Wajib: STOR Gmail wajib generate dlu */}
+            <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-300 text-amber-950 flex items-start gap-3 shadow-2xs">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-xs space-y-0.5">
+                <strong className="text-amber-900 font-black block text-xs sm:text-sm">
+                  STOR Gmail wajib generate dlu
+                </strong>
+                <p className="text-amber-800 leading-relaxed font-medium">
+                  Kalo mau STOR Gmail nya <strong>wajib dari generate</strong> di atas. Akun yang disetor wajib pernah digenerate melalui generator akun Gmail sebelum dapat disetorkan.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick-select chips if user has unsubmitted generated accounts */}
+            {savedAccounts.length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-indigo-900 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Pilih Akun Hasil Generate Anda ({savedAccounts.length}):</span>
+                  </span>
+                  <span className="text-[10px] text-indigo-600 font-semibold">Klik untuk pilih</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                  {savedAccounts.map((acc) => {
+                    const isSelected = inputData.trim().toLowerCase() === acc.email.trim().toLowerCase();
+                    return (
+                      <button
+                        key={acc.id || acc.email}
+                        type="button"
+                        onClick={() => handleSelectFromGenerator(acc.email)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-300'
+                            : 'bg-white hover:bg-indigo-100 text-indigo-800 border border-indigo-200'
+                        }`}
+                      >
+                        <Mail className="w-3 h-3" />
+                        <span>{acc.email}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleOpenConfirm} className="space-y-4">
               <div>
@@ -245,7 +346,7 @@ export function StoranView() {
                       setInputData(e.target.value);
                       setInputError('');
                     }}
-                    placeholder="Contoh: dimas.pratama782@gmail.com"
+                    placeholder="contoh@gmail.com"
                     className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm outline-none transition disabled:bg-slate-100 disabled:text-slate-400 font-mono"
                   />
                 </div>
@@ -255,7 +356,7 @@ export function StoranView() {
                 <div className="flex flex-wrap items-center justify-between gap-2 mt-2 text-[11px] text-slate-500">
                   <span className="flex items-center gap-1">
                     <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                    <span>Format: <strong>email@gmail.com</strong> (Password otomatis: <strong>{activePassword}</strong>)</span>
+                    <span>Format: <strong>contoh@gmail.com</strong> (Password otomatis: <strong>{activePassword}</strong>)</span>
                   </span>
                 </div>
               </div>
@@ -286,78 +387,18 @@ export function StoranView() {
             </form>
           </div>
 
-              {/* Recent Submissions In-Page List */}
-              <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">Riwayat Storan Akun Terkini</h3>
-                    <p className="text-xs text-slate-500">Pantau status verifikasi dan alasan jika akun ditolak</p>
-                  </div>
-                  <span className="text-xs font-semibold text-slate-500">
-                    {submissions.length} Total
-                  </span>
-                </div>
-
-                {loadingHistory ? (
-                  <div className="space-y-3 py-3">
-                    {[1, 2, 3].map((n) => (
-                      <div key={n} className="h-14 bg-slate-100 rounded-xl animate-pulse" />
-                    ))}
-                  </div>
-                ) : submissions.length === 0 ? (
-                  <div className="py-8 text-center text-slate-400 text-xs font-medium">
-                    Belum ada akun Gmail yang disetor.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {submissions.slice(0, 5).map((sub) => (
-                      <div
-                        key={sub.id}
-                        className="p-3.5 rounded-2xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-indigo-200 hover:shadow-xs transition space-y-2"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="font-mono text-xs font-bold text-slate-800 break-all flex items-center gap-1.5">
-                              <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                              <span>{sub.dataContent}</span>
-                            </div>
-                            <div className="text-[11px] text-slate-500 mt-1 flex flex-wrap items-center gap-2">
-                              <span>{formatIndonesianDateTime(sub.createdAt)}</span>
-                              <span>•</span>
-                              <span className="font-bold text-indigo-700">
-                                {formatRupiah(sub.rewardAmount)}
-                              </span>
-                            </div>
-                          </div>
-
-                          <span
-                            className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold ${
-                              sub.status === 'Diterima'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : sub.status === 'Ditolak'
-                                ? 'bg-rose-100 text-rose-800'
-                                : 'bg-amber-100 text-amber-800'
-                            }`}
-                          >
-                            {sub.status}
-                          </span>
-                        </div>
-
-                        {/* Rejection reason if status === Ditolak */}
-                        {sub.status === 'Ditolak' && sub.rejectionReason && (
-                          <div className="p-2.5 rounded-xl bg-rose-50/90 border border-rose-200 text-xs text-rose-800 flex items-start gap-2">
-                            <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                            <div>
-                              <strong className="font-semibold">Alasan Penolakan:</strong>{' '}
-                              {sub.rejectionReason}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+          {/* Pemisah Riwayat Storan Info Card */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200/80 text-slate-600 text-xs flex items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>
+                Riwayat storan dan status verifikasi akun telah dipisahkan ke tab <strong>Riwayat</strong>.
+              </span>
+            </div>
+            <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg shrink-0">
+              {submissions.length} Total Storan
+            </span>
+          </div>
         </div>
 
         {/* Sidebar Column: Rules & Info (5 cols) */}

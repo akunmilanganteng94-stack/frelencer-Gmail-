@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageCircle, X, ExternalLink, Copy, Check, Clock, ShieldCheck, PhoneCall } from 'lucide-react';
+import { MessageCircle, X, ExternalLink, Copy, Check, Clock, ShieldCheck, PhoneCall, Megaphone } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 
@@ -162,17 +162,81 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
   );
 }
 
-export function ContactAdminFloatingButton({ onClick }: { onClick: () => void }) {
+interface ContactAdminFloatingButtonProps {
+  onClick?: () => void;
+  onClickAdmin?: () => void;
+  onClickChannel?: () => void;
+}
+
+export function ContactAdminFloatingButton({
+  onClick,
+  onClickAdmin,
+  onClickChannel,
+}: ContactAdminFloatingButtonProps) {
+  const [showChannelBanner, setShowChannelBanner] = useState(true);
+  const handleAdminClick = onClickAdmin || onClick || (() => {});
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="fixed bottom-20 sm:bottom-6 right-5 z-40 px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-full shadow-lg shadow-emerald-600/30 flex items-center gap-2.5 font-bold text-xs sm:text-sm transition transform hover:scale-105 active:scale-95 border border-white/20"
-      title="Hubungi Admin WhatsApp"
-    >
-      <MessageCircle className="w-5 h-5 animate-pulse" />
-      <span className="hidden sm:inline">Hubungi Admin</span>
-      <span className="sm:hidden">Admin WA</span>
-    </button>
+    <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 flex flex-col items-end gap-2.5 pointer-events-none">
+      {/* Pop up badge / speech bubble saluran informasi di ATAS Admin WA */}
+      <AnimatePresence>
+        {showChannelBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="pointer-events-auto bg-white/95 backdrop-blur-md text-slate-800 p-2.5 px-3 rounded-2xl shadow-xl border border-blue-200 text-xs flex items-center gap-2 max-w-[240px] sm:max-w-[280px]"
+          >
+            <div className="w-7 h-7 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+              <Megaphone className="w-3.5 h-3.5 text-blue-600" />
+            </div>
+            <div
+              className="min-w-0 flex-1 cursor-pointer"
+              onClick={onClickChannel}
+              title="Klik untuk membuka Saluran Informasi"
+            >
+              <div className="font-bold text-slate-900 text-[11px] sm:text-xs flex items-center gap-1">
+                <span>Saluran Informasi WA</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+              </div>
+              <p className="text-[10px] text-slate-500 truncate hover:text-blue-600 font-medium">
+                Klik untuk update & pengumuman
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowChannelBanner(false)}
+              className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition"
+              title="Tutup pemberitahuan"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Pop-up Button Saluran Informasi di ATAS Admin WA */}
+      <button
+        type="button"
+        onClick={onClickChannel}
+        className="pointer-events-auto px-3.5 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full shadow-lg shadow-blue-500/25 flex items-center gap-2 font-bold text-xs sm:text-sm transition transform hover:scale-105 active:scale-95 border border-white/20"
+        title="Buka Saluran Informasi WhatsApp Resmi"
+      >
+        <Megaphone className="w-4 h-4 animate-bounce shrink-0" />
+        <span>Saluran Informasi</span>
+      </button>
+
+      {/* Tombol Admin WA */}
+      <button
+        type="button"
+        onClick={handleAdminClick}
+        className="pointer-events-auto px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-full shadow-lg shadow-emerald-600/30 flex items-center gap-2.5 font-bold text-xs sm:text-sm transition transform hover:scale-105 active:scale-95 border border-white/20"
+        title="Hubungi Admin WhatsApp"
+      >
+        <MessageCircle className="w-5 h-5 animate-pulse shrink-0" />
+        <span className="hidden sm:inline">Hubungi Admin</span>
+        <span className="sm:hidden">Admin WA</span>
+      </button>
+    </div>
   );
 }

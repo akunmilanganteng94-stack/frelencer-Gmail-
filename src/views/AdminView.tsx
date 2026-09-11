@@ -2119,7 +2119,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                     required
                     value={newStockEmail}
                     onChange={(e) => setNewStockEmail(e.target.value)}
-                    placeholder="dimas.pratama782@gmail.com"
+                    placeholder="contoh@gmail.com"
                     className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">

@@ -5,7 +5,6 @@ import { ToastProvider } from './context/ToastContext';
 import { ContactAdminProvider } from './context/ContactAdminContext';
 import { NavigationTab } from './types';
 import { Navigation, DesktopSidebar } from './components/Navigation';
-import { ChannelPopup } from './components/ChannelPopup';
 import { AuthView } from './views/AuthView';
 import { HomeView } from './views/HomeView';
 import { StoranView } from './views/StoranView';
@@ -44,9 +43,6 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-slate-50/60 text-slate-800 flex flex-col antialiased font-sans">
-      {/* Official WhatsApp Channel Promo Popup */}
-      <ChannelPopup />
-
       {/* Top Header & Mobile Bottom Navigation */}
       <Navigation currentTab={activeTab} onSelectTab={setActiveTab} />
 

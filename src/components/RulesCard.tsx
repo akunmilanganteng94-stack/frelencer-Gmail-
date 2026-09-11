@@ -1,5 +1,5 @@
 import { useSettings } from '../context/SettingsContext';
-import { ClipboardList, ShieldAlert, KeyRound, CheckCircle2 } from 'lucide-react';
+import { ClipboardList, ShieldAlert, KeyRound } from 'lucide-react';
 
 export function RulesCard({ compact = false }: { compact?: boolean }) {
   const { settings } = useSettings();

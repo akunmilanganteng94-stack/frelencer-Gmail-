@@ -18,6 +18,8 @@ import {
   Ban,
   Trash2,
   Send,
+  Play,
+  ExternalLink,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -290,8 +292,20 @@ export function GmailGenerator({
           </div>
         </div>
 
-        {/* Available Stock Indicator */}
-        <div className="flex items-center gap-2 self-start sm:self-center">
+        {/* Available Stock Indicator & Tutorial Button */}
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+          <a
+            href="https://vt.tiktok.com/ZSqPBXosL/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
+            title="Tonton video tutorial cara buat akun Gmail di Google"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Cara Buat Akun Gmail</span>
+            <ExternalLink className="w-3 h-3 opacity-80" />
+          </a>
+
           <div className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>Stok: {loading ? '...' : `${availableStock.length} Tersedia`}</span>

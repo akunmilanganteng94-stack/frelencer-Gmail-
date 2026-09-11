@@ -24,7 +24,8 @@ import {
   HelpCircle,
   KeyRound,
   Mail,
-  Sparkles,
+  ExternalLink,
+  Play,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -286,51 +287,38 @@ export function StoranView() {
               </span>
             </div>
 
-            {/* Banner Peringatan Wajib: STOR Gmail wajib generate dlu */}
-            <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-300 text-amber-950 flex items-start gap-3 shadow-2xs">
+            {/* Banner Peringatan Wajib: STOR Gmail Wajib Generate Dulu */}
+            <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-300 text-amber-950 flex items-start gap-3 shadow-2xs">
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="text-xs space-y-0.5">
-                <strong className="text-amber-900 font-black block text-xs sm:text-sm">
-                  STOR Gmail wajib generate dlu
-                </strong>
-                <p className="text-amber-800 leading-relaxed font-medium">
-                  Kalo mau STOR Gmail nya <strong>wajib dari generate</strong> di atas. Akun yang disetor wajib pernah digenerate melalui generator akun Gmail sebelum dapat disetorkan.
-                </p>
+              <div className="text-xs space-y-2.5 flex-1">
+                <div>
+                  <strong className="text-amber-900 font-black block text-xs sm:text-sm">
+                    STOR Gmail Wajib Generate Dulu
+                  </strong>
+                  <p className="text-amber-800 leading-relaxed font-medium mt-1">
+                    Sebelum STOR, buat akun Gmail di Google menggunakan nama Gmail yang sudah digenerate dari Generator di atas. Akun yang tidak melalui Generator tidak dapat disetorkan.
+                  </p>
+                </div>
+
+                {/* Link & Tombol Panduan Cara Buat Akun Gmail di Google */}
+                <div className="pt-1 border-t border-amber-200/80 flex flex-col sm:flex-row sm:items-center gap-2">
+                  <span className="text-[11px] font-bold text-amber-900">
+                    Cara buat akun Gmail di google:
+                  </span>
+                  <a
+                    href="https://vt.tiktok.com/ZSqPBXosL/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-rose-500 via-rose-600 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white rounded-xl text-xs font-bold shadow-xs transition transform hover:scale-[1.02] active:scale-95 w-fit"
+                    title="Buka tutorial video TikTok cara membuat akun Gmail di Google"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>Tutorial TikTok Buat Akun Gmail</span>
+                    <ExternalLink className="w-3 h-3 opacity-90" />
+                  </a>
+                </div>
               </div>
             </div>
-
-            {/* Quick-select chips if user has unsubmitted generated accounts */}
-            {savedAccounts.length > 0 && (
-              <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-indigo-900 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Pilih Akun Hasil Generate Anda ({savedAccounts.length}):</span>
-                  </span>
-                  <span className="text-[10px] text-indigo-600 font-semibold">Klik untuk pilih</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
-                  {savedAccounts.map((acc) => {
-                    const isSelected = inputData.trim().toLowerCase() === acc.email.trim().toLowerCase();
-                    return (
-                      <button
-                        key={acc.id || acc.email}
-                        type="button"
-                        onClick={() => handleSelectFromGenerator(acc.email)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-300'
-                            : 'bg-white hover:bg-indigo-100 text-indigo-800 border border-indigo-200'
-                        }`}
-                      >
-                        <Mail className="w-3 h-3" />
-                        <span>{acc.email}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             <form onSubmit={handleOpenConfirm} className="space-y-4">
               <div>

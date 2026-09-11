@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   gmailDefaultPassword: DEFAULT_GMAIL_PASSWORD,
   generatorOpen: true,
   adminWhatsApp: '6285199219856',
+  dailyGenerateLimit: 10,
 };
 
 interface SettingsContextType {
@@ -54,6 +55,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             gmailDefaultPassword: data.gmailDefaultPassword || DEFAULT_GMAIL_PASSWORD,
             generatorOpen: data.generatorOpen !== undefined ? data.generatorOpen : true,
             adminWhatsApp: data.adminWhatsApp || '6285199219856',
+            dailyGenerateLimit:
+              typeof data.dailyGenerateLimit === 'number' && data.dailyGenerateLimit > 0
+                ? data.dailyGenerateLimit
+                : 10,
             rules: Array.isArray(data.rules) && data.rules.length > 0 ? data.rules : DEFAULT_RULES,
           });
         } else {

@@ -230,6 +230,13 @@ export function RiwayatView() {
               </div>
 
               {/* Rejection / Admin Notes */}
+              {sub.status === 'Pending' && (
+                <div className="p-3 rounded-xl bg-amber-50/90 border border-amber-200 text-xs text-amber-900 flex items-center gap-2 font-semibold">
+                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>dalam pengecekan admin tunggu 24-30 jam</span>
+                </div>
+              )}
+
               {sub.status === 'Ditolak' && sub.rejectionReason && (
                 <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2.5">
                   <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />

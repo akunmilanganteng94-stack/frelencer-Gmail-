@@ -70,6 +70,7 @@ export interface SystemSettings {
   gmailDefaultPassword?: string;
   generatorOpen: boolean;
   adminWhatsApp?: string;
+  dailyGenerateLimit: number;
 }
 
 export type NavigationTab = 'home' | 'storan' | 'riwayat' | 'saldo' | 'akun' | 'admin';

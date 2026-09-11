@@ -110,6 +110,9 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const [tempWhatsApp, setTempWhatsApp] = useState(
     settings.adminWhatsApp || '6285199219856'
   );
+  const [tempDailyGenerateLimit, setTempDailyGenerateLimit] = useState(
+    settings.dailyGenerateLimit || 10
+  );
   const [rulesList, setRulesList] = useState<string[]>(settings.rules);
   const [newRuleInput, setNewRuleInput] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
@@ -199,6 +202,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     setTempMinWithdrawal(settings.minWithdrawal);
     setTempSchedule(settings.storanSchedule);
     setTempAnnouncement(settings.announcement);
+    setTempDailyGenerateLimit(settings.dailyGenerateLimit || 10);
     setRulesList(settings.rules);
   }, [settings]);
 
@@ -489,8 +493,9 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         rules: rulesList.filter((r) => r.trim().length > 0),
         gmailDefaultPassword: tempGmailPassword.trim() || 'sgsg1122',
         adminWhatsApp: tempWhatsApp.trim() || '6285199219856',
+        dailyGenerateLimit: Math.max(1, Number(tempDailyGenerateLimit) || 10),
       });
-      showToast('success', 'Pengaturan Disimpan', 'Konfigurasi sistem, WhatsApp, & password Gmail berhasil diperbarui.');
+      showToast('success', 'Pengaturan Disimpan', 'Konfigurasi sistem, WhatsApp, limit generate, & password Gmail berhasil diperbarui.');
     } catch (err: unknown) {
       showToast('error', 'Gagal Menyimpan', err instanceof Error ? err.message : String(err));
     } finally {
@@ -999,6 +1004,47 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 className="mt-2 text-xs font-black underline hover:opacity-80 transition cursor-pointer"
               >
                 {settings.generatorOpen !== false ? 'Tutup Fitur Generator' : 'Aktifkan Kembali Generator'}
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Setting: Nominal Limit Generate User per Hari */}
+          <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-3xl p-4 sm:p-5 border border-indigo-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-black text-indigo-950 flex items-center gap-2">
+                  <span>Nominal Batas Generate User per Hari:</span>
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-white font-mono font-bold text-xs">
+                    {settings.dailyGenerateLimit || 10} Akun/User/Hari
+                  </span>
+                </div>
+                <p className="text-[11px] text-indigo-700 mt-0.5">
+                  Setiap freelancer dibatasi maksimal mengambil nominal akun ini per hari. Ubah angka di samping lalu klik Simpan.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={tempDailyGenerateLimit}
+                onChange={(e) => setTempDailyGenerateLimit(Math.max(1, Number(e.target.value)))}
+                className="w-24 px-3 py-2 rounded-xl border border-indigo-300 font-mono font-bold text-xs bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  const val = Math.max(1, Number(tempDailyGenerateLimit) || 10);
+                  await updateSettings({ dailyGenerateLimit: val });
+                  showToast('success', 'Batas Kuota Disimpan', `Batas generate akun user diubah menjadi ${val} akun/hari.`);
+                }}
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition shrink-0 cursor-pointer"
+              >
+                Simpan Kuota
               </button>
             </div>
           </div>
@@ -1767,6 +1813,40 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               >
                 {settings.generatorOpen !== false ? '✓ Generator Sedang Buka (Klik Tutup)' : '✕ Generator Ditutup (Klik Buka)'}
               </button>
+            </div>
+
+            {/* Nominal Limit Generate User per Hari */}
+            <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200/90 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-black text-indigo-950 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  <span>Nominal Limit Generate User per Hari</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setTempDailyGenerateLimit(10)}
+                  className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 underline"
+                >
+                  Reset ke 10 akun
+                </button>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    required
+                    value={tempDailyGenerateLimit}
+                    onChange={(e) => setTempDailyGenerateLimit(Math.max(1, Number(e.target.value)))}
+                    className="w-32 px-3.5 py-2.5 rounded-xl border border-indigo-300 font-mono font-black text-indigo-900 text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                  />
+                  <span className="text-xs font-bold text-indigo-900">Akun / Hari</span>
+                </div>
+                <span className="text-xs text-indigo-800 leading-tight">
+                  Jumlah maksimal akun Gmail yang dapat di-generate oleh setiap akun freelancer per hari (24 jam). Jika kuota harian habis, user harus menunggu hari berikutnya.
+                </span>
+              </div>
             </div>
 
             {/* Jam Operasional */}

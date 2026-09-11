@@ -210,7 +210,9 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             <div className="text-xl sm:text-2xl font-black text-amber-600 tracking-tight">
               {loading ? '-' : totalPending}
             </div>
-            <div className="text-[11px] text-slate-500 mt-1">Menunggu cek admin</div>
+            <div className="text-[11px] text-amber-700 font-semibold mt-1">
+              dalam pengecekan admin tunggu 24-30 jam
+            </div>
           </div>
 
           {/* Card 5: Total Ditolak */}
@@ -307,7 +309,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           </div>
 
           <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Estimasi pengecekan: <strong>24–30 jam kerja</strong></span>
+            <span>Status pending: <strong>dalam pengecekan admin tunggu 24-30 jam</strong></span>
             <button
               onClick={() => onNavigate('storan')}
               className="font-bold text-blue-600 hover:underline"

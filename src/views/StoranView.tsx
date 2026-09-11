@@ -183,7 +183,7 @@ export function StoranView() {
       showToast(
         'success',
         'Akun Gmail Berhasil Disetor',
-        `Akun berhasil masuk ke antrean verifikasi admin. Estimasi 24–30 jam kerja.`
+        'dalam pengecekan admin tunggu 24-30 jam'
       );
       setInputData('');
       setShowConfirmModal(false);
@@ -278,6 +278,24 @@ export function StoranView() {
 
           {/* Submission Input Box */}
           <div id="submission-form-card" className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs space-y-4">
+            {/* Banner Status Pending */}
+            {submissions.some((s) => s.status === 'Pending') && (
+              <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-950 flex items-start gap-3 shadow-2xs">
+                <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-amber-950 flex items-center justify-between gap-2">
+                    <span>Storan Akun Sedang Diproses ({submissions.filter((s) => s.status === 'Pending').length} Pending)</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-200/70 text-amber-900 uppercase">
+                      Pending
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-800 mt-1 font-semibold">
+                    dalam pengecekan admin tunggu 24-30 jam
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <span>Form Setor Akun Gmail</span>
@@ -399,9 +417,8 @@ export function StoranView() {
               <Clock className="w-4 h-4 text-indigo-600" />
               <span>Estimasi Waktu Verifikasi</span>
             </div>
-            <p className="text-xs text-indigo-800 leading-relaxed">
-              Semua akun Gmail yang disetor akan dicek login & status keaktifannya oleh admin dalam kurun waktu{' '}
-              <strong>24–30 jam kerja</strong> (Senin–Jumat).
+            <p className="text-xs text-indigo-800 leading-relaxed font-semibold">
+              Semua akun Gmail yang disetor berstatus pending dalam pengecekan admin tunggu 24-30 jam.
             </p>
             <div className="pt-2 border-t border-indigo-200/60 flex items-center justify-between text-xs text-indigo-900 font-medium">
               <span>Jam Operasional:</span>
@@ -454,6 +471,11 @@ export function StoranView() {
                 <div className="flex items-center justify-between text-xs text-slate-600">
                   <span>Status 2FA:</span>
                   <span className="font-semibold text-emerald-700">Wajib Nonaktif</span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2 font-semibold">
+                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>dalam pengecekan admin tunggu 24-30 jam</span>
                 </div>
               </div>
 

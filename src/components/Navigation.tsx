@@ -6,7 +6,7 @@ import { formatRupiah } from '../lib/utils';
 import {
   Home,
   FileText,
-  UploadCloud,
+  Send,
   Wallet,
   User as UserIcon,
   ShieldCheck,
@@ -28,7 +28,7 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
 
   const navItems: { id: NavigationTab; label: string; icon: typeof Home }[] = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'storan', label: 'Storan', icon: UploadCloud },
+    { id: 'storan', label: 'Storan', icon: Send },
     { id: 'riwayat', label: 'Riwayat', icon: FileText },
     { id: 'saldo', label: 'Saldo', icon: Wallet },
     { id: 'akun', label: 'Akun', icon: UserIcon },
@@ -177,7 +177,7 @@ export function DesktopSidebar({
 
   const mainItems: { id: NavigationTab; label: string; icon: typeof Home; badge?: string }[] = [
     { id: 'home', label: 'Home Dashboard', icon: Home },
-    { id: 'storan', label: 'Setor Akun Gmail', icon: UploadCloud },
+    { id: 'storan', label: 'Setor Akun Gmail', icon: Send },
     { id: 'riwayat', label: 'Riwayat Storan', icon: FileText },
     { id: 'saldo', label: 'Saldo & Penarikan', icon: Wallet },
     { id: 'akun', label: 'Profil & Akun', icon: UserIcon },

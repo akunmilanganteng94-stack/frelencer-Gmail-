@@ -155,7 +155,7 @@ export function StoranView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-            <UploadCloud className="w-7 h-7 text-indigo-600" />
+            <Send className="w-7 h-7 text-indigo-600" />
             <span>Storan Akun Gmail / Google</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">

@@ -15,6 +15,7 @@ import {
   ArrowUpRight,
   Megaphone,
   UploadCloud,
+  Send,
   ChevronRight,
   ShieldCheck,
   AlertCircle,
@@ -102,7 +103,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               onClick={() => onNavigate('storan')}
               className="px-5 py-3 rounded-2xl bg-white text-blue-700 font-bold text-sm shadow-md hover:bg-blue-50 transition flex items-center gap-2"
             >
-              <UploadCloud className="w-4 h-4" />
+              <Send className="w-4 h-4" />
               <span>Setor Akun Gmail</span>
             </button>
             <button

@@ -21,7 +21,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
     : rawNumber;
 
   const waUrl = `https://wa.me/${rawNumber}?text=${encodeURIComponent(
-    'Halo Admin Freelancer Akun Gmail, saya ingin bertanya terkait storan akun Gmail & saldo saya.'
+    'Halo Admin AZGmail, saya ingin bertanya terkait storan akun Gmail & saldo saya.'
   )}`;
 
   const handleCopy = () => {

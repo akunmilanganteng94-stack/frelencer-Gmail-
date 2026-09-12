@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useContactAdmin } from '../context/ContactAdminContext';
 import { formatRupiah } from '../lib/utils';
+import { AZGmailLogo } from './GmailLogo';
 import {
   Home,
   FileText,
@@ -13,7 +14,6 @@ import {
   LogOut,
   Clock,
   MessageCircle,
-  Banknote,
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -45,12 +45,12 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
               onClick={() => onSelectTab('home')}
               className="flex items-center gap-2.5 text-left focus:outline-none"
             >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-700 via-purple-600 to-fuchsia-500 flex items-center justify-center text-white shadow-md shadow-purple-600/25 border border-purple-400/30">
-                <Banknote className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-xs border border-blue-100 p-1.5 overflow-hidden">
+                <AZGmailLogo className="w-full h-full" />
               </div>
               <div>
                 <div className="font-extrabold text-base tracking-tight bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent leading-none">
-                  Freelancer Akun Gmail
+                  AZGmail
                 </div>
                 <div className="text-[11px] text-slate-500 font-medium mt-0.5">
                   Platform Freelance Google & Gmail

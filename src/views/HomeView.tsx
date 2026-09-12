@@ -88,13 +88,16 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               Halo, {userProfile?.displayName || 'Freelancer'} 👋
             </h1>
-            <p className="text-blue-100 text-sm max-w-xl">
-              buat akun Gmail fresh dengan password wajib:{' '}
-              <span className="font-mono font-bold bg-white/20 text-white px-2 py-0.5 rounded">
-                {settings.gmailDefaultPassword || 'sgsg1122'}
-              </span>
-              . Saldo otomatis masuk setelah diverifikasi admin
-            </p>
+
+            {/* Saldo Saat Ini dipindahkan di bawah teks Halo */}
+            <div className="pt-2">
+              <div className="text-xs font-bold text-blue-200 uppercase tracking-wider">
+                Saldo Saat Ini
+              </div>
+              <div className="text-3xl sm:text-4xl font-black text-white tracking-tight mt-0.5">
+                {formatRupiah(userProfile?.balance || 0)}
+              </div>
+            </div>
           </div>
 
           {/* Action CTAs */}
@@ -149,29 +152,15 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         </div>
       </div>
 
-      {/* 5 Statistics Grid: Diterima, Pending, Ditolak, Harga per Submission, Saldo saat ini */}
+      {/* 4 Statistics Grid: Harga per Submission, Total Diterima, Total Pending, Total Ditolak */}
       <div>
         <div className="flex items-center justify-between mb-3 px-1">
           <h2 className="text-base font-bold text-slate-900">Statistik Akun Kamu</h2>
           <span className="text-xs text-slate-500 font-medium">Real-time update</span>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
-          {/* Card 1: Saldo Saat Ini */}
-          <div className="col-span-2 lg:col-span-1 rounded-2xl bg-white p-4 sm:p-5 border border-slate-200/80 shadow-xs hover:border-blue-200 transition">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-500">Saldo Saat Ini</span>
-              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Wallet className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-blue-700 tracking-tight">
-              {formatRupiah(userProfile?.balance || 0)}
-            </div>
-            <div className="text-[11px] text-slate-500 mt-1">Siap ditarik ke DANA / GoPay</div>
-          </div>
-
-          {/* Card 2: Harga Per Submission */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* Card 1: Harga Per Submission */}
           <div className="rounded-2xl bg-white p-4 sm:p-5 border border-slate-200/80 shadow-xs hover:border-blue-200 transition">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-slate-500">Harga / Gmail</span>

@@ -737,7 +737,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             <span>Administrator Control Panel</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Admin Panel Freelancer Akun Gmail
+            Admin Panel AZGmail
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Kelola verifikasi akun Gmail, setting password wajib (default sgsg1122), pencairan saldo, dan data pengguna

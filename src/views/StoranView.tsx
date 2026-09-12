@@ -215,7 +215,7 @@ export function StoranView() {
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Kirim akun Gmail fresh dengan password wajib:{' '}
-            <span className="font-mono font-bold bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded border border-rose-200">
+            <span className="font-mono font-bold bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-200">
               {activePassword}
             </span>
             . Reward:{' '}
@@ -362,17 +362,17 @@ export function StoranView() {
                 <div className="flex flex-wrap items-center justify-between gap-2 mt-2 text-[11px] text-slate-500">
                   <span className="flex items-center gap-1">
                     <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                    <span>Format: <strong>contoh@gmail.com</strong> (Password otomatis: <strong>{activePassword}</strong>)</span>
+                    <span>Format: <strong>contoh@gmail.com</strong> (Password otomatis: <strong className="text-orange-600 font-mono">{activePassword}</strong>)</span>
                   </span>
                 </div>
               </div>
 
               {/* Password Wajib Alert Banner */}
-              <div className="p-3.5 rounded-xl bg-rose-50/80 border border-rose-200/70 text-xs text-rose-900 flex items-start gap-2.5">
-                <KeyRound className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="p-3.5 rounded-xl bg-orange-50/90 border border-orange-200 text-xs text-orange-950 flex items-start gap-2.5">
+                <KeyRound className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
                 <span className="leading-relaxed">
-                  <strong>Ketentuan Password:</strong> Akun yang disetor WAJIB memakai password{' '}
-                  <strong className="font-mono bg-white px-1.5 py-0.5 rounded border border-rose-300 text-rose-700">{activePassword}</strong>.
+                  <strong className="text-orange-950">Ketentuan Password:</strong> Akun yang disetor WAJIB memakai password{' '}
+                  <strong className="font-mono bg-white px-1.5 py-0.5 rounded border border-orange-300 text-orange-600 font-bold">{activePassword}</strong>.
                   Jangan aktifkan 2FA (Verifikasi 2 Langkah).
                 </span>
               </div>
@@ -460,7 +460,7 @@ export function StoranView() {
                 </div>
                 <div className="flex items-center justify-between pt-1 text-xs text-slate-600">
                   <span>Password Wajib:</span>
-                  <span className="font-mono font-bold text-rose-600">{activePassword}</span>
+                  <span className="font-mono font-bold text-orange-600">{activePassword}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-600">
                   <span>Imbalan jika diterima:</span>

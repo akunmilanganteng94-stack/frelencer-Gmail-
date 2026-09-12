@@ -1,7 +1,8 @@
 import { useState, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Sparkles, Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle2, Shield } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle2, Shield } from 'lucide-react';
+import { AZGmailLogo } from '../components/GmailLogo';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function AuthView() {
@@ -80,11 +81,11 @@ export function AuthView() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md px-4 relative z-10">
         {/* Brand header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 via-blue-700 to-indigo-700 text-white shadow-lg shadow-blue-500/25 mb-3">
-            <Sparkles className="w-7 h-7" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-lg shadow-blue-500/15 border border-blue-100 mb-3 p-2 overflow-hidden">
+            <AZGmailLogo className="w-full h-full" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Freelancer Storan
+            AZGmail
           </h1>
           <p className="mt-1.5 text-sm text-slate-500 font-medium">
             Platform storan data aman, profesional, dan realtime

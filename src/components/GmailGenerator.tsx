@@ -3,7 +3,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { useGmailStock } from '../hooks/useGmailStock';
 import { useAuth } from '../context/AuthContext';
-import { GmailLogo } from './GmailLogo';
+import { GmailLogo, AZGmailLogo } from './GmailLogo';
 import {
   Copy,
   Check,
@@ -305,7 +305,7 @@ export function GmailGenerator({
           </div>
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <GmailLogo className="w-4 h-4" />
+              <AZGmailLogo className="w-4 h-4" />
               <span>Generator Akun Gmail (Dari Stok Admin)</span>
             </h3>
             <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-rose-100 text-rose-700">
@@ -314,11 +314,7 @@ export function GmailGenerator({
           </div>
         </div>
         <p className="text-xs text-slate-600 leading-relaxed">
-          Admin sedang menonaktifkan fitur pengambilan akun otomatis dari stok. Anda dapat mendaftarkan akun Gmail Anda sendiri secara manual dengan password{' '}
-          <strong className="font-mono text-rose-700 bg-rose-50 px-1 py-0.5 rounded border border-rose-200">
-            {activePassword}
-          </strong>{' '}
-          lalu menyetorkannya pada form di bawah.
+          Admin sedang menonaktifkan fitur pengambilan akun otomatis dari stok.
         </p>
         {onOpenContactAdmin && (
           <button
@@ -339,8 +335,8 @@ export function GmailGenerator({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center shrink-0">
-            <GmailLogo className="w-6 h-6" />
+          <div className="w-11 h-11 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center shrink-0 p-1.5 overflow-hidden">
+            <AZGmailLogo className="w-full h-full" />
           </div>
           <div>
             <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
@@ -479,7 +475,7 @@ export function GmailGenerator({
             {generating ? (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
-              <GmailLogo className="w-4 h-4" />
+              <AZGmailLogo className="w-4 h-4" />
             )}
             <span>
               {remainingQuota <= 0

@@ -1,5 +1,5 @@
 export const AZGMAIL_LOGO_URL =
-  'https://cdn.phototourl.com/free/2026-09-12-12948a6e-df2f-4000-b207-75fa07832577.png';
+  'https://cdn.phototourl.com/free/2026-09-13-9663c7e6-c906-4989-97f1-ee3595406622.png';
 
 export function AZGmailLogo({ className = 'w-5 h-5' }: { className?: string }) {
   return (

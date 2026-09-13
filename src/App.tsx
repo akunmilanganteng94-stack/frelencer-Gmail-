@@ -10,6 +10,7 @@ import { HomeView } from './views/HomeView';
 import { StoranView } from './views/StoranView';
 import { RiwayatView } from './views/RiwayatView';
 import { SaldoView } from './views/SaldoView';
+import { RulesView } from './views/RulesView';
 import { AkunView } from './views/AkunView';
 import { AdminView } from './views/AdminView';
 import { motion, AnimatePresence } from 'motion/react';
@@ -51,7 +52,7 @@ function AppContent() {
 
       {/* Main Content Area */}
       <div className="flex-1 md:pl-64 flex flex-col">
-        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28 md:pb-12">
+        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-32 sm:pb-36 md:pb-12">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -61,9 +62,10 @@ function AppContent() {
               transition={{ duration: 0.18, ease: 'easeOut' }}
             >
               {activeTab === 'home' && <HomeView onNavigate={setActiveTab} />}
-              {activeTab === 'storan' && <StoranView />}
+              {activeTab === 'storan' && <StoranView onNavigate={setActiveTab} />}
               {activeTab === 'riwayat' && <RiwayatView />}
               {activeTab === 'saldo' && <SaldoView />}
+              {activeTab === 'rules' && <RulesView onNavigate={setActiveTab} />}
               {activeTab === 'akun' && <AkunView onNavigate={setActiveTab} />}
               {activeTab === 'admin' && <AdminView onNavigate={setActiveTab} />}
             </motion.div>

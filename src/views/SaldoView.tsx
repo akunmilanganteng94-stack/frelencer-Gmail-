@@ -207,26 +207,14 @@ export function SaldoView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Wallet className="w-7 h-7 text-blue-600" />
-            <span>Saldo & Penarikan</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Kelola saldo dompet freelancer kamu dan lakukan pencairan ke DANA atau GoPay
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleOpenWithdrawModal}
-          disabled={!settings.withdrawalOpen || userBalance < settings.minWithdrawal}
-          className="self-start sm:self-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <ArrowDownLeft className="w-4 h-4" />
-          <span>Tarik Saldo</span>
-        </button>
+      <div>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
+          <Wallet className="w-7 h-7 text-blue-600" />
+          <span>Saldo & Penarikan</span>
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          Kelola saldo dompet freelancer kamu dan lakukan pencairan ke DANA atau GoPay
+        </p>
       </div>
 
       {/* Notice if Withdrawal is Closed */}
@@ -245,19 +233,33 @@ export function SaldoView() {
       {/* 4 Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Saldo Tersedia */}
-        <div className="rounded-3xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 p-6 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-blue-100">Saldo Tersedia</span>
-            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
-              <Wallet className="w-4 h-4 text-white" />
+        <div className="rounded-3xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 p-6 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-blue-100">Saldo Tersedia</span>
+              <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                <Wallet className="w-4 h-4 text-white" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black tracking-tight">
+              {formatRupiah(userBalance)}
+            </div>
+            <div className="mt-2 text-xs text-blue-100 flex items-center justify-between">
+              <span>Min. Tarik:</span>
+              <strong>{formatRupiah(settings.minWithdrawal)}</strong>
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black tracking-tight">
-            {formatRupiah(userBalance)}
-          </div>
-          <div className="mt-2 text-xs text-blue-100 flex items-center justify-between">
-            <span>Min. Tarik:</span>
-            <strong>{formatRupiah(settings.minWithdrawal)}</strong>
+
+          <div className="mt-4 pt-3 border-t border-white/20">
+            <button
+              type="button"
+              onClick={handleOpenWithdrawModal}
+              disabled={!settings.withdrawalOpen || userBalance < settings.minWithdrawal}
+              className="w-full py-2.5 px-4 rounded-xl bg-white text-blue-800 hover:bg-blue-50 font-bold text-xs shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+            >
+              <ArrowDownLeft className="w-4 h-4 text-blue-700" />
+              <span>Tarik Saldo</span>
+            </button>
           </div>
         </div>
 

@@ -73,7 +73,7 @@ export interface SystemSettings {
   dailyGenerateLimit: number;
 }
 
-export type NavigationTab = 'home' | 'storan' | 'riwayat' | 'saldo' | 'akun' | 'admin';
+export type NavigationTab = 'home' | 'storan' | 'riwayat' | 'saldo' | 'akun' | 'admin' | 'rules';
 
 export enum OperationType {
   CREATE = 'create',

@@ -4,13 +4,12 @@ import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { useContactAdmin } from '../context/ContactAdminContext';
 import { formatRupiah } from '../lib/utils';
-import { Submission, OperationType } from '../types';
+import { Submission, OperationType, NavigationTab } from '../types';
 import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { db, handleFirestoreError } from '../lib/firebase';
 import { RulesCard } from '../components/RulesCard';
 import {
   GmailGenerator,
-  checkIsEmailGenerated,
   getSavedGeneratedAccounts,
   GeneratedResultItem,
 } from '../components/GmailGenerator';
@@ -24,12 +23,14 @@ import {
   HelpCircle,
   KeyRound,
   Mail,
-  ExternalLink,
-  Play,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export function StoranView() {
+interface StoranViewProps {
+  onNavigate?: (tab: NavigationTab) => void;
+}
+
+export function StoranView({ onNavigate }: StoranViewProps) {
   const { userProfile, currentUser } = useAuth();
   const { settings } = useSettings();
   const { showToast } = useToast();
@@ -125,17 +126,6 @@ export function StoranView() {
     if (!lower.includes('@gmail.com') && !lower.includes('@googlemail.com')) {
       setInputError('Format harus berupa akun Gmail (mengandung @gmail.com). Contoh: contoh@gmail.com');
       showToast('warning', 'Domain Salah', 'Hanya menerima akun Gmail (@gmail.com).');
-      return;
-    }
-
-    // WAJIB DARI GENERATE: Validasi apakah akun sudah digenerate
-    if (!checkIsEmailGenerated(trimmed, currentUser?.uid)) {
-      setInputError('STOR Gmail wajib generate dlu! Akun ini belum pernah Anda generate melalui sistem.');
-      showToast(
-        'error',
-        'STOR Gmail Wajib Generate Dulu',
-        'Akun yang disetor wajib berasal dari hasil generate pada generator di atas.'
-      );
       return;
     }
 
@@ -276,6 +266,9 @@ export function StoranView() {
             onSelectEmailForStoran={handleSelectFromGenerator}
           />
 
+          {/* Rules & Ketentuan: Di atas form Storan Gmail */}
+          <RulesCard onNavigate={onNavigate} />
+
           {/* Submission Input Box */}
           <div id="submission-form-card" className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs space-y-4">
             {/* Banner Status Pending */}
@@ -303,39 +296,6 @@ export function StoranView() {
               <span className="text-xs font-semibold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100">
                 1 Baris = 1 Akun
               </span>
-            </div>
-
-            {/* Banner Peringatan Wajib: STOR Gmail Wajib Generate Dulu */}
-            <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-300 text-amber-950 flex items-start gap-3 shadow-2xs">
-              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="text-xs space-y-2.5 flex-1">
-                <div>
-                  <strong className="text-amber-900 font-black block text-xs sm:text-sm">
-                    STOR Gmail Wajib Generate Dulu
-                  </strong>
-                  <p className="text-amber-800 leading-relaxed font-medium mt-1">
-                    Sebelum STOR, buat akun Gmail di Google menggunakan nama Gmail yang sudah digenerate dari Generator di atas. Akun yang tidak melalui Generator tidak dapat disetorkan.
-                  </p>
-                </div>
-
-                {/* Link & Tombol Panduan Cara Buat Akun Gmail di Google */}
-                <div className="pt-1 border-t border-amber-200/80 flex flex-col sm:flex-row sm:items-center gap-2">
-                  <span className="text-[11px] font-bold text-amber-900">
-                    Cara buat akun Gmail di google:
-                  </span>
-                  <a
-                    href="https://vt.tiktok.com/ZSqPBXosL/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-rose-500 via-rose-600 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white rounded-xl text-xs font-bold shadow-xs transition transform hover:scale-[1.02] active:scale-95 w-fit"
-                    title="Buka tutorial video TikTok cara membuat akun Gmail di Google"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Tutorial TikTok Buat Akun Gmail</span>
-                    <ExternalLink className="w-3 h-3 opacity-90" />
-                  </a>
-                </div>
-              </div>
             </div>
 
             <form onSubmit={handleOpenConfirm} className="space-y-4">
@@ -407,10 +367,8 @@ export function StoranView() {
           </div>
         </div>
 
-        {/* Sidebar Column: Rules & Info (5 cols) */}
+        {/* Sidebar Column: Info & SLA (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          <RulesCard />
-
           {/* SLA Card */}
           <div className="bg-gradient-to-br from-indigo-50 to-blue-50/60 rounded-2xl p-5 border border-indigo-100 space-y-3">
             <div className="flex items-center gap-2.5 text-indigo-900 font-bold text-sm">

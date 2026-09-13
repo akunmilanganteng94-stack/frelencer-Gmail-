@@ -14,6 +14,8 @@ import {
   LogOut,
   Clock,
   MessageCircle,
+  ClipboardList,
+  History,
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -25,14 +27,6 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
   const { userProfile, isAdmin, logoutUser } = useAuth();
   const { settings } = useSettings();
   const { openContactModal } = useContactAdmin();
-
-  const navItems: { id: NavigationTab; label: string; icon: typeof Home }[] = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'storan', label: 'Storan', icon: Send },
-    { id: 'riwayat', label: 'Riwayat', icon: FileText },
-    { id: 'saldo', label: 'Saldo', icon: Wallet },
-    { id: 'akun', label: 'Akun', icon: UserIcon },
-  ];
 
   return (
     <>
@@ -128,36 +122,141 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
 
       {/* Desktop Sidebar (Rendered on md+ screens in layout) */}
 
-      {/* Mobile Bottom Navigation Bar (< md screens) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        <div className="grid grid-cols-5 gap-1 max-w-md mx-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = currentTab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onSelectTab(item.id)}
-                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all ${
-                  isActive
-                    ? 'text-blue-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900 font-medium'
-                }`}
-              >
-                <div
-                  className={`p-1 rounded-lg transition-transform ${
-                    isActive ? 'bg-blue-50 scale-110' : ''
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                </div>
-                <span className="text-[11px] leading-tight mt-0.5 tracking-tight truncate max-w-full">
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
+      {/* Mobile / Android Responsive Bottom Navigation */}
+      <nav
+        aria-label="Bottom Navigation"
+        className="md:hidden fixed bottom-3 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 select-none"
+      >
+        <div className="bg-white rounded-[32px] shadow-[0_10px_35px_rgba(0,0,0,0.12)] border border-slate-100/90 px-3 py-2 flex items-end justify-between relative">
+          {/* 1. Beranda */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('home')}
+            className="flex-1 flex flex-col items-center justify-center py-1 transition-all group cursor-pointer"
+          >
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                currentTab === 'home'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'bg-transparent text-slate-400 group-hover:text-slate-600'
+              }`}
+            >
+              <Home className="w-5 h-5" />
+            </div>
+            <span
+              className={`text-[11px] leading-none mt-1 tracking-tight ${
+                currentTab === 'home'
+                  ? 'text-blue-600 font-bold'
+                  : 'text-slate-400 font-medium'
+              }`}
+            >
+              Beranda
+            </span>
+          </button>
+
+          {/* 2. Riwayat */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('riwayat')}
+            className="flex-1 flex flex-col items-center justify-center py-1 transition-all group cursor-pointer"
+          >
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                currentTab === 'riwayat'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'bg-transparent text-slate-400 group-hover:text-slate-600'
+              }`}
+            >
+              <History className="w-5 h-5" />
+            </div>
+            <span
+              className={`text-[11px] leading-none mt-1 tracking-tight ${
+                currentTab === 'riwayat'
+                  ? 'text-blue-600 font-bold'
+                  : 'text-slate-400 font-medium'
+              }`}
+            >
+              Riwayat
+            </span>
+          </button>
+
+          {/* 3. STOR (Center Primary Elevated Button with Soft Glow) */}
+          <div className="flex-1 flex flex-col items-center justify-center -mt-7 sm:-mt-8 relative">
+            {/* Soft Glow Effect behind the button */}
+            <div className="absolute top-1 w-14 h-14 rounded-full bg-blue-500/35 blur-md -z-10 pointer-events-none" />
+
+            <button
+              type="button"
+              onClick={() => onSelectTab('storan')}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all transform active:scale-95 cursor-pointer border-4 border-white ${
+                currentTab === 'storan'
+                  ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-500/40 scale-105 ring-2 ring-blue-100'
+                  : 'bg-gradient-to-tr from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 hover:scale-105'
+              }`}
+              title="Setor Akun Gmail"
+            >
+              <Send className="w-6 h-6 text-white translate-x-0.5 -translate-y-0.5 stroke-[2.3]" />
+            </button>
+            <span
+              className={`text-[11px] leading-none mt-1.5 tracking-tight font-black ${
+                currentTab === 'storan' ? 'text-blue-600' : 'text-slate-500'
+              }`}
+            >
+              STOR
+            </span>
+          </div>
+
+          {/* 4. Saldo */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('saldo')}
+            className="flex-1 flex flex-col items-center justify-center py-1 transition-all group cursor-pointer"
+          >
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                currentTab === 'saldo'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'bg-transparent text-slate-400 group-hover:text-slate-600'
+              }`}
+            >
+              <Wallet className="w-5 h-5" />
+            </div>
+            <span
+              className={`text-[11px] leading-none mt-1 tracking-tight ${
+                currentTab === 'saldo'
+                  ? 'text-blue-600 font-bold'
+                  : 'text-slate-400 font-medium'
+              }`}
+            >
+              Saldo
+            </span>
+          </button>
+
+          {/* 5. Profil */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('akun')}
+            className="flex-1 flex flex-col items-center justify-center py-1 transition-all group cursor-pointer"
+          >
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                currentTab === 'akun'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'bg-transparent text-slate-400 group-hover:text-slate-600'
+              }`}
+            >
+              <UserIcon className="w-5 h-5" />
+            </div>
+            <span
+              className={`text-[11px] leading-none mt-1 tracking-tight ${
+                currentTab === 'akun'
+                  ? 'text-blue-600 font-bold'
+                  : 'text-slate-400 font-medium'
+              }`}
+            >
+              Profil
+            </span>
+          </button>
         </div>
       </nav>
     </>
@@ -180,6 +279,7 @@ export function DesktopSidebar({
     { id: 'storan', label: 'Setor Akun Gmail', icon: Send },
     { id: 'riwayat', label: 'Riwayat Storan', icon: FileText },
     { id: 'saldo', label: 'Saldo & Penarikan', icon: Wallet },
+    { id: 'rules', label: 'Rules & Ketentuan', icon: ClipboardList },
     { id: 'akun', label: 'Profil & Akun', icon: UserIcon },
   ];
 

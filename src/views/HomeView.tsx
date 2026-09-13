@@ -68,15 +68,15 @@ export function HomeView({ onNavigate }: HomeViewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Hero Welcome Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-6 sm:p-8 text-white shadow-xl shadow-blue-500/20">
+      {/* Hero Welcome Card (Kompak vertikal, lebar horizontal tetap penuh) */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 px-6 py-4 sm:px-8 sm:py-5 text-white shadow-xl shadow-blue-500/20">
         {/* Background ambient accents */}
-        <div className="absolute -right-12 -top-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -left-12 -bottom-12 w-64 h-64 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -right-12 -top-12 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -left-12 -bottom-12 w-56 h-56 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-blue-100">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3.5 sm:gap-5">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md text-[11px] font-semibold text-blue-100">
               <span
                 className={`w-2 h-2 rounded-full ${
                   settings.storanOpen ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
@@ -85,69 +85,39 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               <span>{settings.storanOpen ? 'Layanan Aktif & Buka' : 'Layanan Sedang Tutup'}</span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">
               Halo, {userProfile?.displayName || 'Freelancer'} 👋
             </h1>
 
-            {/* Saldo Saat Ini dipindahkan di bawah teks Halo */}
-            <div className="pt-2">
-              <div className="text-xs font-bold text-blue-200 uppercase tracking-wider">
+            {/* Saldo Saat Ini di bawah teks Halo */}
+            <div className="pt-0.5">
+              <div className="text-[11px] font-bold text-blue-200 uppercase tracking-wider">
                 Saldo Saat Ini
               </div>
-              <div className="text-3xl sm:text-4xl font-black text-white tracking-tight mt-0.5">
+              <div className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-0.5">
                 {formatRupiah(userProfile?.balance || 0)}
               </div>
             </div>
           </div>
 
           {/* Action CTAs */}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2.5 sm:gap-3">
             <button
+              type="button"
               onClick={() => onNavigate('storan')}
-              className="px-5 py-3 rounded-2xl bg-white text-blue-700 font-bold text-sm shadow-md hover:bg-blue-50 transition flex items-center gap-2"
+              className="px-4 py-2.5 rounded-xl bg-white text-blue-700 font-bold text-xs sm:text-sm shadow-md hover:bg-blue-50 transition flex items-center gap-2 cursor-pointer active:scale-95"
             >
               <Send className="w-4 h-4" />
               <span>Setor Akun Gmail</span>
             </button>
             <button
+              type="button"
               onClick={() => onNavigate('saldo')}
-              className="px-5 py-3 rounded-2xl bg-white/15 hover:bg-white/25 text-white font-bold text-sm backdrop-blur-md transition flex items-center gap-2 border border-white/20"
+              className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs sm:text-sm backdrop-blur-md transition flex items-center gap-2 border border-white/20 cursor-pointer active:scale-95"
             >
               <Wallet className="w-4 h-4" />
               <span>Tarik Saldo</span>
             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Operational Announcement Card */}
-      <div className="rounded-2xl bg-white border border-blue-100 p-5 shadow-xs relative overflow-hidden">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 shadow-xs">
-            <Megaphone className="w-6 h-6" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span>📢 Pengumuman Storan</span>
-              </h2>
-              <span
-                className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                  settings.storanOpen
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-rose-50 text-rose-700 border-rose-200'
-                }`}
-              >
-                {settings.storanOpen ? '● Status: OPEN' : '● Status: CLOSE'}
-              </span>
-            </div>
-            <div className="text-sm text-slate-600 whitespace-pre-line leading-relaxed font-medium">
-              {settings.announcement ||
-                'Storan OPEN setiap Senin–Jumat\nJam operasional: 07.00–17.00 WIB\nSabtu & Minggu storan CLOSE.'}
-            </div>
-            <div className="mt-2 text-xs text-slate-400 font-medium">
-              Jadwal Operasional: {settings.storanSchedule}
-            </div>
           </div>
         </div>
       </div>
@@ -277,6 +247,38 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               {loading ? '-' : totalDitolak}
             </div>
             <div className="text-[11px] text-slate-500 mt-1">Data tidak memenuhi syarat</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Operational Announcement Card (Dipindahkan di atas Gmail terbaru dan di bawah statistik akun kamu) */}
+      <div className="rounded-2xl bg-white border border-blue-100 p-5 shadow-xs relative overflow-hidden">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 shadow-xs">
+            <Megaphone className="w-6 h-6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>📢 Pengumuman Storan</span>
+              </h2>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                  settings.storanOpen
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                }`}
+              >
+                {settings.storanOpen ? '● Status: OPEN' : '● Status: CLOSE'}
+              </span>
+            </div>
+            <div className="text-sm text-slate-600 whitespace-pre-line leading-relaxed font-medium">
+              {settings.announcement ||
+                'Storan OPEN setiap Senin–Jumat\nJam operasional: 07.00–17.00 WIB\nSabtu & Minggu storan CLOSE.'}
+            </div>
+            <div className="mt-2 text-xs text-slate-400 font-medium">
+              Jadwal Operasional: {settings.storanSchedule}
+            </div>
           </div>
         </div>
       </div>

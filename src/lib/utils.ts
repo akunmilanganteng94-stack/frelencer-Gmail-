@@ -37,12 +37,10 @@ export function formatRelativeTime(isoOrDate: string | Date | number): string {
     const d = new Date(isoOrDate);
     const now = new Date();
     const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
-
     if (diffSec < 60) return 'Baru saja';
     if (diffSec < 3600) return `${Math.floor(diffSec / 60)} menit lalu`;
     if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} jam lalu`;
     if (diffSec < 604800) return `${Math.floor(diffSec / 86400)} hari lalu`;
-
     return formatIndonesianDateTime(d);
   } catch {
     return '-';

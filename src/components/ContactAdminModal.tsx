@@ -15,7 +15,6 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
   const [copied, setCopied] = useState(false);
 
   const rawNumber = settings.adminWhatsApp || '6285199219856';
-  // Format for display: +62 851-9921-9856
   const formattedNumber = rawNumber.startsWith('62')
     ? `+62 ${rawNumber.substring(2, 5)}-${rawNumber.substring(5, 9)}-${rawNumber.substring(9)}`
     : rawNumber;
@@ -56,11 +55,9 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
               >
                 <X className="w-5 h-5" />
               </button>
-
               <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-3 shadow-inner">
                 <MessageCircle className="w-7 h-7 text-white" />
               </div>
-
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-black tracking-tight">Hubungi Admin</h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-400/30 border border-emerald-300/40 text-emerald-100">
@@ -80,7 +77,6 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                   <PhoneCall className="w-3.5 h-3.5 text-emerald-600" />
                   <span>WhatsApp Resmi Admin:</span>
                 </div>
-
                 <div className="flex items-center justify-between gap-2 p-3 bg-white rounded-xl border border-emerald-200 shadow-2xs">
                   <div>
                     <div className="font-mono text-base font-black text-slate-900">
@@ -90,7 +86,6 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                       wa.me/{rawNumber}
                     </div>
                   </div>
-
                   <button
                     type="button"
                     onClick={handleCopy}
@@ -119,11 +114,10 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                   <div>
                     <strong className="text-slate-800">Jam Pelayanan:</strong>
                     <p className="text-slate-500 text-[11px] mt-0.5">
-                      Senin–Jumat (07.00–17.00 WIB). Di luar jam tersebut pesan akan dibalas pada jam kerja berikutnya.
+                      Senin - Jumat (07.00 - 17.00 WIB). Di luar jam tersebut pesan akan dibalas pada jam kerja berikutnya.
                     </p>
                   </div>
                 </div>
-
                 <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                   <ShieldCheck className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                   <div>

@@ -24,20 +24,18 @@ interface NavigationProps {
 }
 
 export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
-  const { userProfile, isAdmin, logoutUser } = useAuth();
+  const { userProfile, isAdmin } = useAuth();
   const { settings } = useSettings();
   const { openContactModal } = useContactAdmin();
 
   return (
     <>
-      {/* Top Bar for Desktop & Mobile Header */}
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          {/* Logo & Brand */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => onSelectTab('home')}
-              className="flex items-center gap-2.5 text-left focus:outline-none"
+              className="flex items-center gap-2.5 text-left focus:outline-none cursor-pointer"
             >
               <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-xs border border-blue-100 p-1.5 overflow-hidden">
                 <AZGmailLogo className="w-full h-full" />
@@ -52,7 +50,6 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
               </div>
             </button>
 
-            {/* Operational Status Pill */}
             <div className="hidden sm:flex items-center gap-1.5 ml-3 px-2.5 py-1 rounded-full text-xs font-semibold border shadow-xs transition-colors bg-white">
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -65,23 +62,20 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
             </div>
           </div>
 
-          {/* Right section: Balance, Admin Switch, Profile */}
           <div className="flex items-center gap-2.5 sm:gap-4">
-            {/* Quick Balance Badge */}
             <button
               onClick={() => onSelectTab('saldo')}
-              className="flex items-center gap-2 px-3 py-1.5 bg-blue-50/90 hover:bg-blue-100/80 border border-blue-200/70 rounded-xl text-blue-900 transition text-xs sm:text-sm font-semibold"
+              className="flex items-center gap-2 px-3 py-1.5 bg-blue-50/90 hover:bg-blue-100/80 border border-blue-200/70 rounded-xl text-blue-900 transition text-xs sm:text-sm font-semibold cursor-pointer"
               title="Lihat Rincian Saldo"
             >
               <Wallet className="w-4 h-4 text-blue-600 shrink-0" />
               <span>{formatRupiah(userProfile?.balance || 0)}</span>
             </button>
 
-            {/* Admin Panel Button if admin */}
             {isAdmin && (
               <button
                 onClick={() => onSelectTab('admin')}
-                className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition ${
+                className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition cursor-pointer ${
                   currentTab === 'admin'
                     ? 'bg-indigo-600 text-white shadow-sm'
                     : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
@@ -92,21 +86,19 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
               </button>
             )}
 
-            {/* Contact Admin WA Button */}
             <button
               type="button"
               onClick={openContactModal}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl transition text-xs font-bold"
-              title="Hubungi Admin WhatsApp (wa.me/6285199219856)"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl transition text-xs font-bold cursor-pointer"
+              title="Hubungi Admin WhatsApp"
             >
               <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
               <span>Hubungi Admin</span>
             </button>
 
-            {/* User Profile Avatar / Quick Link */}
             <button
               onClick={() => onSelectTab('akun')}
-              className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-xl hover:bg-slate-100 transition text-slate-700"
+              className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-xl hover:bg-slate-100 transition text-slate-700 cursor-pointer"
               title="Pengaturan Akun"
             >
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
@@ -120,15 +112,12 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
         </div>
       </header>
 
-      {/* Desktop Sidebar (Rendered on md+ screens in layout) */}
-
       {/* Mobile / Android Responsive Bottom Navigation */}
       <nav
         aria-label="Bottom Navigation"
         className="md:hidden fixed bottom-3 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 select-none"
       >
         <div className="bg-white rounded-[32px] shadow-[0_10px_35px_rgba(0,0,0,0.12)] border border-slate-100/90 px-3 py-2 flex items-end justify-between relative">
-          {/* 1. Beranda */}
           <button
             type="button"
             onClick={() => onSelectTab('home')}
@@ -154,7 +143,6 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
             </span>
           </button>
 
-          {/* 2. Riwayat */}
           <button
             type="button"
             onClick={() => onSelectTab('riwayat')}
@@ -180,11 +168,9 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
             </span>
           </button>
 
-          {/* 3. STOR (Center Primary Elevated Button with Soft Glow) */}
+          {/* Center Elevated Button */}
           <div className="flex-1 flex flex-col items-center justify-center -mt-7 sm:-mt-8 relative">
-            {/* Soft Glow Effect behind the button */}
             <div className="absolute top-1 w-14 h-14 rounded-full bg-blue-500/35 blur-md -z-10 pointer-events-none" />
-
             <button
               type="button"
               onClick={() => onSelectTab('storan')}
@@ -206,7 +192,6 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
             </span>
           </div>
 
-          {/* 4. Saldo */}
           <button
             type="button"
             onClick={() => onSelectTab('saldo')}
@@ -232,7 +217,6 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
             </span>
           </button>
 
-          {/* 5. Profil */}
           <button
             type="button"
             onClick={() => onSelectTab('akun')}
@@ -274,7 +258,7 @@ export function DesktopSidebar({
   const { settings } = useSettings();
   const { openContactModal } = useContactAdmin();
 
-  const mainItems: { id: NavigationTab; label: string; icon: typeof Home; badge?: string }[] = [
+  const mainItems: { id: NavigationTab; label: string; icon: typeof Home }[] = [
     { id: 'home', label: 'Home Dashboard', icon: Home },
     { id: 'storan', label: 'Setor Akun Gmail', icon: Send },
     { id: 'riwayat', label: 'Riwayat Storan', icon: FileText },
@@ -287,7 +271,6 @@ export function DesktopSidebar({
     <aside className="hidden md:flex md:w-64 flex-col fixed inset-y-0 left-0 pt-16 bg-white border-r border-slate-200/90 z-20">
       <div className="flex-1 flex flex-col justify-between p-4 overflow-y-auto">
         <div className="space-y-6">
-          {/* User quick card */}
           <div className="p-3.5 rounded-2xl bg-gradient-to-br from-blue-50/70 via-indigo-50/40 to-white border border-blue-100/80 shadow-xs">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
@@ -302,7 +285,6 @@ export function DesktopSidebar({
                 </div>
               </div>
             </div>
-
             <div className="mt-3 pt-3 border-t border-blue-100 flex items-center justify-between text-xs">
               <span className="text-slate-500 font-medium">Saldo Aktif</span>
               <span className="font-extrabold text-blue-700">
@@ -311,7 +293,6 @@ export function DesktopSidebar({
             </div>
           </div>
 
-          {/* Navigation Links */}
           <div className="space-y-1">
             <div className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
               Menu Utama
@@ -323,7 +304,7 @@ export function DesktopSidebar({
                 <button
                   key={item.id}
                   onClick={() => onSelectTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition cursor-pointer ${
                     isActive
                       ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
@@ -336,7 +317,6 @@ export function DesktopSidebar({
             })}
           </div>
 
-          {/* Admin Menu section if admin */}
           {isAdmin && (
             <div className="space-y-1 pt-2">
               <div className="px-3 text-[11px] font-bold text-indigo-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -345,7 +325,7 @@ export function DesktopSidebar({
               </div>
               <button
                 onClick={() => onSelectTab('admin')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition cursor-pointer ${
                   currentTab === 'admin'
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
                     : 'text-indigo-800 hover:bg-indigo-50/80 border border-indigo-100'
@@ -361,26 +341,22 @@ export function DesktopSidebar({
           )}
         </div>
 
-        {/* Bottom Sidebar Info & Logout */}
         <div className="pt-4 border-t border-slate-200 space-y-2.5">
-          {/* Hubungi Admin Button */}
           <button
             type="button"
             onClick={openContactModal}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer"
           >
             <MessageCircle className="w-4 h-4 text-emerald-600" />
             <span>Hubungi Admin WA</span>
           </button>
-
           <div className="flex items-center gap-2 px-2 text-xs text-slate-500">
             <Clock className="w-3.5 h-3.5 text-blue-600" />
             <span className="truncate">{settings.storanSchedule.split('(')[0]}</span>
           </div>
-
           <button
             onClick={() => logoutUser()}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50 transition"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50 transition cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Keluar Akun</span>

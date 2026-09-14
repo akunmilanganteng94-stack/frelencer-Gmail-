@@ -70,7 +70,7 @@ export function ChannelPopup({ isOpen: controlledIsOpen, onClose }: ChannelPopup
               <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center mb-3 shadow-inner">
                 <Megaphone className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-bold tracking-tight">📢 Saluran Informasi Resmi</h3>
+              <h3 className="text-xl font-bold tracking-tight">Saluran Informasi Resmi</h3>
               <p className="text-blue-100 text-sm mt-1">Komunitas Freelancer Storan WhatsApp</p>
             </div>
 

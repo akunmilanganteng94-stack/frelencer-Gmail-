@@ -56,7 +56,6 @@ export function useGmailStock() {
   useEffect(() => {
     const stockColRef = collection(db, 'gmail_stock');
     const q = query(stockColRef, orderBy('addedAt', 'desc'));
-
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -73,8 +72,6 @@ export function useGmailStock() {
             claimedAt: data.claimedAt || undefined,
           });
         });
-
-        // Don't auto-seed so generator stock starts empty as requested by user
         setStock(items);
         setLoading(false);
       },
@@ -83,7 +80,6 @@ export function useGmailStock() {
         setLoading(false);
       }
     );
-
     return () => unsubscribe();
   }, []);
 
@@ -94,7 +90,7 @@ export function useGmailStock() {
         const newDocRef = doc(collection(db, 'gmail_stock'));
         batch.set(newDocRef, {
           email,
-          password: '', // will fallback to system password
+          password: '',
           status: 'available',
           addedAt: new Date().toISOString(),
         });
@@ -108,20 +104,16 @@ export function useGmailStock() {
   const availableStock = stock.filter((item) => item.status === 'available');
   const usedStock = stock.filter((item) => item.status === 'used');
 
-  // Add single account
   const addSingleAccount = async (email: string, password?: string) => {
     const cleanEmail = email.trim();
     if (!cleanEmail) throw new Error('Email tidak boleh kosong.');
     if (!cleanEmail.includes('@gmail.com') && !cleanEmail.includes('@googlemail.com')) {
       throw new Error('Alamat harus berupa akun Gmail (@gmail.com).');
     }
-
-    // Check duplicate
     const exists = stock.some((s) => s.email.toLowerCase() === cleanEmail.toLowerCase());
     if (exists) {
       throw new Error(`Email ${cleanEmail} sudah ada di dalam stok.`);
     }
-
     const newDocRef = doc(collection(db, 'gmail_stock'));
     await setDoc(newDocRef, {
       email: cleanEmail,
@@ -131,21 +123,16 @@ export function useGmailStock() {
     });
   };
 
-  // Add bulk accounts (from multi-line textarea)
   const addBulkAccounts = async (rawText: string, defaultPassword?: string): Promise<number> => {
     const lines = rawText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
     if (lines.length === 0) return 0;
-
     const existingEmails = new Set(stock.map((s) => s.email.toLowerCase()));
     let addedCount = 0;
     const batch = writeBatch(db);
-
     for (const line of lines) {
-      // Support line formats: email@gmail.com OR email@gmail.com|password
       const parts = line.split('|');
       const email = parts[0].trim();
       const customPass = parts[1] ? parts[1].trim() : defaultPassword?.trim() || '';
-
       if (
         (email.includes('@gmail.com') || email.includes('@googlemail.com')) &&
         !existingEmails.has(email.toLowerCase())
@@ -161,22 +148,18 @@ export function useGmailStock() {
         addedCount++;
       }
     }
-
     if (addedCount > 0) {
       await batch.commit();
     }
     return addedCount;
   };
 
-  // Update existing account
   const updateAccount = async (id: string, updates: Partial<GmailStockItem>) => {
     const docRef = doc(db, 'gmail_stock', id);
     await updateDoc(docRef, updates);
   };
 
-  // Delete single account
   const deleteAccount = async (id: string) => {
-    // Optimistic removal from local state
     setStock((prev) => prev.filter((item) => item.id !== id));
     try {
       const docRef = doc(db, 'gmail_stock', id);
@@ -187,15 +170,12 @@ export function useGmailStock() {
     }
   };
 
-  // Clear used accounts
   const clearUsedAccounts = async () => {
-    // Optimistic removal from local state
     setStock((prev) => prev.filter((item) => item.status !== 'used'));
     try {
       const colRef = collection(db, 'gmail_stock');
       const q = query(colRef, where('status', '==', 'used'));
       const snap = await getDocs(q);
-
       if (!snap.empty) {
         const docs = snap.docs;
         for (let i = 0; i < docs.length; i += 400) {
@@ -211,18 +191,15 @@ export function useGmailStock() {
     }
   };
 
-  // Claim/generate accounts for user (takes N accounts from available)
   const claimAccounts = useCallback(
     async (count: number, userId?: string): Promise<GmailStockItem[]> => {
       const currentAvailable = stock.filter((s) => s.status === 'available');
       if (currentAvailable.length === 0) {
         throw new Error('Stok akun Gmail admin sedang habis. Silakan hubungi admin untuk restock.');
       }
-
       const takeCount = Math.min(count, currentAvailable.length);
       const chosen = currentAvailable.slice(0, takeCount);
 
-      // Mark as used in Firestore so they are reserved/used
       try {
         const batch = writeBatch(db);
         const timestamp = new Date().toISOString();
@@ -238,20 +215,17 @@ export function useGmailStock() {
       } catch (err) {
         console.warn('Failed to mark claimed accounts in batch:', err);
       }
-
       return chosen;
     },
     [stock]
   );
 
   const clearAllStock = async () => {
-    // Optimistic clearance of local state
     setStock([]);
     try {
       const colRef = collection(db, 'gmail_stock');
       const snap = await getDocs(colRef);
       if (snap.empty) return;
-
       const docs = snap.docs;
       for (let i = 0; i < docs.length; i += 400) {
         const chunk = docs.slice(i, i + 400);

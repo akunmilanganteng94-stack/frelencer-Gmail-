@@ -4,7 +4,6 @@ import { db, handleFirestoreError } from '../lib/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 const DEFAULT_GMAIL_PASSWORD = 'sgsg1122';
-
 const DEFAULT_RULES = [
   'Password akun Gmail WAJIB menggunakan: sgsg1122 (atau sesuai konfigurasi aktif dari Admin).',
   'Akun Gmail harus fresh, aktif, dan dapat login tanpa terhalang 2FA atau verifikasi nomor yang terkunci.',
@@ -22,11 +21,14 @@ const DEFAULT_SETTINGS: SystemSettings = {
   withdrawalOpen: true,
   minWithdrawal: 4000,
   rules: DEFAULT_RULES,
-  announcement: 'Storan Akun Gmail OPEN setiap Senin - Jumat!\nJam operasional: 07.00 - 17.00 WIB\nPassword wajib Gmail: sgsg1122\nPastikan akun fresh dan tidak mengaktifkan 2FA.',
+  announcement:
+    'Storan Akun Gmail OPEN setiap Senin - Jumat!\nJam operasional: 07.00 - 17.00 WIB\nPassword wajib Gmail: sgsg1122\nPastikan akun fresh dan tidak mengaktifkan 2FA.',
   gmailDefaultPassword: DEFAULT_GMAIL_PASSWORD,
   generatorOpen: true,
   adminWhatsApp: '6285199219856',
   dailyGenerateLimit: 10,
+  storanClosedReason:
+    'Admin sedang menutup penerimaan akun baru. Storan aktif setiap Senin - Jumat. Silakan kembali pada jam operasional.',
 };
 
 interface SettingsContextType {
@@ -58,6 +60,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
               typeof data.dailyGenerateLimit === 'number' && data.dailyGenerateLimit > 0
                 ? data.dailyGenerateLimit
                 : 10,
+            storanClosedReason:
+              data.storanClosedReason !== undefined
+                ? data.storanClosedReason
+                : DEFAULT_SETTINGS.storanClosedReason,
             rules: Array.isArray(data.rules) && data.rules.length > 0 ? data.rules : DEFAULT_RULES,
           });
         } else {

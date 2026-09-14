@@ -7,16 +7,13 @@ import {
   Copy,
   Check,
   Search,
-  Filter,
   CheckCircle2,
   Clock,
   XCircle,
   KeyRound,
   Download,
   ListCheck,
-  Send,
   Layers,
-  Sparkles,
 } from 'lucide-react';
 
 interface AdminAllStorTabProps {
@@ -41,13 +38,11 @@ export function AdminAllStorTab({
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedMode, setCopiedMode] = useState<string | null>(null);
 
-  // Helper to get clean email
   const getCleanEmail = (content: string) => {
     if (!content) return '';
     return content.split('|')[0].trim();
   };
 
-  // Filtered submissions
   const filteredList = useMemo(() => {
     return submissions.filter((sub) => {
       const matchesStatus = filterStatus === 'All' || sub.status === filterStatus;
@@ -62,12 +57,10 @@ export function AdminAllStorTab({
     });
   }, [submissions, filterStatus, searchQuery]);
 
-  // Statistics
   const pendingList = useMemo(() => submissions.filter((s) => s.status === 'Pending'), [submissions]);
   const acceptedList = useMemo(() => submissions.filter((s) => s.status === 'Diterima'), [submissions]);
   const rejectedList = useMemo(() => submissions.filter((s) => s.status === 'Ditolak'), [submissions]);
 
-  // Copy helpers
   const handleCopyEmails = (mode: 'pending_only' | 'current_filter' | 'all_lines' | 'with_details') => {
     let targetList: Submission[] = [];
     if (mode === 'pending_only') {
@@ -94,7 +87,6 @@ export function AdminAllStorTab({
         )
         .join('\n');
     } else {
-      // 1 line 1 email standard format as requested by user
       textToCopy = targetList.map((s) => getCleanEmail(s.dataContent)).join('\n');
     }
 
@@ -180,7 +172,6 @@ export function AdminAllStorTab({
 
       {/* Control Bar: Salin Semua STOR-an + Filter & Search */}
       <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
-        {/* Copy Actions Toolbar ("bisa salin semua STOR an user") */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
@@ -197,7 +188,6 @@ export function AdminAllStorTab({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Salin Pending Saja */}
             <button
               type="button"
               onClick={() => handleCopyEmails('pending_only')}
@@ -215,7 +205,6 @@ export function AdminAllStorTab({
               <span>Salin Pending ({pendingList.length})</span>
             </button>
 
-            {/* Salin Semua yang Tampil */}
             <button
               type="button"
               onClick={() => handleCopyEmails('current_filter')}
@@ -233,7 +222,6 @@ export function AdminAllStorTab({
               <span>Salin Semua ({filteredList.length} Akun)</span>
             </button>
 
-            {/* Salin Format Lengkap */}
             <button
               type="button"
               onClick={() => handleCopyEmails('with_details')}
@@ -248,7 +236,6 @@ export function AdminAllStorTab({
 
         {/* Search & Status Filters */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-1">
-          {/* Status Filter Tabs */}
           <div className="flex flex-wrap gap-1.5 p-1 bg-slate-100 rounded-xl">
             {[
               { id: 'All', label: `Semua (${submissions.length})` },
@@ -271,7 +258,6 @@ export function AdminAllStorTab({
             ))}
           </div>
 
-          {/* Search Box */}
           <div className="relative w-full md:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
             <input

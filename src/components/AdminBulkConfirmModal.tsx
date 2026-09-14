@@ -1,14 +1,11 @@
 import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   CheckCircle2,
-  XCircle,
-  Copy,
   Check,
   AlertCircle,
-  Clock,
-  Layers,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { Submission } from '../types';
 import { formatRupiah } from '../lib/utils';
@@ -34,7 +31,7 @@ export function AdminBulkConfirmModal({
   const [processedCount, setProcessedCount] = useState(0);
   const [processedTotalReward, setProcessedTotalReward] = useState(0);
 
-  // Extract clean email from submission content (in case it is formatted as email|password or has whitespace)
+  // Extract clean email from submission content
   const getCleanEmailFromSubmission = (dataContent: string): string => {
     if (!dataContent) return '';
     const parts = dataContent.split('|');
@@ -47,11 +44,9 @@ export function AdminBulkConfirmModal({
     const lines = inputText.split('\n');
     const result: string[] = [];
     const seen = new Set<string>();
-
     for (const rawLine of lines) {
       const line = rawLine.trim();
       if (!line) continue;
-      // If formatted as email|pass or email:pass, take first part
       const email = line.split(/[|:,\s]/)[0].trim().toLowerCase();
       if (email && email.includes('@') && !seen.has(email)) {
         seen.add(email);
@@ -63,10 +58,8 @@ export function AdminBulkConfirmModal({
 
   // Match parsed emails against submissions
   const matchAnalysis = useMemo(() => {
-    // Map of cleanEmail -> Submission[] (could be multiple if user re-submitted, prioritize Pending)
     const pendingSubsMap = new Map<string, Submission>();
     const acceptedSubsMap = new Map<string, Submission>();
-    const otherSubsMap = new Map<string, Submission>();
 
     for (const sub of submissions) {
       const cleanEmail = getCleanEmailFromSubmission(sub.dataContent);
@@ -77,10 +70,6 @@ export function AdminBulkConfirmModal({
       } else if (sub.status === 'Diterima') {
         if (!acceptedSubsMap.has(cleanEmail)) {
           acceptedSubsMap.set(cleanEmail, sub);
-        }
-      } else {
-        if (!otherSubsMap.has(cleanEmail)) {
-          otherSubsMap.set(cleanEmail, sub);
         }
       }
     }
@@ -131,7 +120,6 @@ export function AdminBulkConfirmModal({
     let totalRewardPaid = 0;
 
     try {
-      // Process each ready submission sequentially or in small transactions to update Firestore
       for (const item of matchAnalysis.readyToAccept) {
         const sub = item.submission;
         const subRef = doc(db, 'submissions', sub.id);
@@ -140,7 +128,6 @@ export function AdminBulkConfirmModal({
         await runTransaction(db, async (transaction) => {
           const subDoc = await transaction.get(subRef);
           if (!subDoc.exists()) return;
-
           const userDoc = await transaction.get(userRef);
           if (!userDoc.exists()) return;
 
@@ -149,7 +136,6 @@ export function AdminBulkConfirmModal({
           const currentEarned = userData.totalEarned || 0;
           const reward = sub.rewardAmount || 3000;
 
-          // Update submission status
           transaction.update(subRef, {
             status: 'Diterima',
             reviewedAt: new Date().toISOString(),
@@ -157,7 +143,6 @@ export function AdminBulkConfirmModal({
             adminNotes: 'Diterima via konfirmasi bulk admin',
           });
 
-          // Credit balance & totalEarned to user
           transaction.update(userRef, {
             balance: currentBalance + reward,
             totalEarned: currentEarned + reward,
@@ -209,7 +194,7 @@ export function AdminBulkConfirmModal({
             className="absolute top-4 right-4 text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition cursor-pointer"
             aria-label="Tutup"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center shadow-inner">
@@ -264,7 +249,6 @@ export function AdminBulkConfirmModal({
                 />
               </div>
 
-              {/* Sample paste helper buttons */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
                 <span className="text-slate-400 text-[11px]">
                   Format didukung: <code>email@gmail.com</code> atau <code>email@gmail.com|pass</code>
@@ -284,7 +268,6 @@ export function AdminBulkConfirmModal({
 
           {step === 'preview' && (
             <div className="space-y-4">
-              {/* Summary Cards */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
                   <div className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
@@ -308,7 +291,7 @@ export function AdminBulkConfirmModal({
                     {matchAnalysis.alreadyAccepted.length}
                   </div>
                   <div className="text-[10px] text-blue-600 mt-0.5">
-                    Tidak akan diduplikasi
+                    Tidak diduplikasi
                   </div>
                 </div>
 
@@ -326,7 +309,6 @@ export function AdminBulkConfirmModal({
                 </div>
               </div>
 
-              {/* Ready to accept preview list */}
               {matchAnalysis.readyToAccept.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-xs font-black text-slate-900 flex items-center justify-between">
@@ -358,7 +340,6 @@ export function AdminBulkConfirmModal({
                 </div>
               )}
 
-              {/* Not Found list warning */}
               {matchAnalysis.notFound.length > 0 && (
                 <div className="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs space-y-1.5">
                   <div className="font-bold text-amber-950 flex items-center gap-1.5">
@@ -389,7 +370,6 @@ export function AdminBulkConfirmModal({
                   Sebanyak <strong>{processedCount} akun Gmail</strong> telah disetujui. Total saldo sebesar <strong>{formatRupiah(processedTotalReward)}</strong> telah langsung ditambahkan ke masing-masing akun pengguna.
                 </p>
               </div>
-
               <div className="pt-3 flex justify-center gap-2">
                 <button
                   type="button"

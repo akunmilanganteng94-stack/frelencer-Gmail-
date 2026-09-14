@@ -50,7 +50,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="absolute top-4 right-4 text-white/80 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition"
+                className="absolute top-4 right-4 text-white/80 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition cursor-pointer"
                 aria-label="Tutup"
               >
                 <X className="w-5 h-5" />
@@ -89,7 +89,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-bold border border-slate-200 transition flex items-center gap-1.5 shrink-0"
+                    className="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-bold border border-slate-200 transition flex items-center gap-1.5 shrink-0 cursor-pointer"
                     title="Salin Nomor"
                   >
                     {copied ? (
@@ -134,7 +134,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                 <button
                   type="button"
                   onClick={handleOpenWhatsApp}
-                  className="flex-1 py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl text-sm shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2"
+                  className="flex-1 py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl text-sm shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span>Chat WhatsApp Sekarang</span>
@@ -143,7 +143,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                 <button
                   type="button"
                   onClick={onClose}
-                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition"
+                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition cursor-pointer"
                 >
                   Tutup
                 </button>
@@ -163,16 +163,13 @@ interface ContactAdminFloatingButtonProps {
 }
 
 export function ContactAdminFloatingButton({
-  onClick,
-  onClickAdmin,
   onClickChannel,
 }: ContactAdminFloatingButtonProps) {
   const [showChannelBanner, setShowChannelBanner] = useState(true);
-  const handleAdminClick = onClickAdmin || onClick || (() => {});
 
   return (
     <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 flex flex-col items-end gap-2.5 pointer-events-none">
-      {/* Pop up badge / speech bubble saluran informasi di ATAS Admin WA */}
+      {/* Pop up badge / speech bubble saluran informasi */}
       <AnimatePresence>
         {showChannelBanner && (
           <motion.div
@@ -200,7 +197,7 @@ export function ContactAdminFloatingButton({
             <button
               type="button"
               onClick={() => setShowChannelBanner(false)}
-              className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition"
+              className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
               title="Tutup pemberitahuan"
             >
               <X className="w-3.5 h-3.5" />
@@ -209,27 +206,15 @@ export function ContactAdminFloatingButton({
         )}
       </AnimatePresence>
 
-      {/* Pop-up Button Saluran Informasi di ATAS Admin WA */}
+      {/* Pop-up Button Saluran Informasi */}
       <button
         type="button"
         onClick={onClickChannel}
-        className="pointer-events-auto px-3.5 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full shadow-lg shadow-blue-500/25 flex items-center gap-2 font-bold text-xs sm:text-sm transition transform hover:scale-105 active:scale-95 border border-white/20"
+        className="pointer-events-auto px-3.5 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full shadow-lg shadow-blue-500/25 flex items-center gap-2 font-bold text-xs sm:text-sm transition transform hover:scale-105 active:scale-95 border border-white/20 cursor-pointer"
         title="Buka Saluran Informasi WhatsApp Resmi"
       >
         <Megaphone className="w-4 h-4 animate-bounce shrink-0" />
         <span>Saluran Informasi</span>
-      </button>
-
-      {/* Tombol Admin WA */}
-      <button
-        type="button"
-        onClick={handleAdminClick}
-        className="pointer-events-auto px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-full shadow-lg shadow-emerald-600/30 flex items-center gap-2.5 font-bold text-xs sm:text-sm transition transform hover:scale-105 active:scale-95 border border-white/20"
-        title="Hubungi Admin WhatsApp"
-      >
-        <MessageCircle className="w-5 h-5 animate-pulse shrink-0" />
-        <span className="hidden sm:inline">Hubungi Admin</span>
-        <span className="sm:hidden">Admin WA</span>
       </button>
     </div>
   );

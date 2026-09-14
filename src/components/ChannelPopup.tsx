@@ -62,7 +62,7 @@ export function ChannelPopup({ isOpen: controlledIsOpen, onClose }: ChannelPopup
               <button
                 type="button"
                 onClick={handleDismiss}
-                className="absolute top-4 right-4 text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition"
+                className="absolute top-4 right-4 text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition cursor-pointer"
                 aria-label="Tutup"
               >
                 <X className="w-5 h-5" />
@@ -90,7 +90,7 @@ export function ChannelPopup({ isOpen: controlledIsOpen, onClose }: ChannelPopup
                 <button
                   type="button"
                   onClick={handleJoin}
-                  className="flex-1 py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl text-sm shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl text-sm shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Gabung Sekarang</span>
                   <ExternalLink className="w-4 h-4" />
@@ -98,7 +98,7 @@ export function ChannelPopup({ isOpen: controlledIsOpen, onClose }: ChannelPopup
                 <button
                   type="button"
                   onClick={handleDismiss}
-                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition"
+                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition cursor-pointer"
                 >
                   Nanti
                 </button>

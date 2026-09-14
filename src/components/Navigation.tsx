@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   LogOut,
   Clock,
-  MessageCircle,
   ClipboardList,
   History,
 } from 'lucide-react';
@@ -26,7 +25,6 @@ interface NavigationProps {
 export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
   const { userProfile, isAdmin } = useAuth();
   const { settings } = useSettings();
-  const { openContactModal } = useContactAdmin();
 
   return (
     <>
@@ -49,7 +47,6 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
                 </div>
               </div>
             </button>
-
             <div className="hidden sm:flex items-center gap-1.5 ml-3 px-2.5 py-1 rounded-full text-xs font-semibold border shadow-xs transition-colors bg-white">
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -87,19 +84,9 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
             )}
 
             <button
-              type="button"
-              onClick={openContactModal}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl transition text-xs font-bold cursor-pointer"
-              title="Hubungi Admin WhatsApp"
-            >
-              <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Hubungi Admin</span>
-            </button>
-
-            <button
               onClick={() => onSelectTab('akun')}
               className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-xl hover:bg-slate-100 transition text-slate-700 cursor-pointer"
-              title="Pengaturan Akun"
+              title="Pengaturan Akun & Profil"
             >
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                 {userProfile?.displayName ? userProfile.displayName.charAt(0).toUpperCase() : 'U'}
@@ -256,7 +243,6 @@ export function DesktopSidebar({
 }) {
   const { userProfile, isAdmin, logoutUser } = useAuth();
   const { settings } = useSettings();
-  const { openContactModal } = useContactAdmin();
 
   const mainItems: { id: NavigationTab; label: string; icon: typeof Home }[] = [
     { id: 'home', label: 'Home Dashboard', icon: Home },
@@ -342,18 +328,11 @@ export function DesktopSidebar({
         </div>
 
         <div className="pt-4 border-t border-slate-200 space-y-2.5">
-          <button
-            type="button"
-            onClick={openContactModal}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer"
-          >
-            <MessageCircle className="w-4 h-4 text-emerald-600" />
-            <span>Hubungi Admin WA</span>
-          </button>
           <div className="flex items-center gap-2 px-2 text-xs text-slate-500">
             <Clock className="w-3.5 h-3.5 text-blue-600" />
             <span className="truncate">{settings.storanSchedule.split('(')[0]}</span>
           </div>
+
           <button
             onClick={() => logoutUser()}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50 transition cursor-pointer"

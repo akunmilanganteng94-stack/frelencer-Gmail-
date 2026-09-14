@@ -3,7 +3,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { useGmailStock } from '../hooks/useGmailStock';
 import { useAuth } from '../context/AuthContext';
-import { GmailLogo, AZGmailLogo } from './GmailLogo';
+import { AZGmailLogo } from './GmailLogo';
 import {
   Copy,
   Check,
@@ -59,6 +59,7 @@ export function checkIsEmailGenerated(email: string, userId?: string): boolean {
       }
     }
   } catch {}
+
   return false;
 }
 
@@ -108,6 +109,7 @@ export function GmailGenerator({
   const { showToast } = useToast();
   const { currentUser } = useAuth();
   const { availableStock, claimAccounts } = useGmailStock();
+
   const [count, setCount] = useState<number>(1);
   const [generating, setGenerating] = useState<boolean>(false);
   const [results, setResults] = useState<GeneratedResultItem[]>([]);
@@ -310,7 +312,7 @@ export function GmailGenerator({
           <button
             type="button"
             onClick={onOpenContactAdmin}
-            className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1.5"
+            className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1.5 cursor-pointer"
           >
             <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
             <span>Tanya Admin via WhatsApp</span>
@@ -466,7 +468,7 @@ export function GmailGenerator({
             <button
               type="button"
               onClick={onOpenContactAdmin}
-              className="w-full sm:w-auto py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-xl text-xs border border-emerald-200 transition flex items-center justify-center gap-1.5 shrink-0"
+              className="w-full sm:w-auto py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-xl text-xs border border-emerald-200 transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
             >
               <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
               <span>Minta Admin Restock</span>
@@ -499,7 +501,7 @@ export function GmailGenerator({
                 <button
                   type="button"
                   onClick={() => handleCopyAll('email_only')}
-                  className="px-2.5 py-1 bg-white hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 transition flex items-center gap-1 shadow-2xs"
+                  className="px-2.5 py-1 bg-white hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 transition flex items-center gap-1 shadow-2xs cursor-pointer"
                 >
                   <Copy className="w-3 h-3" />
                   <span>Salin Semua Email</span>
@@ -507,7 +509,7 @@ export function GmailGenerator({
                 <button
                   type="button"
                   onClick={() => handleCopyAll('email_pass')}
-                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 shadow-2xs"
+                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer"
                 >
                   <Copy className="w-3 h-3" />
                   <span>Salin (Email|PW)</span>
@@ -515,7 +517,7 @@ export function GmailGenerator({
                 <button
                   type="button"
                   onClick={handleClearResults}
-                  className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                  className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                   title="Hapus / Kosongkan Daftar Akun"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -532,6 +534,7 @@ export function GmailGenerator({
                 const isStored = submittedEmails.some(
                   (submitted) => submitted.trim().toLowerCase() === item.email.trim().toLowerCase()
                 );
+
                 return (
                   <div
                     key={item.id || idx}
@@ -585,7 +588,7 @@ export function GmailGenerator({
                         <button
                           type="button"
                           onClick={() => onSelectEmailForStoran(item.email)}
-                          className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 shadow-2xs"
+                          className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer"
                           title="Gunakan akun ini untuk stor ke form di bawah"
                         >
                           <Send className="w-3 h-3" />
@@ -595,7 +598,7 @@ export function GmailGenerator({
                       <button
                         type="button"
                         onClick={() => handleCopyText(item.email, item.id, 'Email')}
-                        className="px-2.5 py-1.5 bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-xs font-bold rounded-lg border border-slate-200 transition flex items-center gap-1"
+                        className="px-2.5 py-1.5 bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-xs font-bold rounded-lg border border-slate-200 transition flex items-center gap-1 cursor-pointer"
                         title="Salin Alamat Email"
                       >
                         {isEmailCopied ? (
@@ -608,7 +611,7 @@ export function GmailGenerator({
                       <button
                         type="button"
                         onClick={() => handleCopyText(item.password, item.id, 'Password')}
-                        className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 transition flex items-center gap-1"
+                        className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 transition flex items-center gap-1 cursor-pointer"
                         title="Salin Password"
                       >
                         {isPwCopied ? (

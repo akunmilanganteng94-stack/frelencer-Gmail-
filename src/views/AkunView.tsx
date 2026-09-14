@@ -15,23 +15,19 @@ import {
   ShieldCheck,
   Check,
   Copy,
-  Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => void }) {
   const { userProfile, currentUser, isAdmin, logoutUser, updateProfileName, changePassword } = useAuth();
   const { showToast } = useToast();
-
   const [copiedUid, setCopiedUid] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
-  // Edit Name state
   const [nameInput, setNameInput] = useState(userProfile?.displayName || '');
   const [savingName, setSavingName] = useState(false);
 
-  // Change Password state
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
@@ -49,7 +45,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   const handleSaveName = async (e: FormEvent) => {
     e.preventDefault();
     if (!nameInput.trim()) return;
-
     setSavingName(true);
     try {
       await updateProfileName(nameInput);
@@ -65,7 +60,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   const handleChangePassword = async (e: FormEvent) => {
     e.preventDefault();
     setPassError('');
-
     if (newPassword.length < 6) {
       setPassError('Kata sandi minimal 6 karakter.');
       return;
@@ -74,7 +68,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
       setPassError('Konfirmasi kata sandi tidak cocok.');
       return;
     }
-
     setSavingPassword(true);
     try {
       await changePassword(newPassword);
@@ -93,7 +86,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
           <User className="w-7 h-7 text-blue-600" />
@@ -104,7 +96,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         </p>
       </div>
 
-      {/* Main Profile Card */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
@@ -135,20 +126,19 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                       : 'bg-rose-50 text-rose-700 border border-rose-200'
                   }`}
                 >
-                  ● Akun {userProfile?.status === 'active' ? 'Aktif' : 'Dibatasi'}
+                  Akun {userProfile?.status === 'active' ? 'Aktif' : 'Dibatasi'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Edit Profile Action */}
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => {
                 setNameInput(userProfile?.displayName || '');
                 setShowEditModal(true);
               }}
-              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-2"
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-2 cursor-pointer"
             >
               <Edit2 className="w-3.5 h-3.5" />
               <span>Edit Profil</span>
@@ -160,7 +150,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                 setPassError('');
                 setShowPasswordModal(true);
               }}
-              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-2"
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-2 cursor-pointer"
             >
               <Lock className="w-3.5 h-3.5" />
               <span>Ubah Password</span>
@@ -168,9 +158,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
           </div>
         </div>
 
-        {/* Detailed Info List */}
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-slate-100">
-          {/* Email */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-white text-blue-600 flex items-center justify-center shadow-xs">
               <Mail className="w-5 h-5" />
@@ -183,7 +171,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
             </div>
           </div>
 
-          {/* UID */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center justify-between gap-3.5">
             <div className="flex items-center gap-3.5 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-white text-indigo-600 flex items-center justify-center shadow-xs">
@@ -198,14 +185,13 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
             </div>
             <button
               onClick={copyUid}
-              className="p-2 rounded-xl hover:bg-slate-200 text-slate-500 transition"
+              className="p-2 rounded-xl hover:bg-slate-200 text-slate-500 transition cursor-pointer"
               title="Salin UID"
             >
               {copiedUid ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
             </button>
           </div>
 
-          {/* Saldo Aktif */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-white text-emerald-600 flex items-center justify-center shadow-xs">
               <Wallet className="w-5 h-5" />
@@ -218,7 +204,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
             </div>
           </div>
 
-          {/* Tanggal Bergabung */}
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-white text-amber-600 flex items-center justify-center shadow-xs">
               <Calendar className="w-5 h-5" />
@@ -232,7 +217,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
           </div>
         </div>
 
-        {/* Admin Panel Quick Access */}
         {isAdmin && (
           <div className="mt-6 p-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -246,19 +230,18 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
             </div>
             <button
               onClick={() => onNavigate('admin')}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
             >
               Buka Admin Panel
             </button>
           </div>
         )}
 
-        {/* Logout Section */}
         <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
           <span className="text-xs text-slate-400">Freelancer Storan v1.0.0 • Session Aman</span>
           <button
             onClick={() => logoutUser()}
-            className="px-4 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 font-bold text-xs transition flex items-center gap-2"
+            className="px-4 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 font-bold text-xs transition flex items-center gap-2 cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Keluar dari Akun</span>
@@ -266,7 +249,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         </div>
       </div>
 
-      {/* Modal Edit Profil */}
       <AnimatePresence>
         {showEditModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -288,20 +270,19 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm outline-none"
                   />
                 </div>
-
                 <div className="flex items-center gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowEditModal(false)}
                     disabled={savingName}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700"
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={savingName}
-                    className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition"
+                    className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer"
                   >
                     {savingName ? 'Menyimpan...' : 'Simpan'}
                   </button>
@@ -312,7 +293,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         )}
       </AnimatePresence>
 
-      {/* Modal Ubah Password */}
       <AnimatePresence>
         {showPasswordModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -323,13 +303,11 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
               className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-4"
             >
               <h3 className="text-base font-bold text-slate-900">Ubah Kata Sandi</h3>
-
               {passError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium">
                   {passError}
                 </div>
               )}
-
               <form onSubmit={handleChangePassword} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -344,7 +322,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm outline-none"
                   />
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Konfirmasi Kata Sandi Baru
@@ -358,20 +335,19 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm outline-none"
                   />
                 </div>
-
                 <div className="flex items-center gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowPasswordModal(false)}
                     disabled={savingPassword}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700"
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={savingPassword}
-                    className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition"
+                    className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer"
                   >
                     {savingPassword ? 'Menyimpan...' : 'Perbarui Sandi'}
                   </button>

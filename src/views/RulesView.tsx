@@ -13,7 +13,6 @@ import {
   MessageCircle,
   Clock,
   ShieldCheck,
-  AlertTriangle,
 } from 'lucide-react';
 
 interface RulesViewProps {
@@ -34,7 +33,6 @@ export function RulesView({ onNavigate }: RulesViewProps) {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Top Header / Back Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200/80">
         <div className="flex items-center gap-3">
           {onNavigate && (
@@ -77,7 +75,6 @@ export function RulesView({ onNavigate }: RulesViewProps) {
         </div>
       </div>
 
-      {/* Mandatory Password Box (Orange Accent) */}
       <div className="rounded-3xl bg-gradient-to-r from-orange-50 via-amber-50 to-white p-5 sm:p-6 border border-orange-200 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -112,14 +109,12 @@ export function RulesView({ onNavigate }: RulesViewProps) {
               </div>
             </div>
           </div>
-
           <div className="text-xs text-orange-950 font-medium sm:text-right max-w-sm">
             Semua akun Gmail yang dibuat dan disetor <strong className="font-bold">WAJIB</strong> menggunakan password di atas. Jika password berbeda, akun akan otomatis ditolak saat pengecekan.
           </div>
         </div>
       </div>
 
-      {/* Main Rules List Card */}
       <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs space-y-4">
         <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
           <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shadow-xs">
@@ -150,7 +145,6 @@ export function RulesView({ onNavigate }: RulesViewProps) {
         </div>
       </div>
 
-      {/* Security & 2FA Warning Card */}
       <div className="rounded-3xl bg-rose-50/80 border border-rose-200/80 p-5 sm:p-6 space-y-3 text-rose-950 shadow-xs">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
@@ -167,7 +161,6 @@ export function RulesView({ onNavigate }: RulesViewProps) {
         </div>
       </div>
 
-      {/* SLA & Operasional Info Card */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -204,7 +197,6 @@ export function RulesView({ onNavigate }: RulesViewProps) {
         </div>
       </div>
 
-      {/* Bottom CTA Actions */}
       <div className="p-6 rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg font-black tracking-tight">
@@ -214,7 +206,6 @@ export function RulesView({ onNavigate }: RulesViewProps) {
             Mulai generate nama Gmail dan setorkan akun Anda untuk mendapatkan saldo.
           </p>
         </div>
-
         <div className="flex flex-wrap items-center gap-3">
           {onNavigate && (
             <button

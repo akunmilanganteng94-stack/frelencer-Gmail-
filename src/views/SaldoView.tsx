@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { formatRupiah, formatIndonesianDateTime, isValidPhoneNumber } from '../lib/utils';
-import { Withdrawal, WithdrawalMethod, OperationType } from '../types';
+import { Withdrawal, WithdrawalMethod } from '../types';
 import {
   collection,
   query,
@@ -12,7 +12,7 @@ import {
   runTransaction,
   doc,
 } from 'firebase/firestore';
-import { db, handleFirestoreError } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import {
   Wallet,
   TrendingUp,
@@ -22,9 +22,6 @@ import {
   XCircle,
   AlertCircle,
   AlertTriangle,
-  ArrowRight,
-  ShieldCheck,
-  Building,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -32,12 +29,10 @@ export function SaldoView() {
   const { userProfile, currentUser } = useAuth();
   const { settings } = useSettings();
   const { showToast } = useToast();
-
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
 
-  // Withdrawal form state
   const [amount, setAmount] = useState<number>(settings.minWithdrawal || 4000);
   const [method, setMethod] = useState<WithdrawalMethod>('DANA');
   const [targetNumber, setTargetNumber] = useState('');
@@ -46,15 +41,12 @@ export function SaldoView() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
-  // Fetch real-time user withdrawals
   useEffect(() => {
     if (!currentUser) return;
-
     const q = query(
       collection(db, 'withdrawals'),
       where('userId', '==', currentUser.uid)
     );
-
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -71,7 +63,6 @@ export function SaldoView() {
         setLoading(false);
       }
     );
-
     return () => unsubscribe();
   }, [currentUser]);
 
@@ -80,12 +71,10 @@ export function SaldoView() {
       showToast('error', 'Penarikan Ditutup', 'Fitur penarikan saldo saat ini sedang ditutup sementara oleh admin.');
       return;
     }
-
     if (userProfile?.status === 'suspended') {
       showToast('error', 'Akun Dibatasi', 'Akun Anda sedang dibatasi. Tidak dapat melakukan penarikan.');
       return;
     }
-
     if ((userProfile?.balance || 0) < settings.minWithdrawal) {
       showToast(
         'error',
@@ -94,7 +83,6 @@ export function SaldoView() {
       );
       return;
     }
-
     setAmount(settings.minWithdrawal);
     setFormError('');
     setIsConfirmed(false);
@@ -104,45 +92,37 @@ export function SaldoView() {
   const handleWithdrawSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError('');
-
     if (!currentUser || !userProfile) return;
 
     if (!settings.withdrawalOpen) {
       setFormError('Layanan penarikan sedang ditutup oleh admin.');
       return;
     }
-
     const currentBalance = userProfile.balance || 0;
     if (amount > currentBalance) {
       setFormError(`Saldo kamu tidak mencukupi (${formatRupiah(currentBalance)}).`);
       return;
     }
-
     if (amount < settings.minWithdrawal) {
       setFormError(`Jumlah penarikan minimal ${formatRupiah(settings.minWithdrawal)}.`);
       return;
     }
-
     const cleanedNumber = targetNumber.trim();
     if (!isValidPhoneNumber(cleanedNumber)) {
       setFormError('Nomor tujuan e-wallet tidak valid. Format: 08xxx (10-13 digit).');
       return;
     }
-
     if (!recipientName.trim()) {
       setFormError('Nama pemilik akun e-wallet wajib diisi.');
       return;
     }
-
     if (!isConfirmed) {
       setFormError('Harap centang konfirmasi bahwa data nomor dan nama penerima sudah benar.');
       return;
     }
 
     setSubmitting(true);
-
     try {
-      // Execute atomic transaction: Deduct user balance and create withdrawal doc
       const userRef = doc(db, 'users', currentUser.uid);
       const newWithdrawalRef = doc(collection(db, 'withdrawals'));
 
@@ -151,20 +131,17 @@ export function SaldoView() {
         if (!userDoc.exists()) {
           throw new Error('Data pengguna tidak ditemukan.');
         }
-
         const userData = userDoc.data();
         const availableBal = userData.balance || 0;
         if (availableBal < amount) {
           throw new Error(`Saldo tidak mencukupi. Saldo saat ini: ${formatRupiah(availableBal)}`);
         }
 
-        // Deduct from balance and add to pendingWithdrawn
         transaction.update(userRef, {
           balance: availableBal - amount,
           pendingWithdrawn: (userData.pendingWithdrawn || 0) + amount,
         });
 
-        // Create withdrawal record
         const withdrawalPayload: Omit<Withdrawal, 'id'> = {
           userId: currentUser.uid,
           userEmail: currentUser.email || '',
@@ -176,7 +153,6 @@ export function SaldoView() {
           status: 'Pending',
           createdAt: new Date().toISOString(),
         };
-
         transaction.set(newWithdrawalRef, withdrawalPayload);
       });
 
@@ -185,7 +161,6 @@ export function SaldoView() {
         'Penarikan Berhasil Diajukan',
         `Permintaan penarikan ${formatRupiah(amount)} ke ${method} (${cleanedNumber}) sedang diproses admin.`
       );
-
       setShowWithdrawModal(false);
       setTargetNumber('');
       setRecipientName('');
@@ -206,7 +181,6 @@ export function SaldoView() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
           <Wallet className="w-7 h-7 text-blue-600" />
@@ -217,7 +191,6 @@ export function SaldoView() {
         </p>
       </div>
 
-      {/* Notice if Withdrawal is Closed */}
       {!settings.withdrawalOpen && (
         <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -230,9 +203,7 @@ export function SaldoView() {
         </div>
       )}
 
-      {/* 4 Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Saldo Tersedia */}
         <div className="rounded-3xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 p-6 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -249,7 +220,6 @@ export function SaldoView() {
               <strong>{formatRupiah(settings.minWithdrawal)}</strong>
             </div>
           </div>
-
           <div className="mt-4 pt-3 border-t border-white/20">
             <button
               type="button"
@@ -263,7 +233,6 @@ export function SaldoView() {
           </div>
         </div>
 
-        {/* Card 2: Total Penghasilan */}
         <div className="rounded-3xl bg-white p-6 border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-500">Total Penghasilan</span>
@@ -277,7 +246,6 @@ export function SaldoView() {
           <div className="mt-2 text-xs text-slate-400">Akumulasi submission diterima</div>
         </div>
 
-        {/* Card 3: Total Penarikan Berhasil */}
         <div className="rounded-3xl bg-white p-6 border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-500">Total Dicairkan</span>
@@ -291,7 +259,6 @@ export function SaldoView() {
           <div className="mt-2 text-xs text-slate-400">Dana telah masuk ke e-wallet</div>
         </div>
 
-        {/* Card 4: Penarikan Pending */}
         <div className="rounded-3xl bg-white p-6 border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-500">Penarikan Pending</span>
@@ -306,7 +273,6 @@ export function SaldoView() {
         </div>
       </div>
 
-      {/* Riwayat Penarikan */}
       <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs">
         <div className="flex items-center justify-between mb-5">
           <div>
@@ -354,7 +320,6 @@ export function SaldoView() {
                       </div>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-3 self-end sm:self-auto">
                     <span className="text-[11px] text-slate-400">
                       {formatIndonesianDateTime(w.createdAt)}
@@ -375,8 +340,6 @@ export function SaldoView() {
                     </span>
                   </div>
                 </div>
-
-                {/* Rejection message */}
                 {w.status === 'Ditolak' && w.rejectionReason && (
                   <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
@@ -391,7 +354,6 @@ export function SaldoView() {
         )}
       </div>
 
-      {/* Modal Tarik Saldo */}
       <AnimatePresence>
         {showWithdrawModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -414,7 +376,7 @@ export function SaldoView() {
                 <button
                   type="button"
                   onClick={() => setShowWithdrawModal(false)}
-                  className="text-slate-400 hover:text-slate-600 p-1"
+                  className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
                 >
                   ✕
                 </button>
@@ -427,7 +389,6 @@ export function SaldoView() {
               )}
 
               <form onSubmit={handleWithdrawSubmit} className="space-y-4">
-                {/* Saldo info card */}
                 <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-100 flex items-center justify-between text-xs">
                   <span className="text-blue-700 font-medium">Saldo kamu saat ini:</span>
                   <strong className="text-blue-900 font-extrabold text-sm">
@@ -435,7 +396,6 @@ export function SaldoView() {
                   </strong>
                 </div>
 
-                {/* Amount input */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs font-bold text-slate-700">
@@ -444,7 +404,7 @@ export function SaldoView() {
                     <button
                       type="button"
                       onClick={() => setAmount(userBalance)}
-                      className="text-xs font-bold text-blue-600 hover:underline"
+                      className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
                     >
                       Tarik Semua
                     </button>
@@ -467,7 +427,7 @@ export function SaldoView() {
                           key={preset}
                           type="button"
                           onClick={() => setAmount(preset)}
-                          className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 rounded-lg text-xs font-semibold text-slate-700 transition"
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 rounded-lg text-xs font-semibold text-slate-700 transition cursor-pointer"
                         >
                           {formatRupiah(preset)}
                         </button>
@@ -476,7 +436,6 @@ export function SaldoView() {
                   </div>
                 </div>
 
-                {/* Method selector: DANA or GoPay */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Metode Pembayaran
@@ -487,7 +446,7 @@ export function SaldoView() {
                         key={m}
                         type="button"
                         onClick={() => setMethod(m)}
-                        className={`py-2.5 px-4 rounded-xl border text-xs font-extrabold transition flex items-center justify-center gap-2 ${
+                        className={`py-2.5 px-4 rounded-xl border text-xs font-extrabold transition flex items-center justify-center gap-2 cursor-pointer ${
                           method === m
                             ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
                             : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -499,7 +458,6 @@ export function SaldoView() {
                   </div>
                 </div>
 
-                {/* Target Phone Number */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Nomor Tujuan ({method})
@@ -514,7 +472,6 @@ export function SaldoView() {
                   />
                 </div>
 
-                {/* Recipient Name */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Nama Penerima Akun {method}
@@ -529,7 +486,6 @@ export function SaldoView() {
                   />
                 </div>
 
-                {/* Confirmation Checkbox */}
                 <div className="pt-1">
                   <label className="flex items-start gap-2.5 cursor-pointer text-xs text-slate-600">
                     <input
@@ -544,20 +500,19 @@ export function SaldoView() {
                   </label>
                 </div>
 
-                {/* Submit Action */}
                 <div className="pt-2 flex items-center gap-3">
                   <button
                     type="button"
                     onClick={() => setShowWithdrawModal(false)}
                     disabled={submitting}
-                    className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50 transition"
+                    className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50 transition cursor-pointer"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={submitting || !isConfirmed}
-                    className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md shadow-blue-500/20 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md shadow-blue-500/20 transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {submitting ? (
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

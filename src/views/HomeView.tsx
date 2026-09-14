@@ -11,16 +11,12 @@ import {
   Clock,
   XCircle,
   Tag,
-  ArrowUpRight,
   Megaphone,
   UploadCloud,
   Send,
   ChevronRight,
-  ShieldCheck,
-  AlertCircle,
   FileText,
 } from 'lucide-react';
-import { motion } from 'motion/react';
 
 interface HomeViewProps {
   onNavigate: (tab: NavigationTab) => void;
@@ -29,18 +25,15 @@ interface HomeViewProps {
 export function HomeView({ onNavigate }: HomeViewProps) {
   const { userProfile, currentUser } = useAuth();
   const { settings } = useSettings();
-
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!currentUser) return;
-
     const q = query(
       collection(db, 'submissions'),
       where('userId', '==', currentUser.uid)
     );
-
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -48,7 +41,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         snapshot.forEach((doc) => {
           list.push({ id: doc.id, ...(doc.data() as Omit<Submission, 'id'>) });
         });
-        // Sort descending by createdAt
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setSubmissions(list);
         setLoading(false);
@@ -58,7 +50,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         setLoading(false);
       }
     );
-
     return () => unsubscribe();
   }, [currentUser]);
 
@@ -68,12 +59,10 @@ export function HomeView({ onNavigate }: HomeViewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Hero Welcome Card (Kompak vertikal, lebar horizontal tetap penuh) */}
+      {/* Hero Welcome Card */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 px-6 py-4 sm:px-8 sm:py-5 text-white shadow-xl shadow-blue-500/20">
-        {/* Background ambient accents */}
         <div className="absolute -right-12 -top-12 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         <div className="absolute -left-12 -bottom-12 w-56 h-56 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
-
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3.5 sm:gap-5">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md text-[11px] font-semibold text-blue-100">
@@ -84,12 +73,9 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               />
               <span>{settings.storanOpen ? 'Layanan Aktif & Buka' : 'Layanan Sedang Tutup'}</span>
             </div>
-
             <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">
-              Halo, {userProfile?.displayName || 'Freelancer'} 👋
+              Halo, {userProfile?.displayName || 'Freelancer'}
             </h1>
-
-            {/* Saldo Saat Ini di bawah teks Halo */}
             <div className="pt-0.5">
               <div className="text-[11px] font-bold text-blue-200 uppercase tracking-wider">
                 Saldo Saat Ini
@@ -99,8 +85,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               </div>
             </div>
           </div>
-
-          {/* Action CTAs */}
           <div className="flex flex-wrap gap-2.5 sm:gap-3">
             <button
               type="button"
@@ -125,7 +109,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       {/* Quick Action Menu: 4 Menu Items Horizontal (STOR, RIWAYAT, SALDO, RULES) */}
       <div className="rounded-3xl bg-white p-4 sm:p-6 border border-slate-200/80 shadow-xs">
         <div className="grid grid-cols-4 gap-2 sm:gap-4 w-full">
-          {/* 1. STOR */}
           <button
             type="button"
             onClick={() => onNavigate('storan')}
@@ -139,7 +122,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             </span>
           </button>
 
-          {/* 2. RIWAYAT */}
           <button
             type="button"
             onClick={() => onNavigate('riwayat')}
@@ -153,7 +135,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             </span>
           </button>
 
-          {/* 3. SALDO */}
           <button
             type="button"
             onClick={() => onNavigate('saldo')}
@@ -167,7 +148,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             </span>
           </button>
 
-          {/* 4. RULES */}
           <button
             type="button"
             onClick={() => onNavigate('rules')}
@@ -183,15 +163,13 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         </div>
       </div>
 
-      {/* 4 Statistics Grid: Harga per Submission, Total Diterima, Total Pending, Total Ditolak */}
+      {/* 4 Statistics Grid */}
       <div>
         <div className="flex items-center justify-between mb-3 px-1">
           <h2 className="text-base font-bold text-slate-900">Statistik Akun Kamu</h2>
           <span className="text-xs text-slate-500 font-medium">Real-time update</span>
         </div>
-
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* Card 1: Harga Per Submission */}
           <div className="rounded-2xl bg-white p-4 sm:p-5 border border-slate-200/80 shadow-xs hover:border-blue-200 transition">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-slate-500">Harga / Gmail</span>
@@ -205,7 +183,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             <div className="text-[11px] text-slate-500 mt-1">Reward per data valid</div>
           </div>
 
-          {/* Card 3: Total Diterima */}
           <div className="rounded-2xl bg-white p-4 sm:p-5 border border-slate-200/80 shadow-xs hover:border-emerald-200 transition">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-slate-500">Total Diterima</span>
@@ -219,7 +196,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             <div className="text-[11px] text-slate-500 mt-1">Data telah disetujui</div>
           </div>
 
-          {/* Card 4: Total Pending */}
           <div className="rounded-2xl bg-white p-4 sm:p-5 border border-slate-200/80 shadow-xs hover:border-amber-200 transition">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-slate-500">Total Pending</span>
@@ -235,7 +211,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             </div>
           </div>
 
-          {/* Card 5: Total Ditolak */}
           <div className="rounded-2xl bg-white p-4 sm:p-5 border border-slate-200/80 shadow-xs hover:border-rose-200 transition">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-slate-500">Total Ditolak</span>
@@ -251,7 +226,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         </div>
       </div>
 
-      {/* Operational Announcement Card (Dipindahkan di atas Gmail terbaru dan di bawah statistik akun kamu) */}
+      {/* Operational Announcement Card */}
       <div className="rounded-2xl bg-white border border-blue-100 p-5 shadow-xs relative overflow-hidden">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 shadow-xs">
@@ -260,7 +235,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span>📢 Pengumuman Storan</span>
+                <span>Pengumuman Storan</span>
               </h2>
               <span
                 className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
@@ -269,12 +244,12 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                     : 'bg-rose-50 text-rose-700 border-rose-200'
                 }`}
               >
-                {settings.storanOpen ? '● Status: OPEN' : '● Status: CLOSE'}
+                {settings.storanOpen ? 'Status: OPEN' : 'Status: CLOSE'}
               </span>
             </div>
             <div className="text-sm text-slate-600 whitespace-pre-line leading-relaxed font-medium">
               {settings.announcement ||
-                'Storan OPEN setiap Senin–Jumat\nJam operasional: 07.00–17.00 WIB\nSabtu & Minggu storan CLOSE.'}
+                'Storan OPEN setiap Senin - Jumat\nJam operasional: 07.00 - 17.00 WIB\nSabtu & Minggu storan CLOSE.'}
             </div>
             <div className="mt-2 text-xs text-slate-400 font-medium">
               Jadwal Operasional: {settings.storanSchedule}
@@ -293,13 +268,12 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             </div>
             <button
               onClick={() => onNavigate('riwayat')}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
             >
               <span>Lihat Semua</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-
           {loading ? (
             <div className="space-y-3 py-4">
               {[1, 2, 3].map((n) => (
@@ -314,7 +288,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               <p className="text-sm font-medium">Belum ada submission data.</p>
               <button
                 onClick={() => onNavigate('storan')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition"
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition cursor-pointer"
               >
                 Kirim Data Pertama
               </button>
@@ -340,7 +314,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                       </span>
                     </div>
                   </div>
-
                   <span
                     className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold ${
                       sub.status === 'Diterima'
@@ -357,12 +330,11 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             </div>
           )}
         </div>
-
         <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <span>Status pending: <strong>dalam pengecekan admin tunggu 24-30 jam</strong></span>
           <button
             onClick={() => onNavigate('storan')}
-            className="font-bold text-blue-600 hover:underline"
+            className="font-bold text-blue-600 hover:underline cursor-pointer"
           >
             + Kirim Data Baru
           </button>

@@ -26,12 +26,10 @@ export function RiwayatView() {
 
   useEffect(() => {
     if (!currentUser) return;
-
     const q = query(
       collection(db, 'submissions'),
       where('userId', '==', currentUser.uid)
     );
-
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -48,7 +46,6 @@ export function RiwayatView() {
         setLoading(false);
       }
     );
-
     return () => unsubscribe();
   }, [currentUser]);
 
@@ -74,7 +71,6 @@ export function RiwayatView() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
           <FileText className="w-7 h-7 text-indigo-600" />
@@ -85,10 +81,8 @@ export function RiwayatView() {
         </p>
       </div>
 
-      {/* Filter Tabs & Search Bar */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          {/* Tabs */}
           <div className="flex flex-wrap gap-1.5 p-1 bg-slate-100/90 rounded-2xl">
             {(
               [
@@ -104,7 +98,7 @@ export function RiwayatView() {
                   key={tab.value}
                   type="button"
                   onClick={() => setActiveFilter(tab.value)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                     isActive
                       ? 'bg-white text-blue-700 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -123,7 +117,6 @@ export function RiwayatView() {
             })}
           </div>
 
-          {/* Search box */}
           <div className="relative w-full md:w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <input
@@ -137,7 +130,6 @@ export function RiwayatView() {
         </div>
       </div>
 
-      {/* Submissions List */}
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4].map((n) => (
@@ -169,7 +161,7 @@ export function RiwayatView() {
                   <span className="font-mono text-xs font-bold text-slate-800">{sub.id}</span>
                   <button
                     onClick={() => copyToClipboard(sub.id)}
-                    className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition"
+                    className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition cursor-pointer"
                     title="Salin ID"
                   >
                     {copiedId === sub.id ? (
@@ -179,13 +171,11 @@ export function RiwayatView() {
                     )}
                   </button>
                 </div>
-
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1 text-xs text-slate-500">
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
                     <span>{formatIndonesianDateTime(sub.createdAt)}</span>
                   </div>
-
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
                       sub.status === 'Diterima'
@@ -203,7 +193,6 @@ export function RiwayatView() {
                 </div>
               </div>
 
-              {/* Data Content */}
               <div className="space-y-1">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   Data Storan:
@@ -213,7 +202,6 @@ export function RiwayatView() {
                 </div>
               </div>
 
-              {/* Amount & notes */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-xs">
                 <div className="flex items-center gap-2 text-slate-600">
                   <span>Nominal Storan:</span>
@@ -221,7 +209,6 @@ export function RiwayatView() {
                     {formatRupiah(sub.rewardAmount)}
                   </span>
                 </div>
-
                 {sub.reviewedAt && (
                   <span className="text-[11px] text-slate-400">
                     Diverifikasi pada: {formatIndonesianDateTime(sub.reviewedAt)}
@@ -229,7 +216,6 @@ export function RiwayatView() {
                 )}
               </div>
 
-              {/* Rejection / Admin Notes */}
               {sub.status === 'Pending' && (
                 <div className="p-3 rounded-xl bg-amber-50/90 border border-amber-200 text-xs text-amber-900 flex items-center gap-2 font-semibold">
                   <Clock className="w-4 h-4 text-amber-600 shrink-0" />

@@ -42,23 +42,20 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const [submitting, setSubmitting] = useState(false);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [inputError, setInputError] = useState('');
-  const [savedAccounts, setSavedAccounts] = useState<GeneratedResultItem[]>([]);
+  const [, setSavedAccounts] = useState<GeneratedResultItem[]>([]);
 
-  // Real-time listener for user's submissions
   useEffect(() => {
     if (!currentUser) return;
-
     const q = query(
       collection(db, 'submissions'),
       where('userId', '==', currentUser.uid)
     );
-
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         const list: Submission[] = [];
-        snapshot.forEach((doc) => {
-          list.push({ id: doc.id, ...(doc.data() as Omit<Submission, 'id'>) });
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...(docSnap.data() as Omit<Submission, 'id'>) });
         });
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setSubmissions(list);
@@ -67,11 +64,9 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         console.warn('Snapshot error:', err);
       }
     );
-
     return () => unsubscribe();
   }, [currentUser]);
 
-  // Sync unsubmitted generated accounts
   useEffect(() => {
     const updateSaved = () => {
       const list = getSavedGeneratedAccounts(currentUser?.uid);
@@ -83,7 +78,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       );
       setSavedAccounts(unsubmitted);
     };
-
     updateSaved();
     const interval = setInterval(updateSaved, 1500);
     window.addEventListener('storage', updateSaved);
@@ -96,17 +90,14 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const handleOpenConfirm = (e: FormEvent) => {
     e.preventDefault();
     setInputError('');
-
     if (!settings.storanOpen) {
       showToast('error', 'Storan Ditutup', 'Layanan storan saat ini sedang tutup.');
       return;
     }
-
     if (userProfile?.status === 'suspended') {
       showToast('error', 'Akun Dibatasi', 'Akun kamu sedang dibatasi. Hubungi admin untuk informasi lebih lanjut.');
       return;
     }
-
     const trimmed = inputData.trim();
     if (!trimmed) {
       setInputError('Data akun Gmail tidak boleh kosong.');
@@ -114,14 +105,12 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       return;
     }
 
-    // Single line constraint check: no multiline
     if (trimmed.includes('\n')) {
       setInputError('Harap gunakan sistem satu baris untuk satu akun (tidak boleh ada enter/multiline).');
       showToast('error', 'Format Salah', 'Data harus dalam satu baris tunggal.');
       return;
     }
 
-    // Gmail domain check
     const lower = trimmed.toLowerCase();
     if (!lower.includes('@gmail.com') && !lower.includes('@googlemail.com')) {
       setInputError('Format harus berupa akun Gmail (mengandung @gmail.com). Contoh: contoh@gmail.com');
@@ -134,7 +123,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
 
   const handleConfirmSubmit = async () => {
     if (!currentUser || !userProfile) return;
-
     setSubmitting(true);
     try {
       const newSubmissionData = {
@@ -146,10 +134,8 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         status: 'Pending' as const,
         createdAt: new Date().toISOString(),
       };
-
       await addDoc(collection(db, 'submissions'), newSubmissionData);
 
-      // Bersihkan akun yang disetor dari unsubmitted local list
       try {
         const activeKey = currentUser.uid
           ? `gmail_gen_saved_${currentUser.uid}`
@@ -196,7 +182,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
@@ -213,7 +198,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           </p>
         </div>
 
-        {/* Operational Banner Pill */}
         <div
           className={`self-start sm:self-auto px-3.5 py-1.5 rounded-full text-xs font-bold border flex items-center gap-2 ${
             settings.storanOpen
@@ -230,7 +214,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         </div>
       </div>
 
-      {/* Notice if Storan is CLOSE */}
       {!settings.storanOpen && (
         <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
@@ -243,7 +226,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         </div>
       )}
 
-      {/* Account suspended warning */}
       {userProfile?.status === 'suspended' && (
         <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3">
           <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -257,21 +239,16 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Main Active Column (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Feature Generator Akun Gmail (Berada tepat di atas Form Storan Akun Gmail) */}
           <GmailGenerator
             onOpenContactAdmin={openContactModal}
             submittedEmails={submissions.map((s) => s.dataContent.trim().toLowerCase())}
             onSelectEmailForStoran={handleSelectFromGenerator}
           />
 
-          {/* Rules & Ketentuan: Di atas form Storan Gmail */}
           <RulesCard onNavigate={onNavigate} />
 
-          {/* Submission Input Box */}
           <div id="submission-form-card" className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs space-y-4">
-            {/* Banner Status Pending */}
             {submissions.some((s) => s.status === 'Pending') && (
               <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-950 flex items-start gap-3 shadow-2xs">
                 <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -327,7 +304,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 </div>
               </div>
 
-              {/* Password Wajib Alert Banner */}
               <div className="p-3.5 rounded-xl bg-orange-50/90 border border-orange-200 text-xs text-orange-950 flex items-start gap-2.5">
                 <KeyRound className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
                 <span className="leading-relaxed">
@@ -337,7 +313,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 </span>
               </div>
 
-              {/* Submit CTA */}
               <button
                 type="submit"
                 disabled={
@@ -345,7 +320,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                   userProfile?.status === 'suspended' ||
                   !inputData.trim()
                 }
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-700 hover:from-indigo-700 hover:to-blue-800 text-white font-black tracking-wide rounded-xl text-sm shadow-md shadow-indigo-500/25 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-700 hover:from-indigo-700 hover:to-blue-800 text-white font-black tracking-wide rounded-xl text-sm shadow-md shadow-indigo-500/25 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Send className="w-4 h-4" />
                 <span>STOR AKUN GMAIL</span>
@@ -353,7 +328,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
             </form>
           </div>
 
-          {/* Pemisah Riwayat Storan Info Card */}
           <div className="p-4 rounded-2xl bg-white border border-slate-200/80 text-slate-600 text-xs flex items-center justify-between gap-3 shadow-2xs">
             <div className="flex items-center gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -367,9 +341,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           </div>
         </div>
 
-        {/* Sidebar Column: Info & SLA (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          {/* SLA Card */}
           <div className="bg-gradient-to-br from-indigo-50 to-blue-50/60 rounded-2xl p-5 border border-indigo-100 space-y-3">
             <div className="flex items-center gap-2.5 text-indigo-900 font-bold text-sm">
               <Clock className="w-4 h-4 text-indigo-600" />
@@ -386,13 +358,12 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
       <AnimatePresence>
         {showConfirmModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
               className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-5"
             >
@@ -430,7 +401,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                   <span>Status 2FA:</span>
                   <span className="font-semibold text-emerald-700">Wajib Nonaktif</span>
                 </div>
-
                 <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2 font-semibold">
                   <Clock className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>dalam pengecekan admin tunggu 24-30 jam</span>
@@ -446,7 +416,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                   type="button"
                   onClick={() => setShowConfirmModal(false)}
                   disabled={submitting}
-                  className="flex-1 py-3 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-sm text-slate-700 transition"
+                  className="flex-1 py-3 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-sm text-slate-700 transition cursor-pointer"
                 >
                   Batal
                 </button>
@@ -454,7 +424,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                   type="button"
                   onClick={handleConfirmSubmit}
                   disabled={submitting}
-                  className="flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold text-sm text-white shadow-md shadow-indigo-500/20 transition flex items-center justify-center gap-2"
+                  className="flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold text-sm text-white shadow-md shadow-indigo-500/20 transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {submitting ? (
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

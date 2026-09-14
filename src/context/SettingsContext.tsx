@@ -17,12 +17,12 @@ const DEFAULT_RULES = [
 
 const DEFAULT_SETTINGS: SystemSettings = {
   storanOpen: true,
-  storanSchedule: 'Senin–Jumat, 07.00–17.00 WIB (Sabtu & Minggu CLOSE)',
+  storanSchedule: 'Senin - Jumat, 07.00 - 17.00 WIB (Sabtu & Minggu CLOSE)',
   pricePerSubmission: 3000,
   withdrawalOpen: true,
   minWithdrawal: 4000,
   rules: DEFAULT_RULES,
-  announcement: 'Storan Akun Gmail OPEN setiap Senin–Jumat!\nJam operasional: 07.00–17.00 WIB\nPassword wajib Gmail: sgsg1122\nPastikan akun fresh dan tidak mengaktifkan 2FA.',
+  announcement: 'Storan Akun Gmail OPEN setiap Senin - Jumat!\nJam operasional: 07.00 - 17.00 WIB\nPassword wajib Gmail: sgsg1122\nPastikan akun fresh dan tidak mengaktifkan 2FA.',
   gmailDefaultPassword: DEFAULT_GMAIL_PASSWORD,
   generatorOpen: true,
   adminWhatsApp: '6285199219856',
@@ -43,7 +43,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const settingsDocRef = doc(db, 'settings', 'general');
-
     const unsubscribe = onSnapshot(
       settingsDocRef,
       (snapshot) => {

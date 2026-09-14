@@ -39,7 +39,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-
       if (!user) {
         setUserProfile(null);
         setLoading(false);
@@ -89,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const isAdmin = Boolean(
-    currentUser?.email && ADMIN_EMAILS.includes(currentUser.email.toLowerCase()) ||
+    (currentUser?.email && ADMIN_EMAILS.includes(currentUser.email.toLowerCase())) ||
     userProfile?.role === 'admin'
   );
 
@@ -100,7 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerUser = async (name: string, email: string, pass: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), pass);
     const user = userCredential.user;
-
     await updateProfile(user, { displayName: name.trim() });
 
     const isDefaultAdmin = ADMIN_EMAILS.includes(email.toLowerCase().trim());
@@ -132,7 +130,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfileName = async (newName: string) => {
     if (!currentUser) throw new Error('Pengguna tidak login.');
     await updateProfile(currentUser, { displayName: newName.trim() });
-
     try {
       await updateDoc(doc(db, 'users', currentUser.uid), {
         displayName: newName.trim(),

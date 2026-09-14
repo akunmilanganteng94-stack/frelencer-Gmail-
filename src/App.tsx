@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { SettingsProvider } from './context/SettingsContext';
 import { ToastProvider } from './context/ToastContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { SettingsProvider, useSettings } from './context/SettingsContext';
 import { ContactAdminProvider } from './context/ContactAdminContext';
-import { Navigation, DesktopSidebar } from './components/Navigation';
+import { NavigationTab } from './types';
+import { Navigation } from './components/Navigation';
+import { AuthView } from './views/AuthView';
 import { HomeView } from './views/HomeView';
 import { StoranView } from './views/StoranView';
 import { RiwayatView } from './views/RiwayatView';
@@ -11,21 +13,26 @@ import { SaldoView } from './views/SaldoView';
 import { RulesView } from './views/RulesView';
 import { AkunView } from './views/AkunView';
 import { AdminView } from './views/AdminView';
-import { AuthView } from './views/AuthView';
-import { NavigationTab } from './types';
+import { AZGmailLogo } from './components/GmailLogo';
+import { motion, AnimatePresence } from 'motion/react';
 
 function MainApp() {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loadingAuth } = useAuth();
+  const { settings } = useSettings();
   const [currentTab, setCurrentTab] = useState<NavigationTab>('home');
 
-  if (loading) {
+  if (loadingAuth) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs font-bold text-slate-500 tracking-wider">
-            Memuat AZGmail Freelancer...
-          </span>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-white p-2 shadow-lg border border-blue-100 flex items-center justify-center">
+            <AZGmailLogo className="w-12 h-12" />
+          </div>
+          <div>
+            <h1 className="text-lg font-black tracking-tight text-slate-900">AZGmail</h1>
+            <p className="text-xs text-slate-500 mt-1">Memuat data aplikasi...</p>
+          </div>
+          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -36,20 +43,61 @@ function MainApp() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col antialiased">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-blue-600 selection:text-white">
+      {/* Top Header & Navigation */}
       <Navigation currentTab={currentTab} onSelectTab={setCurrentTab} />
-      <DesktopSidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
 
       {/* Main Content Area */}
-      <main className="flex-1 md:pl-64 pb-28 md:pb-12 pt-4 px-4 sm:px-6 lg:px-8 max-w-7xl w-full mx-auto">
-        {currentTab === 'home' && <HomeView onNavigate={setCurrentTab} />}
-        {currentTab === 'storan' && <StoranView onNavigate={setCurrentTab} />}
-        {currentTab === 'riwayat' && <RiwayatView />}
-        {currentTab === 'saldo' && <SaldoView />}
-        {currentTab === 'rules' && <RulesView />}
-        {currentTab === 'akun' && <AkunView onNavigate={setCurrentTab} />}
-        {currentTab === 'admin' && <AdminView onNavigate={setCurrentTab} />}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-12">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentTab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+          >
+            {currentTab === 'home' && <HomeView onNavigate={setCurrentTab} />}
+            {currentTab === 'storan' && <StoranView onNavigate={setCurrentTab} />}
+            {currentTab === 'riwayat' && <RiwayatView />}
+            {currentTab === 'saldo' && <SaldoView />}
+            {currentTab === 'rules' && <RulesView onNavigate={setCurrentTab} />}
+            {currentTab === 'akun' && <AkunView onNavigate={setCurrentTab} />}
+            {currentTab === 'admin' && <AdminView onNavigate={setCurrentTab} />}
+          </motion.div>
+        </AnimatePresence>
       </main>
+
+      {/* Footer */}
+      <footer className="hidden sm:block border-t border-slate-200/80 bg-white py-6 text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-md bg-blue-50 flex items-center justify-center p-0.5">
+              <AZGmailLogo className="w-full h-full" />
+            </div>
+            <span className="font-bold text-slate-800">AZGmail</span>
+            <span>•</span>
+            <span>Platform Freelance Akun Google & Gmail</span>
+          </div>
+          <div className="flex items-center gap-4 text-slate-500">
+            <span>Operasional: {settings.storanSchedule}</span>
+            <span>•</span>
+            <button
+              onClick={() => setCurrentTab('rules')}
+              className="hover:text-blue-600 font-semibold cursor-pointer"
+            >
+              Ketentuan Storan
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => setCurrentTab('akun')}
+              className="hover:text-blue-600 font-semibold cursor-pointer"
+            >
+              Profil & Chat Admin
+            </button>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -57,13 +105,13 @@ function MainApp() {
 export default function App() {
   return (
     <ToastProvider>
-      <AuthProvider>
-        <SettingsProvider>
+      <SettingsProvider>
+        <AuthProvider>
           <ContactAdminProvider>
             <MainApp />
           </ContactAdminProvider>
-        </SettingsProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </SettingsProvider>
     </ToastProvider>
   );
 }

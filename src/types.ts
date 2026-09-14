@@ -73,6 +73,7 @@ export interface SystemSettings {
   generatorOpen: boolean;
   adminWhatsApp?: string;
   dailyGenerateLimit: number;
+  storanClosedReason?: string;
 }
 
 export type NavigationTab = 'home' | 'storan' | 'riwayat' | 'saldo' | 'akun' | 'admin' | 'rules';

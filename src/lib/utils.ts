@@ -18,7 +18,6 @@ export function formatIndonesianDateTime(isoOrDate: string | Date | number): str
   try {
     const d = new Date(isoOrDate);
     if (isNaN(d.getTime())) return '-';
-
     return new Intl.DateTimeFormat('id-ID', {
       timeZone: 'Asia/Jakarta',
       day: '2-digit',

@@ -8,7 +8,6 @@ import {
   Submission,
   Withdrawal,
   NavigationTab,
-  OperationType,
   GmailStockItem,
 } from '../types';
 import {
@@ -18,7 +17,7 @@ import {
   updateDoc,
   runTransaction,
 } from 'firebase/firestore';
-import { db, handleFirestoreError } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { useGmailStock } from '../hooks/useGmailStock';
 import { AdminAllStorTab } from '../components/AdminAllStorTab';
 import { AdminBulkConfirmModal } from '../components/AdminBulkConfirmModal';
@@ -47,6 +46,7 @@ import {
   MessageCircle,
   Sparkles,
   ListCheck,
+  AlertTriangle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GmailLogo } from '../components/GmailLogo';
@@ -114,6 +114,9 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const [tempDailyGenerateLimit, setTempDailyGenerateLimit] = useState(
     settings.dailyGenerateLimit || 10
   );
+  const [tempStoranClosedReason, setTempStoranClosedReason] = useState(
+    settings.storanClosedReason || ''
+  );
   const [rulesList, setRulesList] = useState<string[]>(settings?.rules || []);
   const [newRuleInput, setNewRuleInput] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
@@ -162,10 +165,15 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     }
   }, [settings.adminWhatsApp]);
 
+  useEffect(() => {
+    if (settings.storanClosedReason !== undefined) {
+      setTempStoranClosedReason(settings.storanClosedReason);
+    }
+  }, [settings.storanClosedReason]);
+
   // Listeners for collections
   useEffect(() => {
     if (!isAdmin) return;
-
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       const uList: UserProfile[] = [];
       snap.forEach((d) => uList.push(d.data() as UserProfile));
@@ -404,16 +412,19 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const handleSaveUserBalance = async (e: FormEvent) => {
     e.preventDefault();
     if (!balanceModalUser) return;
+
     const parsed = parseInt(balanceAmountInput.replace(/[^0-9]/g, ''), 10);
     if (isNaN(parsed) || parsed < 0) {
       showToast('error', 'Nominal Tidak Valid', 'Masukkan nominal saldo yang benar (angka positif).');
       return;
     }
+
     setSavingBalance(true);
     try {
       const currentBal = balanceModalUser.balance || 0;
       let newBal = currentBal;
       let newTotalEarned = balanceModalUser.totalEarned || 0;
+
       if (balanceMode === 'add') {
         newBal = currentBal + parsed;
         if (includeTotalEarned) {
@@ -439,6 +450,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             : u
         )
       );
+
       if (selectedUser?.uid === balanceModalUser.uid) {
         setSelectedUser({
           ...selectedUser,
@@ -454,6 +466,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           ? `Berhasil menambah ${formatRupiah(parsed)} ke saldo ${balanceModalUser.displayName}. Saldo baru: ${formatRupiah(newBal)}.`
           : `Saldo ${balanceModalUser.displayName} berhasil diubah menjadi ${formatRupiah(newBal)}.`
       );
+
       setBalanceModalUser(null);
       setBalanceAmountInput('');
     } catch (err: unknown) {
@@ -476,8 +489,9 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         gmailDefaultPassword: tempGmailPassword.trim() || 'sgsg1122',
         adminWhatsApp: tempWhatsApp.trim() || '6285199219856',
         dailyGenerateLimit: Math.max(1, Number(tempDailyGenerateLimit) || 10),
+        storanClosedReason: tempStoranClosedReason.trim(),
       });
-      showToast('success', 'Pengaturan Disimpan', 'Konfigurasi sistem, WhatsApp, limit generate, & password Gmail berhasil diperbarui.');
+      showToast('success', 'Pengaturan Disimpan', 'Konfigurasi sistem, alasan storan tutup, WhatsApp, & password Gmail berhasil diperbarui.');
     } catch (err: unknown) {
       showToast('error', 'Gagal Menyimpan', err instanceof Error ? err.message : String(err));
     } finally {
@@ -492,11 +506,13 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       showToast('error', 'Form Belum Lengkap', 'Alamat email Gmail wajib diisi.');
       return;
     }
+
     const emailVal = newStockEmail.trim().toLowerCase();
     if (!emailVal.endsWith('@gmail.com') || emailVal.includes(' ')) {
       showToast('error', 'Format Tidak Valid', 'Email harus beralamat @gmail.com valid tanpa spasi.');
       return;
     }
+
     setSavingStock(true);
     try {
       await addSingleAccount(
@@ -520,6 +536,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       showToast('error', 'Data Kosong', 'Silakan tempel daftar email Gmail per baris.');
       return;
     }
+
     setSavingStock(true);
     try {
       const added = await addBulkAccounts(
@@ -555,6 +572,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       showToast('error', 'Email Kosong', 'Alamat email tidak boleh kosong.');
       return;
     }
+
     setSavingStock(true);
     try {
       await updateAccount(editingStockItem.id, {
@@ -717,7 +735,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
 
         {/* Global OPEN/CLOSE switches & Bulk Confirm shortcut */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Shortcut to Bulk Confirm */}
           <button
             type="button"
             onClick={() => setShowBulkConfirmModal(true)}
@@ -726,8 +743,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             <ListCheck className="w-4 h-4" />
             <span>Terima Bulk</span>
           </button>
-
-          {/* Storan Switch */}
           <button
             onClick={() => updateSettings({ storanOpen: !settings.storanOpen })}
             className={`px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition border cursor-pointer ${
@@ -743,8 +758,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             />
             <span>Storan: {settings.storanOpen ? 'OPEN' : 'CLOSE'}</span>
           </button>
-
-          {/* Penarikan Switch */}
           <button
             onClick={() => updateSettings({ withdrawalOpen: !settings.withdrawalOpen })}
             className={`px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition border cursor-pointer ${
@@ -760,8 +773,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             />
             <span>Penarikan: {settings.withdrawalOpen ? 'OPEN' : 'CLOSE'}</span>
           </button>
-
-          {/* Generator Switch */}
           <button
             onClick={() =>
               updateSettings({ generatorOpen: settings.generatorOpen === false ? true : false })
@@ -817,7 +828,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         })}
       </div>
 
-      {/* TAB 0: ALL STOR USER (FEATURE REQUESTED BY USER) */}
+      {/* TAB 0: ALL STOR USER */}
       {activeTab === 'all_stor' && (
         <AdminAllStorTab
           submissions={submissionsList}
@@ -829,7 +840,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         />
       )}
 
-      {/* TAB 1: STATS & RINGKASAN */}
+      {/* TAB 1: STATS */}
       {activeTab === 'stats' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -843,7 +854,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               <div className="text-2xl font-black text-slate-900">{usersList.length}</div>
               <div className="text-[11px] text-slate-400 mt-1">Akun terdaftar di database</div>
             </div>
-
             <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-500">Submission Hari Ini</span>
@@ -854,7 +864,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               <div className="text-2xl font-black text-indigo-700">{submissionHariIni}</div>
               <div className="text-[11px] text-slate-400 mt-1">Tanggal: {todayStr}</div>
             </div>
-
             <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-500">Total Saldo User</span>
@@ -867,7 +876,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               </div>
               <div className="text-[11px] text-slate-400 mt-1">Kewajiban saldo aktif</div>
             </div>
-
             <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-500">Total Dicairkan</span>
@@ -948,7 +956,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               <div className="text-2xl font-black text-slate-900">{gmailStockList.length}</div>
               <div className="text-[11px] text-slate-400 mt-1">Total akun di database</div>
             </div>
-
             <div className="bg-white rounded-3xl p-5 border border-emerald-200/70 shadow-xs bg-emerald-50/20">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-emerald-700">Stok Tersedia (Fresh)</span>
@@ -959,7 +966,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               <div className="text-2xl font-black text-emerald-700">{availableStock.length}</div>
               <div className="text-[11px] text-emerald-600 mt-1">Siap diambil saat generate</div>
             </div>
-
             <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-500">Stok Terpakai</span>
@@ -970,7 +976,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               <div className="text-2xl font-black text-slate-700">{usedStock.length}</div>
               <div className="text-[11px] text-slate-400 mt-1">Sudah digenerate pengguna</div>
             </div>
-
             <div className={`rounded-3xl p-5 border shadow-xs transition ${
               settings.generatorOpen !== false
                 ? 'bg-purple-50/70 border-purple-200 text-purple-950'
@@ -1014,6 +1019,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 </p>
               </div>
             </div>
+
             <div className="flex items-center gap-2">
               <input
                 type="number"
@@ -1269,7 +1275,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         </div>
       )}
 
-      {/* TAB 2: KELOLA SUBMISSION (ANTREAN DETAIL) */}
+      {/* TAB 2: KELOLA SUBMISSION */}
       {activeTab === 'submissions' && (
         <div className="space-y-4">
           <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-4">
@@ -1610,6 +1616,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                       <span>Ubah/Tambah Saldo</span>
                     </button>
                   </div>
+
                   <button
                     type="button"
                     onClick={() => handleToggleSuspendUser(u)}
@@ -1765,6 +1772,36 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               </div>
             </div>
 
+            <div className="p-4 rounded-2xl bg-rose-50/70 border border-rose-200/90 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-black text-rose-950 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-600" />
+                  <span>Teks Alasan Layanan Storan Sedang Tutup</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTempStoranClosedReason(
+                      'Admin sedang menutup penerimaan akun baru. Storan aktif setiap Senin - Jumat. Silakan kembali pada jam operasional.'
+                    )
+                  }
+                  className="text-[11px] font-bold text-rose-700 hover:text-rose-900 underline cursor-pointer"
+                >
+                  Reset Default
+                </button>
+              </div>
+              <textarea
+                rows={3}
+                value={tempStoranClosedReason}
+                onChange={(e) => setTempStoranClosedReason(e.target.value)}
+                placeholder="Contoh: Admin sedang menutup penerimaan akun baru. Storan aktif setiap Senin - Jumat. Silakan kembali pada jam operasional."
+                className="w-full px-3.5 py-2.5 rounded-xl border border-rose-300 font-medium text-rose-950 text-xs bg-white focus:ring-2 focus:ring-rose-500/20 outline-none"
+              />
+              <p className="text-[11px] text-rose-700 leading-tight">
+                Teks ini akan otomatis ditampilkan kepada pengguna di halaman STOR ketika penerimaan storan dinonaktifkan (CLOSE).
+              </p>
+            </div>
+
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 Jam Operasional Storan
@@ -1860,7 +1897,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         </div>
       )}
 
-      {/* MODAL BULK CONFIRMATION (CORE USER REQUEST) */}
+      {/* MODAL BULK CONFIRMATION */}
       <AdminBulkConfirmModal
         isOpen={showBulkConfirmModal}
         onClose={() => setShowBulkConfirmModal(false)}
@@ -2044,7 +2081,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                   </strong>
                 </div>
               </div>
-
               <div className="pt-2">
                 <h4 className="text-xs font-bold text-slate-700 mb-2">Riwayat Submission User Ini:</h4>
                 <div className="max-h-36 overflow-y-auto space-y-1.5">
@@ -2146,7 +2182,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         </div>
       )}
 
-      {/* MODAL IMPORT MASSAL (BULK) */}
+      {/* MODAL IMPORT MASSAL */}
       {showAddBulkModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <motion.div
@@ -2210,7 +2246,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         </div>
       )}
 
-      {/* MODAL EDIT / UBAH AKUN GMAIL */}
+      {/* MODAL EDIT STOK */}
       {editingStockItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <motion.div
@@ -2401,6 +2437,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 ✕
               </button>
             </div>
+
             <form onSubmit={handleSaveUserBalance} className="mt-4 space-y-4">
               <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
                 <button
@@ -2506,7 +2543,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                     type="checkbox"
                     checked={includeTotalEarned}
                     onChange={(e) => setIncludeTotalEarned(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
                   />
                   <span>Tambahkan juga ke <strong>Total Penghasilan (Total Earned)</strong></span>
                 </label>

@@ -78,6 +78,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       );
       setSavedAccounts(unsubmitted);
     };
+
     updateSaved();
     const interval = setInterval(updateSaved, 1500);
     window.addEventListener('storage', updateSaved);
@@ -90,6 +91,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const handleOpenConfirm = (e: FormEvent) => {
     e.preventDefault();
     setInputError('');
+
     if (!settings.storanOpen) {
       showToast('error', 'Storan Ditutup', 'Layanan storan saat ini sedang tutup.');
       return;
@@ -98,13 +100,13 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       showToast('error', 'Akun Dibatasi', 'Akun kamu sedang dibatasi. Hubungi admin untuk informasi lebih lanjut.');
       return;
     }
+
     const trimmed = inputData.trim();
     if (!trimmed) {
       setInputError('Data akun Gmail tidak boleh kosong.');
       showToast('error', 'Validasi Gagal', 'Data akun Gmail wajib diisi.');
       return;
     }
-
     if (trimmed.includes('\n')) {
       setInputError('Harap gunakan sistem satu baris untuk satu akun (tidak boleh ada enter/multiline).');
       showToast('error', 'Format Salah', 'Data harus dalam satu baris tunggal.');
@@ -134,6 +136,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         status: 'Pending' as const,
         createdAt: new Date().toISOString(),
       };
+
       await addDoc(collection(db, 'submissions'), newSubmissionData);
 
       try {
@@ -182,36 +185,11 @@ export function StoranView({ onNavigate }: StoranViewProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Send className="w-7 h-7 text-indigo-600" />
-            <span>Storan Akun Gmail / Google</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Kirim akun Gmail fresh dengan password wajib:{' '}
-            <span className="font-mono font-bold bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-200">
-              {activePassword}
-            </span>
-            . Reward:{' '}
-            <strong className="text-indigo-700 font-extrabold">{formatRupiah(settings.pricePerSubmission)}</strong> per akun valid.
-          </p>
-        </div>
-
-        <div
-          className={`self-start sm:self-auto px-3.5 py-1.5 rounded-full text-xs font-bold border flex items-center gap-2 ${
-            settings.storanOpen
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              : 'bg-rose-50 text-rose-800 border-rose-200'
-          }`}
-        >
-          <span
-            className={`w-2.5 h-2.5 rounded-full ${
-              settings.storanOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
-            }`}
-          />
-          <span>{settings.storanOpen ? 'Storan BUKA (Menerima Akun)' : 'Storan TUTUP'}</span>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
+          <Send className="w-7 h-7 text-indigo-600" />
+          <span>Storan Akun Gmail / Google</span>
+        </h1>
       </div>
 
       {!settings.storanOpen && (
@@ -219,8 +197,9 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
           <div className="text-sm">
             <div className="font-bold">Layanan Storan Sedang Tutup</div>
-            <p className="text-xs text-rose-700 mt-0.5">
-              Admin sedang menutup penerimaan akun baru. Storan aktif setiap {settings.storanSchedule}. Silakan kembali pada jam operasional.
+            <p className="text-xs text-rose-700 mt-0.5 whitespace-pre-line leading-relaxed">
+              {settings.storanClosedReason ||
+                `Admin sedang menutup penerimaan akun baru. Storan aktif setiap ${settings.storanSchedule}. Silakan kembali pada jam operasional.`}
             </p>
           </div>
         </div>

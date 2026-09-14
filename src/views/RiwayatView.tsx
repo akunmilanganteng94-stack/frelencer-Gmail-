@@ -171,8 +171,9 @@ export function RiwayatView() {
                     )}
                   </button>
                 </div>
+
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                  <div className="flex items-center gap-1 text-xs text-slate-400">
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
                     <span>{formatIndonesianDateTime(sub.createdAt)}</span>
                   </div>

@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 export function AuthView() {
   const { loginUser, registerUser, resetPassword } = useAuth();
   const { showToast } = useToast();
+
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

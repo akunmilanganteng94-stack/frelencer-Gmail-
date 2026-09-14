@@ -29,10 +29,10 @@ export function SaldoView() {
   const { userProfile, currentUser } = useAuth();
   const { settings } = useSettings();
   const { showToast } = useToast();
+
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-
   const [amount, setAmount] = useState<number>(settings.minWithdrawal || 4000);
   const [method, setMethod] = useState<WithdrawalMethod>('DANA');
   const [targetNumber, setTargetNumber] = useState('');
@@ -92,12 +92,13 @@ export function SaldoView() {
   const handleWithdrawSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError('');
-    if (!currentUser || !userProfile) return;
 
+    if (!currentUser || !userProfile) return;
     if (!settings.withdrawalOpen) {
       setFormError('Layanan penarikan sedang ditutup oleh admin.');
       return;
     }
+
     const currentBalance = userProfile.balance || 0;
     if (amount > currentBalance) {
       setFormError(`Saldo kamu tidak mencukupi (${formatRupiah(currentBalance)}).`);
@@ -107,6 +108,7 @@ export function SaldoView() {
       setFormError(`Jumlah penarikan minimal ${formatRupiah(settings.minWithdrawal)}.`);
       return;
     }
+
     const cleanedNumber = targetNumber.trim();
     if (!isValidPhoneNumber(cleanedNumber)) {
       setFormError('Nomor tujuan e-wallet tidak valid. Format: 08xxx (10-13 digit).');
@@ -131,6 +133,7 @@ export function SaldoView() {
         if (!userDoc.exists()) {
           throw new Error('Data pengguna tidak ditemukan.');
         }
+
         const userData = userDoc.data();
         const availableBal = userData.balance || 0;
         if (availableBal < amount) {
@@ -153,6 +156,7 @@ export function SaldoView() {
           status: 'Pending',
           createdAt: new Date().toISOString(),
         };
+
         transaction.set(newWithdrawalRef, withdrawalPayload);
       });
 
@@ -340,6 +344,7 @@ export function SaldoView() {
                     </span>
                   </div>
                 </div>
+
                 {w.status === 'Ditolak' && w.rejectionReason && (
                   <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
@@ -492,7 +497,7 @@ export function SaldoView() {
                       type="checkbox"
                       checked={isConfirmed}
                       onChange={(e) => setIsConfirmed(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                      className="mt-0.5 w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                     <span>
                       Saya memastikan nomor dan nama pemilik akun {method} sudah benar. Kesalahan input nomor tujuan menjadi tanggung jawab pengguna.

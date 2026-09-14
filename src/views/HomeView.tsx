@@ -63,6 +63,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 px-6 py-4 sm:px-8 sm:py-5 text-white shadow-xl shadow-blue-500/20">
         <div className="absolute -right-12 -top-12 w-56 h-56 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         <div className="absolute -left-12 -bottom-12 w-56 h-56 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
+
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-3.5 sm:gap-5">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md text-[11px] font-semibold text-blue-100">
@@ -85,6 +86,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               </div>
             </div>
           </div>
+
           <div className="flex flex-wrap gap-2.5 sm:gap-3">
             <button
               type="button"
@@ -274,6 +276,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
+
           {loading ? (
             <div className="space-y-3 py-4">
               {[1, 2, 3].map((n) => (
@@ -330,6 +333,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             </div>
           )}
         </div>
+
         <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <span>Status pending: <strong>dalam pengecekan admin tunggu 24-30 jam</strong></span>
           <button

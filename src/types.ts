@@ -57,6 +57,8 @@ export interface GmailStockItem {
   addedAt: string;
   claimedBy?: string;
   claimedAt?: string;
+  usedAt?: string;
+  createdAt?: string;
 }
 
 export interface SystemSettings {

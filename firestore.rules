@@ -1,17 +1,13 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
     // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
-
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'apriliansyahazril10@gmail.com' ||

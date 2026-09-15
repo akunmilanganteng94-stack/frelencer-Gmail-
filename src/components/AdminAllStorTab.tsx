@@ -13,6 +13,7 @@ import {
   KeyRound,
   Download,
   ListCheck,
+  ListX,
   Layers,
 } from 'lucide-react';
 
@@ -20,6 +21,7 @@ interface AdminAllStorTabProps {
   submissions: Submission[];
   defaultPassword?: string;
   onOpenBulkConfirmModal: () => void;
+  onOpenBulkRejectModal?: () => void;
   onAcceptSubmission: (sub: Submission) => void;
   onRejectSubmission: (sub: Submission) => void;
   processingSubId: string | null;
@@ -29,6 +31,7 @@ export function AdminAllStorTab({
   submissions,
   defaultPassword = 'sgsg1122',
   onOpenBulkConfirmModal,
+  onOpenBulkRejectModal,
   onAcceptSubmission,
   onRejectSubmission,
   processingSubId,
@@ -118,16 +121,26 @@ export function AdminAllStorTab({
           </p>
         </div>
 
-        {/* Big Action: Konfirmasi Terima Bulk */}
-        <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+        {/* Big Actions: Konfirmasi Terima Bulk & Tolak Bulk */}
+        <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
           <button
             type="button"
             onClick={onOpenBulkConfirmModal}
-            className="px-5 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-500/25 transition flex items-center justify-center gap-2.5 cursor-pointer active:scale-95"
+            className="px-4 sm:px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-500/25 transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
           >
-            <ListCheck className="w-5 h-5" />
-            <span>Konfirmasi Terima Bulk</span>
+            <ListCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Terima Bulk</span>
           </button>
+          {onOpenBulkRejectModal && (
+            <button
+              type="button"
+              onClick={onOpenBulkRejectModal}
+              className="px-4 sm:px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-rose-500/25 transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+            >
+              <ListX className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>Tolak Bulk</span>
+            </button>
+          )}
         </div>
       </div>
 

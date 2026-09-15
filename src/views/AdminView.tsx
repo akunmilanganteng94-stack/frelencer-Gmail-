@@ -21,6 +21,7 @@ import { db } from '../lib/firebase';
 import { useGmailStock } from '../hooks/useGmailStock';
 import { AdminAllStorTab } from '../components/AdminAllStorTab';
 import { AdminBulkConfirmModal } from '../components/AdminBulkConfirmModal';
+import { AdminBulkRejectModal } from '../components/AdminBulkRejectModal';
 import {
   ShieldCheck,
   Users,
@@ -46,6 +47,7 @@ import {
   MessageCircle,
   Sparkles,
   ListCheck,
+  ListX,
   AlertTriangle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -79,8 +81,9 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const [withdrawalsList, setWithdrawalsList] = useState<Withdrawal[]>([]);
   const [, setLoadingData] = useState(true);
 
-  // Bulk confirmation modal state
+  // Bulk confirmation & reject modal state
   const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false);
+  const [showBulkRejectModal, setShowBulkRejectModal] = useState(false);
 
   // Submissions review state
   const [subFilter, setSubFilter] = useState<'All' | 'Pending' | 'Diterima' | 'Ditolak'>('Pending');
@@ -733,15 +736,25 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           </p>
         </div>
 
-        {/* Global OPEN/CLOSE switches & Bulk Confirm shortcut */}
+        {/* Global OPEN/CLOSE switches & Bulk Actions shortcut */}
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setShowBulkConfirmModal(true)}
             className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+            title="Konfirmasi terima banyak akun sekaligus (1 baris 1 Gmail)"
           >
             <ListCheck className="w-4 h-4" />
             <span>Terima Bulk</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowBulkRejectModal(true)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white text-xs font-black shadow-md shadow-rose-500/20 transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+            title="Tolak banyak akun sekaligus (1 baris 1 Gmail) dengan alasan penolakan"
+          >
+            <ListX className="w-4 h-4" />
+            <span>Tolak Bulk</span>
           </button>
           <button
             onClick={() => updateSettings({ storanOpen: !settings.storanOpen })}
@@ -834,6 +847,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           submissions={submissionsList}
           defaultPassword={settings.gmailDefaultPassword || 'sgsg1122'}
           onOpenBulkConfirmModal={() => setShowBulkConfirmModal(true)}
+          onOpenBulkRejectModal={() => setShowBulkRejectModal(true)}
           onAcceptSubmission={handleAcceptSubmission}
           onRejectSubmission={(sub) => setRejectModalSub(sub)}
           processingSubId={processingSubId}
@@ -924,12 +938,20 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 Gunakan fitur All STOR User atau Konfirmasi Terima Bulk untuk memproses antrean dengan cepat.
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setShowBulkConfirmModal(true)}
-                className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1.5"
               >
-                Konfirmasi Bulk
+                <ListCheck className="w-3.5 h-3.5" />
+                <span>Terima Bulk</span>
+              </button>
+              <button
+                onClick={() => setShowBulkRejectModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer flex items-center gap-1.5"
+              >
+                <ListX className="w-3.5 h-3.5" />
+                <span>Tolak Bulk</span>
               </button>
               <button
                 onClick={() => setActiveTab('all_stor')}
@@ -1280,20 +1302,42 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         <div className="space-y-4">
           <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
-                {(['Pending', 'Diterima', 'Ditolak', 'All'] as const).map((f) => (
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
+                  {(['Pending', 'Diterima', 'Ditolak', 'All'] as const).map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setSubFilter(f)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        subFilter === f
+                          ? 'bg-white text-indigo-700 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Bulk Actions Shortcut in Submissions Tab */}
+                <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
                   <button
-                    key={f}
-                    onClick={() => setSubFilter(f)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                      subFilter === f
-                        ? 'bg-white text-indigo-700 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                    type="button"
+                    onClick={() => setShowBulkConfirmModal(true)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-200 transition flex items-center gap-1 cursor-pointer"
                   >
-                    {f}
+                    <ListCheck className="w-3.5 h-3.5" />
+                    <span>Terima Bulk</span>
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkRejectModal(true)}
+                    className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <ListX className="w-3.5 h-3.5" />
+                    <span>Tolak Bulk</span>
+                  </button>
+                </div>
               </div>
               <div className="relative w-full md:w-80">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
@@ -1901,6 +1945,13 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       <AdminBulkConfirmModal
         isOpen={showBulkConfirmModal}
         onClose={() => setShowBulkConfirmModal(false)}
+        submissions={submissionsList}
+      />
+
+      {/* MODAL BULK REJECTION */}
+      <AdminBulkRejectModal
+        isOpen={showBulkRejectModal}
+        onClose={() => setShowBulkRejectModal(false)}
         submissions={submissionsList}
       />
 

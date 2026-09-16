@@ -52,3 +52,31 @@ export function isValidPhoneNumber(phone: string): boolean {
   const cleaned = phone.replace(/[^0-9+]/g, '');
   return /^(08|\+628|628)[0-9]{8,12}$/.test(cleaned);
 }
+
+export function getDateStringWIB(isoOrDate: string | Date | number): string {
+  try {
+    const d = new Date(isoOrDate);
+    if (isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(d);
+  } catch {
+    return '';
+  }
+}
+
+export function isTodayWIB(isoOrDate: string | Date | number): boolean {
+  const dateStr = getDateStringWIB(isoOrDate);
+  const todayStr = getDateStringWIB(new Date());
+  return dateStr !== '' && dateStr === todayStr;
+}
+
+export function isEarlierThanTodayWIB(isoOrDate: string | Date | number): boolean {
+  const dateStr = getDateStringWIB(isoOrDate);
+  const todayStr = getDateStringWIB(new Date());
+  return dateStr !== '' && dateStr < todayStr;
+}
+

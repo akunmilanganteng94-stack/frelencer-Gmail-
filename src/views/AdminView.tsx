@@ -2,7 +2,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
-import { formatRupiah, formatIndonesianDateTime } from '../lib/utils';
+import { formatRupiah, formatIndonesianDateTime, isTodayWIB, isEarlierThanTodayWIB } from '../lib/utils';
 import {
   UserProfile,
   Submission,
@@ -673,6 +673,12 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const todayStr = new Date().toISOString().split('T')[0];
   const submissionHariIni = submissionsList.filter((s) => s.createdAt.startsWith(todayStr)).length;
   const submissionPending = submissionsList.filter((s) => s.status === 'Pending').length;
+  const pendingYesterdayCount = submissionsList.filter(
+    (s) => s.status === 'Pending' && isEarlierThanTodayWIB(s.createdAt)
+  ).length;
+  const pendingTodayCount = submissionsList.filter(
+    (s) => s.status === 'Pending' && isTodayWIB(s.createdAt)
+  ).length;
   const submissionDiterima = submissionsList.filter((s) => s.status === 'Diterima').length;
   const submissionDitolak = submissionsList.filter((s) => s.status === 'Ditolak').length;
   const totalSaldoUser = usersList.reduce((acc, u) => acc + (u.balance || 0), 0);
@@ -810,7 +816,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       {/* Admin Navigation Tabs */}
       <div className="flex flex-wrap gap-1 p-1 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
         {[
-          { id: 'all_stor', label: `All STOR User (${submissionsList.length})`, icon: Layers },
+          { id: 'all_stor', label: `All STOR / Stok User (${submissionsList.length})`, icon: Layers },
           { id: 'stats', label: 'Statistik & Ringkasan', icon: TrendingUp },
           { id: 'stock', label: `Stok Generator (${availableStock.length})`, icon: Sparkles },
           { id: 'submissions', label: `Antrean Pending (${submissionPending})`, icon: UploadCloud },
@@ -933,9 +939,14 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
 
           <div className="bg-gradient-to-r from-indigo-900 to-blue-900 rounded-3xl p-6 text-white flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold">Ada {submissionPending} antrean submission menunggu</h3>
+              <h3 className="text-lg font-bold">
+                Ada {submissionPending} antrean submission menunggu{' '}
+                <span className="text-sm font-normal text-indigo-200">
+                  ({pendingYesterdayCount} kemarin • {pendingTodayCount} hari ini)
+                </span>
+              </h3>
               <p className="text-xs text-indigo-200 mt-0.5">
-                Gunakan fitur All STOR User atau Konfirmasi Terima Bulk untuk memproses antrean dengan cepat.
+                Gunakan fitur All STOR / Stok User untuk memisahkan pendingan kemarin atau konfirmasi/tolak secara bulk.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -957,7 +968,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 onClick={() => setActiveTab('all_stor')}
                 className="px-4 py-2.5 rounded-xl bg-white text-indigo-950 font-bold text-xs hover:bg-indigo-50 transition cursor-pointer"
               >
-                Buka All STOR User
+                Buka All STOR / Stok User
               </button>
             </div>
           </div>

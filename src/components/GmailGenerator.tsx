@@ -303,7 +303,7 @@ export function GmailGenerator({
           <ol className="list-decimal list-inside space-y-1 text-slate-700 font-medium">
             <li>Tekan tombol Generate Gmail dan pilih jumlah yang Anda butuhkan.</li>
             <li>Salin nama Gmail satu per satu, atau salin semuanya sekaligus.</li>
-            <li>Daftarkan akun Gmail dengan nama tersebut dan password wajib di atas.</li>
+            <li>Daftarkan akun Gmail dengan nama tersebut dan pw tersebut di google/Gmail.</li>
             <li>Tempel Gmail yang sudah jadi ke kolom storan di bawah, lalu kirim.</li>
           </ol>
           <p className="font-bold text-orange-600">Password wajib: sgsg1122</p>
@@ -364,7 +364,7 @@ export function GmailGenerator({
         <ol className="list-decimal list-inside space-y-1 text-slate-600 font-medium">
           <li>Tekan tombol Generate Gmail dan pilih jumlah yang Anda butuhkan.</li>
           <li>Salin nama Gmail satu per satu, atau salin semuanya sekaligus.</li>
-          <li>Daftarkan akun Gmail dengan nama tersebut dan password wajib di atas.</li>
+          <li>Daftarkan akun Gmail dengan nama tersebut dan pw tersebut di google/Gmail.</li>
           <li>Tempel Gmail yang sudah jadi ke kolom storan di bawah, lalu kirim.</li>
         </ol>
         <div className="pt-0.5 text-xs font-bold text-orange-600">

@@ -10,8 +10,7 @@ import { db, handleFirestoreError } from '../lib/firebase';
 import { RulesCard } from '../components/RulesCard';
 import {
   GmailGenerator,
-  getSavedGeneratedAccounts,
-  GeneratedResultItem,
+  verifyUserGeneratedEmail,
 } from '../components/GmailGenerator';
 import {
   Clock,
@@ -38,11 +37,12 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const activePassword = settings.gmailDefaultPassword || 'sgsg1122';
 
   const [inputData, setInputData] = useState('');
+  const [validatedEmails, setValidatedEmails] = useState<string[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [inputError, setInputError] = useState('');
-  const [, setSavedAccounts] = useState<GeneratedResultItem[]>([]);
+  const [checkingEmail, setCheckingEmail] = useState(false);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -67,28 +67,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     return () => unsubscribe();
   }, [currentUser]);
 
-  useEffect(() => {
-    const updateSaved = () => {
-      const list = getSavedGeneratedAccounts(currentUser?.uid);
-      const unsubmitted = list.filter(
-        (acc) =>
-          !submissions.some(
-            (sub) => sub.dataContent.trim().toLowerCase() === acc.email.trim().toLowerCase()
-          )
-      );
-      setSavedAccounts(unsubmitted);
-    };
-
-    updateSaved();
-    const interval = setInterval(updateSaved, 1500);
-    window.addEventListener('storage', updateSaved);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', updateSaved);
-    };
-  }, [currentUser?.uid, submissions]);
-
-  const handleOpenConfirm = (e: FormEvent) => {
+  const handleOpenConfirm = async (e: FormEvent) => {
     e.preventDefault();
     setInputError('');
 
@@ -101,58 +80,145 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       return;
     }
 
-    const trimmed = inputData.trim();
-    if (!trimmed) {
-      setInputError('Data akun Gmail tidak boleh kosong.');
+    const rawLines = inputData
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+
+    if (rawLines.length === 0) {
+      setInputError('Kolom storan masih kosong. Silakan masukkan minimal 1 akun Gmail.');
       showToast('error', 'Validasi Gagal', 'Data akun Gmail wajib diisi.');
       return;
     }
-    if (trimmed.includes('\n')) {
-      setInputError('Harap gunakan sistem satu baris untuk satu akun (tidak boleh ada enter/multiline).');
-      showToast('error', 'Format Salah', 'Data harus dalam satu baris tunggal.');
+
+    if (rawLines.length > 5) {
+      setInputError('Maksimal 5 akun Gmail sekaligus per proses storan.');
+      showToast('error', 'Melebihi Batas', 'Maksimal 5 akun Gmail per proses.');
       return;
     }
 
-    const lower = trimmed.toLowerCase();
-    if (!lower.includes('@gmail.com') && !lower.includes('@googlemail.com')) {
-      setInputError('Format harus berupa akun Gmail (mengandung @gmail.com). Contoh: contoh@gmail.com');
-      showToast('warning', 'Domain Salah', 'Hanya menerima akun Gmail (@gmail.com).');
-      return;
+    const cleanedEmails: string[] = [];
+
+    for (let i = 0; i < rawLines.length; i++) {
+      const line = rawLines[i];
+      const lineNum = i + 1;
+
+      if (line.includes(' ')) {
+        setInputError(`Baris ${lineNum} ("${line}") mengandung spasi tidak valid.`);
+        showToast('error', 'Format Salah', `Baris ${lineNum} tidak boleh mengandung spasi.`);
+        return;
+      }
+
+      // Normalisasi: jika user hanya mengetik nama akun tanpa domain, jadikan @gmail.com
+      let cleanEmail = line.toLowerCase();
+      if (!cleanEmail.includes('@')) {
+        cleanEmail = `${cleanEmail}@gmail.com`;
+      }
+
+      if (!cleanEmail.includes('@gmail.com') && !cleanEmail.includes('@googlemail.com')) {
+        setInputError(
+          `Baris ${lineNum} ("${line}") bukan alamat Gmail valid (@gmail.com). Contoh: nama.akun@gmail.com`
+        );
+        showToast('warning', 'Domain Salah', `Baris ${lineNum}: Hanya menerima akun Gmail (@gmail.com).`);
+        return;
+      }
+
+      // Cek duplikat dalam baris yang sama
+      if (cleanedEmails.includes(cleanEmail)) {
+        setInputError(`Baris ${lineNum}: Akun "${cleanEmail}" duplikat (sudah ditulis di baris sebelumnya).`);
+        showToast('warning', 'Akun Duplikat', `Akun ${cleanEmail} ditulis lebih dari 1 kali.`);
+        return;
+      }
+
+      // Cek apakah akun sudah pernah disetorkan sebelumnya oleh user ini
+      const alreadySubmitted = submissions.some(
+        (sub) => sub.dataContent.trim().toLowerCase() === cleanEmail
+      );
+      if (alreadySubmitted) {
+        setInputError(`Baris ${lineNum}: Akun "${cleanEmail}" sudah pernah Anda setorkan sebelumnya.`);
+        showToast('warning', 'Sudah Pernah Disetor', `Akun ${cleanEmail} sudah ada di riwayat storan Anda.`);
+        return;
+      }
+
+      cleanedEmails.push(cleanEmail);
     }
 
-    setShowConfirmModal(true);
+    // ATURAN WAJIB: Nama Gmail HARUS SAMA PERSIS dengan yang di-generate oleh akun user ini
+    setCheckingEmail(true);
+    try {
+      for (let i = 0; i < cleanedEmails.length; i++) {
+        const email = cleanedEmails[i];
+        const isGenerated = await verifyUserGeneratedEmail(email, currentUser?.uid);
+        if (!isGenerated) {
+          setInputError(
+            `Baris ${i + 1} ("${email}") bukan hasil generate dari akun Anda! Semua Gmail yang disetor harus sama dengan yang Anda generate sendiri.`
+          );
+          showToast(
+            'error',
+            'Nama Tidak Sesuai Generate',
+            `Akun "${email}" tidak terdaftar dalam riwayat generate akun Anda.`
+          );
+          return;
+        }
+      }
+
+      // Simpan daftar email bersih yang sudah lolos validasi
+      setValidatedEmails(cleanedEmails);
+      setInputData(cleanedEmails.join('\n'));
+      setShowConfirmModal(true);
+    } finally {
+      setCheckingEmail(false);
+    }
   };
 
   const handleConfirmSubmit = async () => {
-    if (!currentUser || !userProfile) return;
+    if (!currentUser || !userProfile || validatedEmails.length === 0) return;
     setSubmitting(true);
     try {
-      const newSubmissionData = {
-        userId: currentUser.uid,
-        userEmail: currentUser.email || '',
-        userName: userProfile.displayName || 'Freelancer',
-        dataContent: inputData.trim(),
-        rewardAmount: settings.pricePerSubmission,
-        status: 'Pending' as const,
-        createdAt: new Date().toISOString(),
-      };
+      // Validasi proteksi ganda sebelum submit ke database
+      for (const email of validatedEmails) {
+        const isGenerated = await verifyUserGeneratedEmail(email, currentUser.uid);
+        if (!isGenerated) {
+          setInputError(`Akun "${email}" bukan hasil generate dari akun Anda!`);
+          showToast(
+            'error',
+            'Nama Tidak Sesuai Generate',
+            `Akun "${email}" harus sama persis dengan yang di-generate oleh akun Anda masing-masing.`
+          );
+          setShowConfirmModal(false);
+          setSubmitting(false);
+          return;
+        }
+      }
 
-      await addDoc(collection(db, 'submissions'), newSubmissionData);
+      // Kirim setiap akun sebagai submission baru
+      for (const email of validatedEmails) {
+        const newSubmissionData = {
+          userId: currentUser.uid,
+          userEmail: currentUser.email || '',
+          userName: userProfile.displayName || 'Freelancer',
+          dataContent: email,
+          rewardAmount: settings.pricePerSubmission,
+          status: 'Pending' as const,
+          createdAt: new Date().toISOString(),
+        };
+        await addDoc(collection(db, 'submissions'), newSubmissionData);
+      }
 
+      // Bersihkan local storage untuk akun-akun yang baru disetor
       try {
-        const activeKey = currentUser.uid
-          ? `gmail_gen_saved_${currentUser.uid}`
-          : 'gmail_gen_saved_guest';
+        const activeKey = `gmail_gen_saved_${currentUser.uid}`;
         const raw = localStorage.getItem(activeKey);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            const remaining = parsed.filter(
-              (item: any) =>
-                (item.email || '').trim().toLowerCase() !== inputData.trim().toLowerCase()
-            );
+            const remaining = parsed.filter((item: any) => {
+              const itemEmail = (item.email || '').trim().toLowerCase();
+              return !validatedEmails.some(
+                (ve) => ve === itemEmail || ve.split('@')[0] === itemEmail.split('@')[0]
+              );
+            });
             localStorage.setItem(activeKey, JSON.stringify(remaining));
-            setSavedAccounts(remaining);
           }
         }
       } catch (cleanErr) {
@@ -161,10 +227,11 @@ export function StoranView({ onNavigate }: StoranViewProps) {
 
       showToast(
         'success',
-        'Akun Gmail Berhasil Disetor',
+        `${validatedEmails.length} Akun Gmail Berhasil Disetor`,
         'dalam pengecekan admin tunggu 24-30 jam'
       );
       setInputData('');
+      setValidatedEmails([]);
       setShowConfirmModal(false);
     } catch (error) {
       setShowConfirmModal(false);
@@ -175,7 +242,24 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   };
 
   const handleSelectFromGenerator = (email: string) => {
-    setInputData(email);
+    const currentLines = inputData
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const lower = email.toLowerCase();
+    if (currentLines.map((c) => c.toLowerCase()).includes(lower)) {
+      showToast('info', 'Sudah Ada', `Akun ${email} sudah ada dalam daftar stor.`);
+      return;
+    }
+
+    if (currentLines.length >= 5) {
+      showToast('info', 'Batas 5 Akun Penuh', 'Kolom storan sudah berisi 5 akun (maksimal 5 akun per proses).');
+      return;
+    }
+
+    const updated = [...currentLines, lower].join('\n');
+    setInputData(updated);
     setInputError('');
     const formEl = document.getElementById('submission-form-card');
     if (formEl) {
@@ -250,36 +334,61 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 <span>Form Setor Akun Gmail</span>
               </h2>
               <span className="text-xs font-semibold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100">
-                1 Baris = 1 Akun
+                5 Baris (Maks. 5 Akun)
               </span>
             </div>
 
             <form onSubmit={handleOpenConfirm} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Alamat Akun Gmail yang Disetor
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span>Alamat Akun Gmail yang Disetor (5 Baris Menyatu)</span>
+                  <span className="text-[11px] font-semibold text-indigo-600">
+                    {inputData.split('\n').filter((l) => l.trim().length > 0).length}/5 Baris Terisi
+                  </span>
                 </label>
+
+                {/* Kolom 5 Baris Menyatu */}
                 <div className="relative">
-                  <input
-                    type="text"
+                  <textarea
+                    rows={5}
                     disabled={!settings.storanOpen || userProfile?.status === 'suspended'}
                     value={inputData}
                     onChange={(e) => {
-                      setInputData(e.target.value);
+                      const lines = e.target.value.split('\n');
+                      if (lines.length > 5) {
+                        setInputData(lines.slice(0, 5).join('\n'));
+                      } else {
+                        setInputData(e.target.value);
+                      }
                       setInputError('');
                     }}
                     placeholder="contoh@gmail.com"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm outline-none transition disabled:bg-slate-100 disabled:text-slate-400 font-mono"
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-xs sm:text-sm font-mono text-slate-800 outline-none resize-none transition disabled:bg-slate-100 disabled:text-slate-400 shadow-xs"
+                    style={{ minHeight: '140px', lineHeight: '26px' }}
                   />
                 </div>
+
                 {inputError && (
                   <p className="text-xs text-rose-600 font-semibold mt-1.5">{inputError}</p>
                 )}
+
                 <div className="flex flex-wrap items-center justify-between gap-2 mt-2 text-[11px] text-slate-500">
                   <span className="flex items-center gap-1">
                     <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                    <span>Format: <strong>contoh@gmail.com</strong> (Password otomatis: <strong className="text-orange-600 font-mono">{activePassword}</strong>)</span>
+                    <span>1 baris = 1 akun Gmail. Anda bisa stor hingga 5 akun sekaligus per proses.</span>
                   </span>
+                  {inputData.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInputData('');
+                        setInputError('');
+                      }}
+                      className="text-slate-400 hover:text-rose-600 text-xs font-semibold cursor-pointer underline transition"
+                    >
+                      Kosongkan Kolom
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -297,12 +406,21 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 disabled={
                   !settings.storanOpen ||
                   userProfile?.status === 'suspended' ||
-                  !inputData.trim()
+                  !inputData.trim() ||
+                  checkingEmail
                 }
                 className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-700 hover:from-indigo-700 hover:to-blue-800 text-white font-black tracking-wide rounded-xl text-sm shadow-md shadow-indigo-500/25 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Send className="w-4 h-4" />
-                <span>STOR AKUN GMAIL</span>
+                {checkingEmail ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                <span>
+                  {checkingEmail
+                    ? 'Memeriksa Kesesuaian Akun...'
+                    : `STOR GMAIL (${inputData.split('\n').filter((l) => l.trim().length > 0).length || 1} AKUN)`}
+                </span>
               </button>
             </form>
           </div>
@@ -358,22 +476,50 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Akun yang akan dikirim:
-                </p>
-                <div className="p-3 bg-white rounded-xl border border-slate-200 font-mono text-xs font-bold text-slate-800 break-all flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-indigo-500 shrink-0" />
-                  <span>{inputData}</span>
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Akun yang akan dikirim ({validatedEmails.length} Akun):
+                  </p>
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[10px] font-bold font-mono">
+                    {validatedEmails.length} Akun
+                  </span>
                 </div>
+
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {validatedEmails.map((email, idx) => (
+                    <div
+                      key={email}
+                      className="p-2.5 bg-white rounded-xl border border-slate-200 font-mono text-xs font-bold text-slate-800 break-all flex items-center justify-between gap-2 shadow-2xs"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-5 h-5 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-mono shrink-0">
+                          {idx + 1}
+                        </span>
+                        <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                        <span className="truncate">{email}</span>
+                      </div>
+                      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-sans shrink-0 flex items-center gap-0.5 font-semibold">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>Sesuai Generate</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Semua Akun Terverifikasi Sesuai Hasil Generate Anda</span>
+                </div>
+
                 <div className="flex items-center justify-between pt-1 text-xs text-slate-600">
                   <span>Password Wajib:</span>
                   <span className="font-mono font-bold text-orange-600">{activePassword}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>Imbalan jika diterima:</span>
-                  <span className="font-extrabold text-indigo-700">
-                    {formatRupiah(settings.pricePerSubmission)}
+                  <span>Total Imbalan ({validatedEmails.length} Akun):</span>
+                  <span className="font-extrabold text-indigo-700 text-sm">
+                    {formatRupiah(settings.pricePerSubmission * validatedEmails.length)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-600">
@@ -387,7 +533,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
               </div>
 
               <p className="text-xs font-medium text-slate-600 text-center">
-                Pastikan akun Gmail sudah berhasil dibuat di Google dan password sesuai ketentuan sebelum mengirim.
+                Pastikan semua akun Gmail sudah berhasil dibuat di Google dan password sesuai ketentuan sebelum mengirim.
               </p>
 
               <div className="flex items-center gap-3">
@@ -408,7 +554,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                   {submitting ? (
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
-                    <span>Ya, Kirim Akun</span>
+                    <span>Ya, Kirim {validatedEmails.length} Akun</span>
                   )}
                 </button>
               </div>

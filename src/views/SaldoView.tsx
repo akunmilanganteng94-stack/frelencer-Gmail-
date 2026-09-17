@@ -25,6 +25,16 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+export const WITHDRAWAL_PRESETS = [
+  { value: 2000, label: '2k', text: 'Rp 2.000' },
+  { value: 4000, label: '4k', text: 'Rp 4.000' },
+  { value: 6000, label: '6k', text: 'Rp 6.000' },
+  { value: 10000, label: '10k', text: 'Rp 10.000' },
+  { value: 20000, label: '20k', text: 'Rp 20.000' },
+  { value: 50000, label: '50k', text: 'Rp 50.000' },
+  { value: 100000, label: '100k', text: 'Rp 100.000' },
+] as const;
+
 export function SaldoView() {
   const { userProfile, currentUser } = useAuth();
   const { settings } = useSettings();
@@ -33,7 +43,7 @@ export function SaldoView() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [amount, setAmount] = useState<number>(settings.minWithdrawal || 4000);
+  const [amount, setAmount] = useState<number>(2000);
   const [method, setMethod] = useState<WithdrawalMethod>('DANA');
   const [targetNumber, setTargetNumber] = useState('');
   const [recipientName, setRecipientName] = useState('');
@@ -75,15 +85,20 @@ export function SaldoView() {
       showToast('error', 'Akun Dibatasi', 'Akun Anda sedang dibatasi. Tidak dapat melakukan penarikan.');
       return;
     }
-    if ((userProfile?.balance || 0) < settings.minWithdrawal) {
+    const lowestNominal = WITHDRAWAL_PRESETS[0].value; // 2000 (2k)
+    if ((userProfile?.balance || 0) < lowestNominal) {
       showToast(
         'error',
         'Saldo Kurang',
-        `Saldo minimum untuk penarikan adalah ${formatRupiah(settings.minWithdrawal)}.`
+        `Saldo minimum untuk penarikan adalah ${formatRupiah(lowestNominal)} (2k).`
       );
       return;
     }
-    setAmount(settings.minWithdrawal);
+
+    const currentValid = WITHDRAWAL_PRESETS.find(
+      (opt) => opt.value === amount && opt.value <= (userProfile?.balance || 0)
+    );
+    setAmount(currentValid ? currentValid.value : lowestNominal);
     setFormError('');
     setIsConfirmed(false);
     setShowWithdrawModal(true);
@@ -100,12 +115,14 @@ export function SaldoView() {
     }
 
     const currentBalance = userProfile.balance || 0;
-    if (amount > currentBalance) {
-      setFormError(`Saldo kamu tidak mencukupi (${formatRupiah(currentBalance)}).`);
+    const validOption = WITHDRAWAL_PRESETS.find((opt) => opt.value === amount);
+    if (!validOption) {
+      setFormError('Harap pilih salah satu nominal penarikan resmi dari admin (2k, 4k, 6k, 10k, 20k, 50k, 100k).');
       return;
     }
-    if (amount < settings.minWithdrawal) {
-      setFormError(`Jumlah penarikan minimal ${formatRupiah(settings.minWithdrawal)}.`);
+
+    if (amount > currentBalance) {
+      setFormError(`Saldo kamu tidak mencukupi untuk nominal ${formatRupiah(amount)} (${validOption.label}). Saldo saat ini: ${formatRupiah(currentBalance)}.`);
       return;
     }
 
@@ -221,14 +238,14 @@ export function SaldoView() {
             </div>
             <div className="mt-2 text-xs text-blue-100 flex items-center justify-between">
               <span>Min. Tarik:</span>
-              <strong>{formatRupiah(settings.minWithdrawal)}</strong>
+              <strong>{formatRupiah(WITHDRAWAL_PRESETS[0].value)} ({WITHDRAWAL_PRESETS[0].label})</strong>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-white/20">
             <button
               type="button"
               onClick={handleOpenWithdrawModal}
-              disabled={!settings.withdrawalOpen || userBalance < settings.minWithdrawal}
+              disabled={!settings.withdrawalOpen || userBalance < WITHDRAWAL_PRESETS[0].value}
               className="w-full py-2.5 px-4 rounded-xl bg-white text-blue-800 hover:bg-blue-50 font-bold text-xs shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer active:scale-95"
             >
               <ArrowDownLeft className="w-4 h-4 text-blue-700" />
@@ -402,42 +419,78 @@ export function SaldoView() {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-bold text-slate-700">
-                      Jumlah Penarikan (Rp)
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-bold text-slate-800">
+                      Pilih Jumlah Penarikan
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => setAmount(userBalance)}
-                      className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
-                    >
-                      Tarik Semua
-                    </button>
+                    <span className="text-[11px] font-semibold text-indigo-600">
+                      7 Pilihan Nominal dari Admin
+                    </span>
                   </div>
-                  <input
-                    type="number"
-                    required
-                    min={settings.minWithdrawal}
-                    max={userBalance}
-                    step="1000"
-                    value={amount}
-                    onChange={(e) => setAmount(Number(e.target.value))}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm font-bold outline-none"
-                  />
-                  <div className="flex gap-2 mt-2">
-                    {[settings.minWithdrawal, 10000, 25000, 50000].map((preset) => {
-                      if (preset > userBalance && preset !== settings.minWithdrawal) return null;
+
+                  {/* 7 Nominal Pilihan Admin: 2k, 4k, 6k, 10k, 20k, 50k, 100k */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {WITHDRAWAL_PRESETS.map((preset) => {
+                      const isSelected = amount === preset.value;
+                      const isAffordable = userBalance >= preset.value;
+
                       return (
                         <button
-                          key={preset}
+                          key={preset.value}
                           type="button"
-                          onClick={() => setAmount(preset)}
-                          className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 rounded-lg text-xs font-semibold text-slate-700 transition cursor-pointer"
+                          disabled={!isAffordable}
+                          onClick={() => {
+                            setAmount(preset.value);
+                            setFormError('');
+                          }}
+                          className={`relative p-2.5 rounded-xl border text-center transition flex flex-col items-center justify-center cursor-pointer ${
+                            isSelected
+                              ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20 ring-2 ring-blue-300 scale-[1.02]'
+                              : isAffordable
+                              ? 'bg-slate-50 hover:bg-blue-50/80 border-slate-200 text-slate-800 hover:border-blue-300'
+                              : 'bg-slate-100/60 border-slate-200/50 text-slate-400 cursor-not-allowed opacity-50'
+                          }`}
                         >
-                          {formatRupiah(preset)}
+                          <span className="text-sm font-black tracking-tight">{preset.label}</span>
+                          <span
+                            className={`text-[10px] font-semibold mt-0.5 ${
+                              isSelected
+                                ? 'text-blue-100'
+                                : isAffordable
+                                ? 'text-slate-500'
+                                : 'text-slate-400'
+                            }`}
+                          >
+                            {preset.text}
+                          </span>
+                          {!isAffordable && (
+                            <span className="text-[9px] font-bold text-rose-500 mt-0.5">
+                              Kurang
+                            </span>
+                          )}
                         </button>
                       );
                     })}
+                  </div>
+
+                  {/* Info Nominal Dipilih & Sisa Saldo */}
+                  <div className="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                    <div>
+                      <span className="text-slate-500 block text-[11px]">Nominal Dipilih:</span>
+                      <strong className="text-blue-700 font-extrabold text-sm">
+                        {formatRupiah(amount)} ({WITHDRAWAL_PRESETS.find((p) => p.value === amount)?.label || ''})
+                      </strong>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-slate-500 block text-[11px]">Sisa Saldo:</span>
+                      <strong
+                        className={`font-bold ${
+                          userBalance - amount < 0 ? 'text-rose-600' : 'text-slate-700'
+                        }`}
+                      >
+                        {formatRupiah(Math.max(0, userBalance - amount))}
+                      </strong>
+                    </div>
                   </div>
                 </div>
 

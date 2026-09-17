@@ -5,6 +5,17 @@ import { useGmailStock } from '../hooks/useGmailStock';
 import { useAuth } from '../context/AuthContext';
 import { AZGmailLogo } from './GmailLogo';
 import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+  arrayUnion,
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import {
   Copy,
   Check,
   KeyRound,
@@ -36,29 +47,113 @@ export interface GeneratedResultItem {
 }
 
 export function checkIsEmailGenerated(email: string, userId?: string): boolean {
-  if (!email) return false;
-  const target = email.trim().toLowerCase();
-  const activeKey = userId ? `gmail_gen_saved_${userId}` : 'gmail_gen_saved_guest';
+  if (!email || !userId) return false;
+  const rawTarget = email.trim().toLowerCase();
+  const normalizedTarget = rawTarget.includes('@') ? rawTarget : `${rawTarget}@gmail.com`;
+  const targetPrefix = normalizedTarget.split('@')[0];
+
+  const activeKey = `gmail_gen_saved_${userId}`;
   try {
     const raw = localStorage.getItem(activeKey);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.some((item: any) => (item.email || '').trim().toLowerCase() === target)) {
+      if (
+        Array.isArray(parsed) &&
+        parsed.some((item: any) => {
+          const itemEmail = (item.email || '').trim().toLowerCase();
+          return itemEmail === normalizedTarget || itemEmail.split('@')[0] === targetPrefix;
+        })
+      ) {
         return true;
       }
     }
   } catch {}
 
-  const historyKey = userId ? `gmail_gen_all_${userId}` : 'gmail_gen_all_guest';
+  const historyKey = `gmail_gen_all_${userId}`;
   try {
     const raw = localStorage.getItem(historyKey);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.some((e: string) => (e || '').trim().toLowerCase() === target)) {
+      if (
+        Array.isArray(parsed) &&
+        parsed.some((e: string) => {
+          const itemEmail = (e || '').trim().toLowerCase();
+          return itemEmail === normalizedTarget || itemEmail.split('@')[0] === targetPrefix;
+        })
+      ) {
         return true;
       }
     }
   } catch {}
+
+  return false;
+}
+
+export async function verifyUserGeneratedEmail(email: string, userId?: string): Promise<boolean> {
+  if (!email || !userId) return false;
+  const rawTarget = email.trim().toLowerCase();
+  const normalizedTarget = rawTarget.includes('@') ? rawTarget : `${rawTarget}@gmail.com`;
+  const targetPrefix = normalizedTarget.split('@')[0];
+
+  // 1. Cek cepat dari penyimpanan lokal akun aktif ataupun riwayat generate user yang sedang login
+  if (checkIsEmailGenerated(normalizedTarget, userId)) {
+    return true;
+  }
+
+  // 2. Cek di profil Firestore user itu sendiri (users/{userId})
+  try {
+    const userDocSnap = await getDoc(doc(db, 'users', userId));
+    if (userDocSnap.exists()) {
+      const uData = userDocSnap.data();
+      const list: string[] = Array.isArray(uData?.generatedEmails) ? uData.generatedEmails : [];
+      const match = list.some((e) => {
+        const itemEmail = (e || '').trim().toLowerCase();
+        return itemEmail === normalizedTarget || itemEmail.split('@')[0] === targetPrefix;
+      });
+      if (match) {
+        try {
+          const historyKey = `gmail_gen_all_${userId}`;
+          const existingRaw = localStorage.getItem(historyKey);
+          const existing: string[] = existingRaw ? JSON.parse(existingRaw) : [];
+          if (!existing.includes(normalizedTarget)) {
+            existing.push(normalizedTarget);
+            localStorage.setItem(historyKey, JSON.stringify(existing));
+          }
+        } catch {}
+        return true;
+      }
+    }
+  } catch (errUser) {
+    console.warn('Gagal verifikasi dari user profile:', errUser);
+  }
+
+  // 3. Cek sinkronisasi ke database Firestore gmail_stock akun yang di-claim khusus oleh user ini
+  try {
+    const q = query(
+      collection(db, 'gmail_stock'),
+      where('claimedBy', '==', userId)
+    );
+    const snap = await getDocs(q);
+    const matched = snap.docs.some((docSnap) => {
+      const docEmail = (docSnap.data().email || '').trim().toLowerCase();
+      return docEmail === normalizedTarget || docEmail.split('@')[0] === targetPrefix;
+    });
+    if (matched) {
+      // Cache ke riwayat lokal agar pengecekan berikutnya instan
+      try {
+        const historyKey = `gmail_gen_all_${userId}`;
+        const existingRaw = localStorage.getItem(historyKey);
+        const existing: string[] = existingRaw ? JSON.parse(existingRaw) : [];
+        if (!existing.includes(normalizedTarget)) {
+          existing.push(normalizedTarget);
+          localStorage.setItem(historyKey, JSON.stringify(existing));
+        }
+      } catch {}
+      return true;
+    }
+  } catch (err) {
+    console.warn('Gagal verifikasi email generate di database Firestore:', err);
+  }
 
   return false;
 }
@@ -214,6 +309,14 @@ export function GmailGenerator({
         const newEmails = mapped.map((m) => m.email.toLowerCase().trim());
         const combinedAll = Array.from(new Set([...existingAll, ...newEmails]));
         localStorage.setItem(historyKey, JSON.stringify(combinedAll));
+
+        // Sinkronisasi ke profil Firestore user agar tersimpan permanen untuk user ini
+        if (currentUser?.uid) {
+          const userRef = doc(db, 'users', currentUser.uid);
+          await updateDoc(userRef, {
+            generatedEmails: arrayUnion(...newEmails),
+          });
+        }
       } catch (errHistory) {
         console.warn('Gagal simpan riwayat generator:', errHistory);
       }

@@ -4,12 +4,14 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut,
   sendPasswordResetEmail,
   updateProfile,
   updatePassword,
 } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, handleFirestoreError } from '../lib/firebase';
 import { UserProfile, OperationType } from '../types';
 
@@ -20,6 +22,7 @@ interface AuthContextType {
   loading: boolean;
   loginUser: (email: string, pass: string) => Promise<void>;
   registerUser: (name: string, email: string, pass: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logoutUser: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateProfileName: (newName: string) => Promise<void>;
@@ -119,6 +122,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserProfile(profile);
   };
 
+  const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const docSnap = await getDoc(userDocRef);
+
+    const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
+    if (!docSnap.exists()) {
+      const profile: UserProfile = {
+        uid: user.uid,
+        email: user.email || '',
+        displayName: user.displayName || user.email?.split('@')[0] || 'User Google',
+        role: isDefaultAdmin ? 'admin' : 'user',
+        balance: 0,
+        totalEarned: 0,
+        totalWithdrawn: 0,
+        pendingWithdrawn: 0,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+      };
+      await setDoc(userDocRef, profile);
+      setUserProfile(profile);
+    } else {
+      const existing = docSnap.data() as UserProfile;
+      setUserProfile(existing);
+    }
+  };
+
   const logoutUser = async () => {
     await signOut(auth);
   };
@@ -154,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         loginUser,
         registerUser,
+        loginWithGoogle,
         logoutUser,
         resetPassword,
         updateProfileName,

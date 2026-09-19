@@ -128,13 +128,11 @@ export function AdminBulkConfirmModal({
         await runTransaction(db, async (transaction) => {
           const subDoc = await transaction.get(subRef);
           if (!subDoc.exists()) return;
-          const userDoc = await transaction.get(userRef);
-          if (!userDoc.exists()) return;
+          if (subDoc.data().status === 'Diterima') return;
 
-          const userData = userDoc.data();
-          const currentBalance = userData.balance || 0;
-          const currentEarned = userData.totalEarned || 0;
-          const reward = sub.rewardAmount || 3000;
+          const reward =
+            typeof sub.rewardAmount === 'number' && sub.rewardAmount > 0 ? sub.rewardAmount : 3000;
+          const userDoc = await transaction.get(userRef);
 
           transaction.update(subRef, {
             status: 'Diterima',
@@ -143,10 +141,29 @@ export function AdminBulkConfirmModal({
             adminNotes: 'Diterima via konfirmasi bulk admin',
           });
 
-          transaction.update(userRef, {
-            balance: currentBalance + reward,
-            totalEarned: currentEarned + reward,
-          });
+          if (!userDoc.exists()) {
+            transaction.set(userRef, {
+              uid: sub.userId,
+              email: sub.userEmail,
+              displayName: sub.userName || 'User',
+              balance: reward,
+              totalEarned: reward,
+              totalWithdrawn: 0,
+              pendingWithdrawn: 0,
+              status: 'active',
+              role: 'user',
+              createdAt: new Date().toISOString(),
+            });
+          } else {
+            const userData = userDoc.data();
+            const currentBalance = userData.balance || 0;
+            const currentEarned = userData.totalEarned || 0;
+
+            transaction.update(userRef, {
+              balance: currentBalance + reward,
+              totalEarned: currentEarned + reward,
+            });
+          }
         });
 
         successCount++;

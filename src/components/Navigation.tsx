@@ -33,19 +33,17 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
           <div className="flex items-center gap-3">
             <button
               onClick={() => onSelectTab('home')}
-              className="flex items-center gap-2.5 text-left focus:outline-none cursor-pointer"
+              className="flex items-center gap-2.5 text-left focus:outline-none cursor-pointer group"
             >
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-xs border border-blue-100 p-1.5 overflow-hidden">
+              <div
+                className="w-10 h-10 rounded-[25px] bg-white flex items-center justify-center shadow-xs border border-blue-100 p-0.5 overflow-hidden shrink-0"
+                style={{ borderRadius: '25px' }}
+              >
                 <AZGmailLogo className="w-full h-full" />
               </div>
-              <div>
-                <div className="font-extrabold text-base tracking-tight bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent leading-none">
-                  AZGmail
-                </div>
-                <div className="text-[11px] text-slate-500 font-medium mt-0.5">
-                  Platform Freelance Google & Gmail
-                </div>
-              </div>
+              <span className="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent leading-none select-none">
+                AZGmail
+              </span>
             </button>
             <div className="hidden sm:flex items-center gap-1.5 ml-3 px-2.5 py-1 rounded-full text-xs font-semibold border shadow-xs transition-colors bg-white">
               <span
@@ -99,10 +97,10 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
         </div>
       </header>
 
-      {/* Mobile / Android Responsive Bottom Navigation */}
+      {/* Bottom Floating Feature Navigation (Consistent across Mobile and Desktop) */}
       <nav
         aria-label="Bottom Navigation"
-        className="md:hidden fixed bottom-3 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 select-none"
+        className="fixed bottom-3 sm:bottom-4 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 select-none"
       >
         <div className="bg-white rounded-[32px] shadow-[0_10px_35px_rgba(0,0,0,0.12)] border border-slate-100/90 px-3 py-2 flex items-end justify-between relative">
           <button

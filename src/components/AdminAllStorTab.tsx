@@ -190,7 +190,7 @@ export function AdminAllStorTab({
         </div>
 
         {/* Big Actions: Konfirmasi Terima Bulk & Tolak Bulk */}
-        <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+        <div className="relative z-10 flex flex-wrap items-stretch sm:items-center gap-2.5 shrink-0">
           <button
             type="button"
             onClick={onOpenBulkConfirmModal}

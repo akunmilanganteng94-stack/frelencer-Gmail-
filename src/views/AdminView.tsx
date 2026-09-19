@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useMemo, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
@@ -49,6 +49,7 @@ import {
   ListCheck,
   ListX,
   AlertTriangle,
+  Flame,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GmailLogo } from '../components/GmailLogo';
@@ -102,6 +103,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   // User detail inspection
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [userSearch, setUserSearch] = useState('');
+  const [userSortMode, setUserSortMode] = useState<'all' | 'highest_balance' | 'has_balance'>('all');
 
   // Settings form state
   const [tempPrice, setTempPrice] = useState(settings.pricePerSubmission);
@@ -240,16 +242,19 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     try {
       const subRef = doc(db, 'submissions', sub.id);
       const userRef = doc(db, 'users', sub.userId);
+      const reward =
+        typeof sub.rewardAmount === 'number' && sub.rewardAmount > 0
+          ? sub.rewardAmount
+          : settings.pricePerSubmission || 3000;
 
       await runTransaction(db, async (transaction) => {
         const subDoc = await transaction.get(subRef);
         if (!subDoc.exists()) throw new Error('Submission tidak ditemukan.');
-        const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) throw new Error('User tidak ditemukan.');
+        if (subDoc.data().status === 'Diterima') {
+          return;
+        }
 
-        const userData = userDoc.data();
-        const currentBalance = userData.balance || 0;
-        const currentEarned = userData.totalEarned || 0;
+        const userDoc = await transaction.get(userRef);
 
         transaction.update(subRef, {
           status: 'Diterima',
@@ -257,16 +262,35 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           rejectionReason: '',
         });
 
-        transaction.update(userRef, {
-          balance: currentBalance + sub.rewardAmount,
-          totalEarned: currentEarned + sub.rewardAmount,
-        });
+        if (!userDoc.exists()) {
+          transaction.set(userRef, {
+            uid: sub.userId,
+            email: sub.userEmail,
+            displayName: sub.userName || 'User',
+            balance: reward,
+            totalEarned: reward,
+            totalWithdrawn: 0,
+            pendingWithdrawn: 0,
+            status: 'active',
+            role: 'user',
+            createdAt: new Date().toISOString(),
+          });
+        } else {
+          const userData = userDoc.data();
+          const currentBalance = userData.balance || 0;
+          const currentEarned = userData.totalEarned || 0;
+
+          transaction.update(userRef, {
+            balance: currentBalance + reward,
+            totalEarned: currentEarned + reward,
+          });
+        }
       });
 
       showToast(
         'success',
         'Submission Diterima',
-        `Saldo ${formatRupiah(sub.rewardAmount)} otomatis ditambahkan ke akun ${sub.userName || sub.userEmail}.`
+        `Saldo ${formatRupiah(reward)} otomatis masuk ke akun ${sub.userName || sub.userEmail}.`
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -494,7 +518,11 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         dailyGenerateLimit: Math.max(1, Number(tempDailyGenerateLimit) || 10),
         storanClosedReason: tempStoranClosedReason.trim(),
       });
-      showToast('success', 'Pengaturan Disimpan', 'Konfigurasi sistem, alasan storan tutup, WhatsApp, & password Gmail berhasil diperbarui.');
+      showToast(
+        'success',
+        'Pengaturan Disimpan',
+        'Semua konfigurasi sistem dan aturan berhasil diperbarui.'
+      );
     } catch (err: unknown) {
       showToast('error', 'Gagal Menyimpan', err instanceof Error ? err.message : String(err));
     } finally {
@@ -707,12 +735,24 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     return matchesFilter && matchesSearch;
   });
 
-  const filteredUsers = usersList.filter(
-    (u) =>
-      u.displayName?.toLowerCase().includes(userSearch.toLowerCase()) ||
-      u.email?.toLowerCase().includes(userSearch.toLowerCase()) ||
-      u.uid.toLowerCase().includes(userSearch.toLowerCase())
-  );
+  const filteredUsers = useMemo(() => {
+    let list = usersList.filter(
+      (u) =>
+        u.displayName?.toLowerCase().includes(userSearch.toLowerCase()) ||
+        u.email?.toLowerCase().includes(userSearch.toLowerCase()) ||
+        u.uid.toLowerCase().includes(userSearch.toLowerCase())
+    );
+
+    if (userSortMode === 'has_balance') {
+      list = list.filter((u) => (u.balance || 0) > 0);
+    }
+
+    if (userSortMode === 'highest_balance') {
+      list = [...list].sort((a, b) => (b.balance || 0) - (a.balance || 0));
+    }
+
+    return list;
+  }, [usersList, userSearch, userSortMode]);
 
   const filteredStock = gmailStockList.filter((item) => {
     const matchesFilter =
@@ -1593,7 +1633,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       {/* TAB 4: KELOLA USER */}
       {activeTab === 'users' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-4">
+          <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-md">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
               <input
@@ -1604,16 +1644,69 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 className="w-full pl-10 pr-3.5 py-2 rounded-xl border border-slate-300 focus:border-indigo-500 text-xs outline-none"
               />
             </div>
-            <span className="text-xs text-slate-500 font-semibold">{filteredUsers.length} User</span>
+
+            {/* Quick Sort & Filter Pills */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setUserSortMode('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  userSortMode === 'all'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Semua User ({usersList.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setUserSortMode('highest_balance')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  userSortMode === 'highest_balance'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/25 ring-2 ring-amber-300'
+                    : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+                }`}
+                title="Urutkan dari saldo terbanyak ke paling sedikit"
+              >
+                <Flame className="w-3.5 h-3.5 text-amber-500" />
+                <span>Saldo Terbanyak 🔥</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setUserSortMode('has_balance')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                  userSortMode === 'has_balance'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
+                }`}
+                title="Hanya tampilkan user dengan saldo > Rp0"
+              >
+                <span>Ada Saldo ({usersList.filter((u) => (u.balance || 0) > 0).length})</span>
+              </button>
+
+              <span className="text-xs text-slate-400 font-semibold pl-2">
+                {filteredUsers.length} Ditampilkan
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredUsers.map((u) => (
+            {filteredUsers.map((u, idx) => (
               <div
                 key={u.uid}
                 className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-4"
               >
                 <div>
+                  {/* Highlight for highest balance */}
+                  {userSortMode === 'highest_balance' && (u.balance || 0) > 0 && (
+                    <div className="mb-2.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-300 text-amber-900 text-[10px] font-black tracking-tight">
+                      <Flame className="w-3 h-3 text-amber-600" />
+                      <span>#{idx + 1} Saldo Terbanyak</span>
+                    </div>
+                  )}
+
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <h4 className="font-extrabold text-sm text-slate-900 truncate">

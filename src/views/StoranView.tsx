@@ -22,6 +22,7 @@ import {
   HelpCircle,
   KeyRound,
   Mail,
+  XCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -42,7 +43,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const [submitting, setSubmitting] = useState(false);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [inputError, setInputError] = useState('');
-  const [checkingEmail, setCheckingEmail] = useState(false);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -144,7 +144,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     }
 
     // ATURAN WAJIB: Nama Gmail HARUS SAMA PERSIS dengan yang di-generate oleh akun user ini
-    setCheckingEmail(true);
     try {
       for (let i = 0; i < cleanedEmails.length; i++) {
         const email = cleanedEmails[i];
@@ -166,8 +165,9 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       setValidatedEmails(cleanedEmails);
       setInputData(cleanedEmails.join('\n'));
       setShowConfirmModal(true);
-    } finally {
-      setCheckingEmail(false);
+    } catch (err: any) {
+      console.error('Error saat memvalidasi akun:', err);
+      showToast('error', 'Gagal Memvalidasi Akun', err?.message || 'Terjadi kesalahan saat memvalidasi akun.');
     }
   };
 
@@ -191,7 +191,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         }
       }
 
-      // Kirim setiap akun sebagai submission baru
+      // Kirim setiap akun dengan status 'Pending' untuk pengecekan admin
       for (const email of validatedEmails) {
         const newSubmissionData = {
           userId: currentUser.uid,
@@ -230,6 +230,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         `${validatedEmails.length} Akun Gmail Berhasil Disetor`,
         'dalam pengecekan admin tunggu 24-30 jam'
       );
+
       setInputData('');
       setValidatedEmails([]);
       setShowConfirmModal(false);
@@ -406,20 +407,13 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 disabled={
                   !settings.storanOpen ||
                   userProfile?.status === 'suspended' ||
-                  !inputData.trim() ||
-                  checkingEmail
+                  !inputData.trim()
                 }
                 className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-700 hover:from-indigo-700 hover:to-blue-800 text-white font-black tracking-wide rounded-xl text-sm shadow-md shadow-indigo-500/25 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
               >
-                {checkingEmail ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
+                <Send className="w-4 h-4" />
                 <span>
-                  {checkingEmail
-                    ? 'Memeriksa Kesesuaian Akun...'
-                    : `STOR GMAIL (${inputData.split('\n').filter((l) => l.trim().length > 0).length || 1} AKUN)`}
+                  STOR GMAIL ({inputData.split('\n').filter((l) => l.trim().length > 0).length || 1} AKUN)
                 </span>
               </button>
             </form>
@@ -445,7 +439,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
               <span>Estimasi Waktu Verifikasi</span>
             </div>
             <p className="text-xs text-indigo-800 leading-relaxed font-semibold">
-              Semua akun Gmail yang disetor berstatus pending dalam pengecekan admin tunggu 24-30 jam.
+              Semua akun Gmail yang disetor akan masuk status pending dalam pengecekan admin tunggu 24-30 jam.
             </p>
             <div className="pt-2 border-t border-indigo-200/60 flex items-center justify-between text-xs text-indigo-900 font-medium">
               <span>Jam Operasional:</span>
@@ -472,60 +466,49 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                   <h3 className="text-base font-bold text-slate-900">
                     Konfirmasi Setor Akun Gmail
                   </h3>
-                  <p className="text-xs text-slate-500">Periksa kembali data akun Anda</p>
+                  <p className="text-xs text-slate-500">Pastikan data akun sudah benar sebelum dikirim</p>
                 </div>
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Akun yang akan dikirim ({validatedEmails.length} Akun):
+                    Daftar Akun ({validatedEmails.length} Akun):
                   </p>
-                  <span className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[10px] font-bold font-mono">
-                    {validatedEmails.length} Akun
-                  </span>
                 </div>
 
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {validatedEmails.map((email, idx) => (
                     <div
                       key={email}
-                      className="p-2.5 bg-white rounded-xl border border-slate-200 font-mono text-xs font-bold text-slate-800 break-all flex items-center justify-between gap-2 shadow-2xs"
+                      className="p-2.5 rounded-xl border border-slate-200 bg-white font-mono text-xs font-bold text-slate-800 break-all flex items-center gap-2 shadow-2xs"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-5 h-5 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-mono shrink-0">
-                          {idx + 1}
-                        </span>
-                        <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                        <span className="truncate">{email}</span>
-                      </div>
-                      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-sans shrink-0 flex items-center gap-0.5 font-semibold">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        <span>Sesuai Generate</span>
+                      <span className="w-5 h-5 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-mono shrink-0">
+                        {idx + 1}
                       </span>
+                      <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                      <span className="truncate">{email}</span>
                     </div>
                   ))}
-                </div>
-
-                <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Semua Akun Terverifikasi Sesuai Hasil Generate Anda</span>
                 </div>
 
                 <div className="flex items-center justify-between pt-1 text-xs text-slate-600">
                   <span>Password Wajib:</span>
                   <span className="font-mono font-bold text-orange-600">{activePassword}</span>
                 </div>
+
                 <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>Total Imbalan ({validatedEmails.length} Akun):</span>
+                  <span>Estimasi Imbalan ({validatedEmails.length} Akun):</span>
                   <span className="font-extrabold text-indigo-700 text-sm">
                     {formatRupiah(settings.pricePerSubmission * validatedEmails.length)}
                   </span>
                 </div>
+
                 <div className="flex items-center justify-between text-xs text-slate-600">
                   <span>Status 2FA:</span>
                   <span className="font-semibold text-emerald-700">Wajib Nonaktif</span>
                 </div>
+
                 <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2 font-semibold">
                   <Clock className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>dalam pengecekan admin tunggu 24-30 jam</span>
@@ -554,7 +537,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                   {submitting ? (
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
-                    <span>Ya, Kirim {validatedEmails.length} Akun</span>
+                    <span>Kirim {validatedEmails.length} Akun Sekarang</span>
                   )}
                 </button>
               </div>

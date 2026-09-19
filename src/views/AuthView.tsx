@@ -6,7 +6,7 @@ import { AZGmailLogo } from '../components/GmailLogo';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function AuthView() {
-  const { loginUser, registerUser, resetPassword } = useAuth();
+  const { loginUser, registerUser, resetPassword, loginWithGoogle } = useAuth();
   const { showToast } = useToast();
 
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
@@ -16,7 +16,48 @@ export function AuthView() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [formError, setFormError] = useState('');
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    setFormError('');
+    try {
+      await loginWithGoogle();
+      showToast('success', 'Login Google Berhasil', 'Selamat datang di AZGmail.');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (
+        errorMessage.includes('auth/popup-closed-by-user') ||
+        errorMessage.includes('auth/cancelled-popup-request')
+      ) {
+        // User voluntarily closed or cancelled the popup window
+        console.info('Google sign-in popup was dismissed by user.');
+        setFormError('Login Google dibatalkan.');
+        return;
+      }
+
+      if (errorMessage.includes('auth/popup-blocked')) {
+        setFormError(
+          'Popup Google diblokir oleh peramban (browser). Harap izinkan pop-up untuk situs ini atau gunakan pendaftaran dengan email & sandi.'
+        );
+        showToast('error', 'Popup Diblokir', 'Izinkan pop-up di browser Anda untuk melanjutkan.');
+      } else if (errorMessage.includes('auth/unauthorized-domain')) {
+        setFormError(
+          'Domain web ini belum ditambahkan ke Firebase Authorized Domains. Buka Firebase Console > Authentication > Settings > Authorized Domains lalu tambahkan domain aplikasi.'
+        );
+        showToast('error', 'Domain Belum Diizinkan', 'Harap daftarkan domain aplikasi di Firebase.');
+      } else if (errorMessage.includes('auth/invalid-credential')) {
+        setFormError('Autentikasi Google dibatalkan atau tidak valid. Silakan coba kembali.');
+        showToast('error', 'Login Google', 'Autentikasi akun Google tidak valid atau kedaluwarsa.');
+      } else {
+        setFormError('Gagal login dengan Google: ' + errorMessage);
+        showToast('error', 'Login Google', errorMessage);
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -38,37 +79,43 @@ export function AuthView() {
     }
 
     setLoading(true);
+    const cleanEmail = email.trim().toLowerCase();
     try {
       if (mode === 'login') {
-        await loginUser(email, password);
-        showToast('success', 'Login Berhasil', 'Selamat datang kembali di Freelancer Storan.');
+        await loginUser(cleanEmail, password);
+        showToast('success', 'Login Berhasil', 'Selamat datang kembali di AZGmail.');
       } else if (mode === 'register') {
-        await registerUser(name, email, password);
+        await registerUser(name.trim(), cleanEmail, password);
         showToast('success', 'Pendaftaran Berhasil', 'Akun kamu siap digunakan untuk mengirim storan.');
       } else if (mode === 'forgot') {
-        await resetPassword(email);
+        await resetPassword(cleanEmail);
         showToast('success', 'Email Terkirim', 'Silakan periksa kotak masuk email kamu untuk reset kata sandi.');
         setMode('login');
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error('Auth error:', errorMessage);
       let friendlyMsg = 'Terjadi kesalahan, silakan coba lagi.';
       if (
         errorMessage.includes('auth/invalid-credential') ||
         errorMessage.includes('auth/wrong-password') ||
         errorMessage.includes('auth/user-not-found')
       ) {
-        friendlyMsg = 'Email atau kata sandi yang kamu masukkan salah.';
+        friendlyMsg =
+          'Email atau kata sandi yang Anda masukkan salah. Jika belum memiliki akun, silakan klik menu "Daftar Akun" di atas, atau klik "Lupa sandi?" jika lupa kata sandi.';
       } else if (errorMessage.includes('auth/email-already-in-use')) {
-        friendlyMsg = 'Email sudah terdaftar. Silakan gunakan menu Login.';
+        friendlyMsg = 'Email sudah terdaftar. Silakan gunakan menu "Masuk (Login)".';
       } else if (errorMessage.includes('auth/weak-password')) {
         friendlyMsg = 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.';
       } else if (errorMessage.includes('auth/invalid-email')) {
-        friendlyMsg = 'Format email tidak valid.';
+        friendlyMsg = 'Format email tidak valid. Pastikan tidak ada spasi di awal atau akhir email.';
+      } else if (errorMessage.includes('auth/too-many-requests')) {
+        friendlyMsg = 'Terlalu banyak percobaan login yang gagal. Akun sementara dibatasi demi keamanan. Silakan tunggu beberapa saat atau gunakan "Lupa sandi?".';
+      } else {
+        console.error('Auth error:', errorMessage);
+        friendlyMsg = errorMessage;
       }
       setFormError(friendlyMsg);
-      showToast('error', 'Gagal', friendlyMsg);
+      showToast('error', 'Gagal Masuk', friendlyMsg);
     } finally {
       setLoading(false);
     }
@@ -81,7 +128,7 @@ export function AuthView() {
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md px-4 relative z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-lg shadow-blue-500/15 border border-blue-100 mb-3 p-2 overflow-hidden">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-[25px] bg-white shadow-lg shadow-blue-500/15 border border-blue-100 mb-3 p-1 overflow-hidden" style={{ borderRadius: '25px' }}>
             <AZGmailLogo className="w-full h-full" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -145,6 +192,53 @@ export function AuthView() {
             </div>
           )}
 
+          {/* Google Sign-in / Sign-up Button */}
+          {mode !== 'forgot' && (
+            <div className="mb-5 space-y-3">
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={googleLoading || loading}
+                className="w-full py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-700 font-bold rounded-xl text-xs sm:text-sm shadow-xs transition flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60"
+              >
+                {googleLoading ? (
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                )}
+                <span>
+                  {mode === 'login'
+                    ? 'Masuk dengan Google'
+                    : 'Daftar dengan Google'}
+                </span>
+              </button>
+
+              <div className="relative flex items-center justify-center">
+                <div className="border-t border-slate-200 w-full" />
+                <span className="bg-white px-2.5 text-[11px] text-slate-400 font-semibold absolute uppercase tracking-wider">
+                  atau dengan email
+                </span>
+              </div>
+            </div>
+          )}
+
           {formError && (
             <div className="mb-5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
               {formError}
@@ -184,9 +278,12 @@ export function AuthView() {
                 <input
                   type="email"
                   required
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@domain.com"
+                  placeholder="nama@gmail.com"
                   className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm outline-none transition bg-white"
                 />
               </div>
@@ -261,7 +358,7 @@ export function AuthView() {
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || googleLoading}
                 className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold rounded-xl text-sm shadow-md shadow-blue-500/25 transition disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? (
@@ -284,7 +381,7 @@ export function AuthView() {
 
           <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-center gap-2 text-xs text-slate-500">
             <Shield className="w-3.5 h-3.5 text-blue-600" />
-            <span>Data terlindungi dengan Firebase Authentication & Firestore</span>
+            <span>Data terlindungi dengan Firebase Authentication &amp; Firestore</span>
           </div>
         </div>
       </div>

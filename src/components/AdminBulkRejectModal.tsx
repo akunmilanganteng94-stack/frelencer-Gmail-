@@ -202,12 +202,13 @@ export function AdminBulkRejectModal({
 
     setProcessing(true);
     let successCount = 0;
+    let failureCount = 0;
     const trimmedReason = rejectionReason.trim();
 
-    try {
-      for (const item of matchAnalysis.readyToReject) {
-        const sub = item.submission;
-        const subRef = doc(db, 'submissions', sub.id);
+    for (const item of matchAnalysis.readyToReject) {
+      const sub = item.submission;
+      const subRef = doc(db, 'submissions', sub.id);
+      try {
         await updateDoc(subRef, {
           status: 'Ditolak',
           rejectionReason: trimmedReason,
@@ -215,20 +216,28 @@ export function AdminBulkRejectModal({
           adminNotes: 'Ditolak via tolak bulk admin',
         });
         successCount++;
+      } catch (itemErr: unknown) {
+        failureCount++;
+        console.error(`Error rejecting submission ${sub.id}:`, itemErr);
       }
+    }
 
-      setProcessedCount(successCount);
-      setStep('result');
+    setProcessedCount(successCount);
+    setProcessing(false);
+    setStep('result');
+
+    if (failureCount > 0) {
+      showToast(
+        'warning',
+        'Tolak Sebagian',
+        `${successCount} berhasil ditolak, ${failureCount} gagal diproses.`
+      );
+    } else {
       showToast(
         'info',
         'Tolak Bulk Berhasil',
         `${successCount} akun Gmail berhasil ditolak dengan alasan: "${trimmedReason}".`
       );
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      showToast('error', 'Gagal Memproses Sebagian', msg);
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -345,7 +354,7 @@ export function AdminBulkRejectModal({
                   </button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-200/60">
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
                   <span className="text-[10px] font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded">Hari Ini:</span>
                   <button
                     type="button"
@@ -485,6 +494,7 @@ export function AdminBulkRejectModal({
                   </div>
                   <div className="text-[10px] text-rose-600 mt-0.5">Status Pending</div>
                 </div>
+
                 <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
                   <div className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
                     <Check className="w-3.5 h-3.5 text-slate-500" />
@@ -495,6 +505,7 @@ export function AdminBulkRejectModal({
                   </div>
                   <div className="text-[10px] text-slate-500 mt-0.5">Tidak diubah</div>
                 </div>
+
                 <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
                   <div className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -505,6 +516,7 @@ export function AdminBulkRejectModal({
                   </div>
                   <div className="text-[10px] text-emerald-600 mt-0.5">Dilewati</div>
                 </div>
+
                 <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200">
                   <div className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
@@ -592,6 +604,7 @@ export function AdminBulkRejectModal({
                   <span className="font-bold text-slate-800">{rejectionReason}</span>
                 </div>
               </div>
+
               <div className="pt-3 flex justify-center gap-2">
                 <button
                   type="button"

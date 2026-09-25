@@ -318,7 +318,7 @@ export function AdminAllStorTab({
           </div>
           <div className="text-2xl font-black text-indigo-900 mt-1">{allKhususList.length}</div>
           <div className="text-[11px] text-indigo-700 mt-0.5 font-medium">
-            {pendingYesterdayKhusus.length} kemarin   {pendingTodayKhusus.length} hari ini
+            {pendingYesterdayKhusus.length} kemarin · {pendingTodayKhusus.length} hari ini
           </div>
         </div>
 
@@ -333,7 +333,7 @@ export function AdminAllStorTab({
           </div>
           <div className="text-2xl font-black text-teal-900 mt-1">{allBebasList.length}</div>
           <div className="text-[11px] text-teal-700 mt-0.5 font-medium">
-            {pendingYesterdayBebas.length} kemarin   {pendingTodayBebas.length} hari ini
+            {pendingYesterdayBebas.length} kemarin · {pendingTodayBebas.length} hari ini
           </div>
         </div>
 
@@ -433,10 +433,10 @@ export function AdminAllStorTab({
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mt-1.5">
                   <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-100 text-indigo-800">
-                      Khusus: {pendingYesterdayKhusus.length} Akun
+                    Khusus: {pendingYesterdayKhusus.length} Akun
                   </span>
                   <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-teal-100 text-teal-800">
-                      Bebas: {pendingYesterdayBebas.length} Akun
+                    Bebas: {pendingYesterdayBebas.length} Akun
                   </span>
                 </div>
               </div>
@@ -507,10 +507,10 @@ export function AdminAllStorTab({
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mt-1.5">
                   <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-100 text-indigo-800">
-                      Khusus: {pendingTodayKhusus.length} Akun
+                    Khusus: {pendingTodayKhusus.length} Akun
                   </span>
                   <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-teal-100 text-teal-800">
-                      Bebas: {pendingTodayBebas.length} Akun
+                    Bebas: {pendingTodayBebas.length} Akun
                   </span>
                 </div>
               </div>
@@ -585,7 +585,7 @@ export function AdminAllStorTab({
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>  Gmail Khusus (3k)</span>
+              <span>Gmail Khusus (3k)</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                 typeFilter === 'khusus' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-800'
               }`}>
@@ -602,7 +602,7 @@ export function AdminAllStorTab({
               }`}
             >
               <Globe className="w-3.5 h-3.5" />
-              <span>  Gmail Bebas (2.7k)</span>
+              <span>Gmail Bebas (2.7k)</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                 typeFilter === 'bebas' ? 'bg-white/20 text-white' : 'bg-teal-100 text-teal-800'
               }`}>
@@ -618,12 +618,12 @@ export function AdminAllStorTab({
               { id: 'All', label: `Semua (${submissions.length})` },
               {
                 id: 'Pending_Kemarin',
-                label: `  Pending Kemarin (${pendingYesterdayList.length})`,
+                label: `Pending Kemarin (${pendingYesterdayList.length})`,
                 highlight: pendingYesterdayList.length > 0 ? 'amber' : undefined,
               },
               {
                 id: 'Pending_Sekarang',
-                label: `  Pending Hari Ini (${pendingTodayList.length})`,
+                label: `Pending Hari Ini (${pendingTodayList.length})`,
                 highlight: pendingTodayList.length > 0 ? 'blue' : undefined,
               },
               { id: 'Pending', label: `Pending (${pendingList.length})` },

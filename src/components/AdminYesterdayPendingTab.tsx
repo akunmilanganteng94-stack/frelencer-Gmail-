@@ -82,10 +82,12 @@ export function AdminYesterdayPendingTab({
       const matchesType = typeFilter === 'All' || getSubmissionType(sub) === typeFilter;
       if (!matchesType) return false;
       if (!searchQuery.trim()) return true;
+
       const q = searchQuery.toLowerCase();
       const email = getCleanEmail(sub.dataContent).toLowerCase();
       const userName = (sub.userName || '').toLowerCase();
       const userEmail = (sub.userEmail || '').toLowerCase();
+
       return (
         email.includes(q) ||
         userName.includes(q) ||
@@ -210,6 +212,7 @@ export function AdminYesterdayPendingTab({
             </span>
             <span className="text-xs font-extrabold text-indigo-700">Rp 3.000 / akun</span>
           </div>
+
           <div>
             <div className="text-3xl font-black text-indigo-900 font-mono">
               {yesterdayKhususList.length}{' '}
@@ -219,6 +222,7 @@ export function AdminYesterdayPendingTab({
               Total Kewajiban: {formatRupiah(totalRewardKhusus)}
             </div>
           </div>
+
           <div className="pt-2 border-t border-indigo-100 flex items-center justify-between gap-2">
             <button
               type="button"
@@ -251,6 +255,7 @@ export function AdminYesterdayPendingTab({
             </span>
             <span className="text-xs font-extrabold text-teal-700">Rp 2.700 / akun</span>
           </div>
+
           <div>
             <div className="text-3xl font-black text-teal-900 font-mono">
               {yesterdayBebasList.length}{' '}
@@ -260,6 +265,7 @@ export function AdminYesterdayPendingTab({
               Total Kewajiban: {formatRupiah(totalRewardBebas)}
             </div>
           </div>
+
           <div className="pt-2 border-t border-teal-100 flex items-center justify-between gap-2">
             <button
               type="button"
@@ -291,6 +297,7 @@ export function AdminYesterdayPendingTab({
               <span>Total Antrean Kemarin</span>
             </span>
           </div>
+
           <div>
             <div className="text-3xl font-black text-amber-950 font-mono">
               {yesterdayPendingList.length}{' '}
@@ -300,6 +307,7 @@ export function AdminYesterdayPendingTab({
               Total Keseluruhan: {formatRupiah(totalReward)}
             </div>
           </div>
+
           <div className="pt-2 border-t border-amber-200 flex items-center justify-between gap-2">
             <button
               type="button"
@@ -339,7 +347,7 @@ export function AdminYesterdayPendingTab({
                 }`}
               >
                 <Sparkles className="w-3 h-3" />
-                <span>  Khusus ({yesterdayKhususList.length})</span>
+                <span>Khusus ({yesterdayKhususList.length})</span>
               </button>
               <button
                 type="button"
@@ -351,9 +359,10 @@ export function AdminYesterdayPendingTab({
                 }`}
               >
                 <Globe className="w-3 h-3" />
-                <span>  Bebas ({yesterdayBebasList.length})</span>
+                <span>Bebas ({yesterdayBebasList.length})</span>
               </button>
             </div>
+
             {selectedIds.size > 0 && (
               <button
                 type="button"

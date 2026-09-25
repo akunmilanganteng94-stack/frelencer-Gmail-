@@ -51,10 +51,11 @@ export function RulesCard({ onNavigate, onClick }: RulesCardProps) {
               <strong className="font-mono text-orange-600 font-bold">
                 {activePassword}
               </strong>{' '}
-                Klik untuk baca aturan lengkap
+              · Klik untuk baca aturan lengkap
             </p>
           </div>
         </div>
+
         <div className="flex items-center gap-2 shrink-0">
           <span className="hidden sm:inline text-xs font-bold text-purple-700 group-hover:underline">
             Buka Halaman Rules

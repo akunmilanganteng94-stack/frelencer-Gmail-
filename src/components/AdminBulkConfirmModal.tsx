@@ -176,13 +176,14 @@ export function AdminBulkConfirmModal({
     setProcessing(true);
     let successCount = 0;
     let totalRewardPaid = 0;
+    let failureCount = 0;
 
-    try {
-      for (const item of matchAnalysis.readyToAccept) {
-        const sub = item.submission;
-        const subRef = doc(db, 'submissions', sub.id);
-        const userRef = doc(db, 'users', sub.userId);
+    for (const item of matchAnalysis.readyToAccept) {
+      const sub = item.submission;
+      const subRef = doc(db, 'submissions', sub.id);
+      const userRef = doc(db, 'users', sub.userId);
 
+      try {
         await runTransaction(db, async (transaction) => {
           const subDoc = await transaction.get(subRef);
           if (!subDoc.exists()) return;
@@ -226,21 +227,29 @@ export function AdminBulkConfirmModal({
 
         successCount++;
         totalRewardPaid += sub.rewardAmount || 3000;
+      } catch (itemErr: unknown) {
+        failureCount++;
+        console.error(`Error accepting submission ${sub.id}:`, itemErr);
       }
+    }
 
-      setProcessedCount(successCount);
-      setProcessedTotalReward(totalRewardPaid);
-      setStep('result');
+    setProcessedCount(successCount);
+    setProcessedTotalReward(totalRewardPaid);
+    setProcessing(false);
+    setStep('result');
+
+    if (failureCount > 0) {
+      showToast(
+        'warning',
+        'Konfirmasi Sebagian',
+        `${successCount} berhasil, ${failureCount} gagal diproses.`
+      );
+    } else {
       showToast(
         'success',
         'Konfirmasi Bulk Berhasil',
         `${successCount} akun Gmail berhasil diterima dan saldo pengguna telah diperbarui.`
       );
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      showToast('error', 'Gagal Sebagian', msg);
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -357,7 +366,7 @@ export function AdminBulkConfirmModal({
                   </button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-200/60">
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
                   <span className="text-[10px] font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded">Hari Ini:</span>
                   <button
                     type="button"
@@ -547,6 +556,7 @@ export function AdminBulkConfirmModal({
                   Sebanyak <strong>{processedCount} akun Gmail</strong> telah disetujui. Total saldo sebesar <strong>{formatRupiah(processedTotalReward)}</strong> telah langsung ditambahkan ke masing-masing akun pengguna.
                 </p>
               </div>
+
               <div className="pt-3 flex justify-center gap-2">
                 <button
                   type="button"

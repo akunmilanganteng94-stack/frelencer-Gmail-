@@ -5,14 +5,10 @@ import { formatRupiah } from '../lib/utils';
 import { AZGmailLogo } from './GmailLogo';
 import {
   Home,
-  FileText,
   Send,
   Wallet,
   User as UserIcon,
   ShieldCheck,
-  LogOut,
-  Clock,
-  ClipboardList,
   History,
 } from 'lucide-react';
 
@@ -97,7 +93,7 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
         </div>
       </header>
 
-      {/* Bottom Floating Feature Navigation (Consistent across Mobile and Desktop) */}
+      {/* Bottom Floating Feature Navigation */}
       <nav
         aria-label="Bottom Navigation"
         className="fixed bottom-3 sm:bottom-4 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 select-none"

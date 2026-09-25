@@ -18,7 +18,6 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
   const formattedNumber = rawNumber.startsWith('62')
     ? `+62 ${rawNumber.substring(2, 5)}-${rawNumber.substring(5, 9)}-${rawNumber.substring(9)}`
     : rawNumber;
-
   const waUrl = `https://wa.me/${rawNumber}?text=${encodeURIComponent(
     'Halo Admin AZGmail, saya ingin bertanya terkait storan akun Gmail & saldo saya.'
   )}`;

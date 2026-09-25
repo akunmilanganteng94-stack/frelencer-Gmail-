@@ -51,6 +51,7 @@ export function checkIsEmailGenerated(email: string, userId?: string): boolean {
   const rawTarget = email.trim().toLowerCase();
   const normalizedTarget = rawTarget.includes('@') ? rawTarget : `${rawTarget}@gmail.com`;
   const targetPrefix = normalizedTarget.split('@')[0];
+
   const activeKey = `gmail_gen_saved_${userId}`;
   try {
     const raw = localStorage.getItem(activeKey);
@@ -206,7 +207,7 @@ export function GmailGenerator({
   const [generating, setGenerating] = useState<boolean>(false);
   const [results, setResults] = useState<GeneratedResultItem[]>([]);
   const [copiedItem, setCopiedItem] = useState<{ id: string; type: string } | null>(null);
-  const [copiedAll, setCopiedAll] = useState<boolean>(false);
+  const [, setCopiedAll] = useState<boolean>(false);
   const [todayGenerated, setTodayGenerated] = useState<number>(() =>
     getGeneratedCountToday(currentUser?.uid)
   );
@@ -222,6 +223,7 @@ export function GmailGenerator({
   const storageKey = currentUser?.uid
     ? `gmail_gen_saved_${currentUser.uid}`
     : 'gmail_gen_saved_guest';
+
   const historyKey = currentUser?.uid
     ? `gmail_gen_all_${currentUser.uid}`
     : 'gmail_gen_all_guest';
@@ -584,7 +586,6 @@ export function GmailGenerator({
                   </span>
                 </div>
               </div>
-
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
@@ -657,7 +658,6 @@ export function GmailGenerator({
                           </span>
                         )}
                       </div>
-
                       <div className="flex items-center gap-2 pl-7 text-xs">
                         <span className="text-slate-400 font-semibold text-[11px]">PW:</span>
                         <span className="font-mono font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200 text-xs">

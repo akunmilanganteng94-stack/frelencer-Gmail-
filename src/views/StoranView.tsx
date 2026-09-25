@@ -24,6 +24,9 @@ import {
   Mail,
   Sparkles,
   Globe,
+  Copy,
+  Check,
+  ClipboardList,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -51,6 +54,14 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const [submitting, setSubmitting] = useState(false);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [inputError, setInputError] = useState('');
+  const [passwordCopied, setPasswordCopied] = useState(false);
+
+  const handleCopyPassword = () => {
+    navigator.clipboard.writeText(activePassword);
+    setPasswordCopied(true);
+    showToast('info', 'Password Disalin', `Password ${activePassword} telah disalin ke clipboard.`);
+    setTimeout(() => setPasswordCopied(false), 2000);
+  };
 
   const isKhususClosed = settings.storanKhususOpen === false || !settings.storanOpen;
   const isBebasClosed = settings.storanBebasOpen === false || !settings.storanOpen;
@@ -639,6 +650,155 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 </span>
               </button>
             </form>
+          </div>
+
+          {/* RULES & KETENTUAN STOR (DI BAWAH FORM STOR) */}
+          <div id="rules-storan-card" className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold shadow-xs shrink-0">
+                  <ClipboardList className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900">
+                      Rules & Ketentuan Storan Gmail
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-800">
+                      {settings.rules?.length || 0} Aturan Wajib
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Wajib dibaca dan dipatuhi agar storan akun Anda lolos verifikasi dan diterima
+                  </p>
+                </div>
+              </div>
+
+              {onNavigate && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate('rules')}
+                  className="text-xs font-bold text-purple-700 hover:text-purple-800 hover:underline flex items-center gap-1 self-start sm:self-center cursor-pointer"
+                >
+                  <span>Halaman Rules Lengkap →</span>
+                </button>
+              )}
+            </div>
+
+            {/* 1. PASSWORD GMAIL WAJIB */}
+            <div className="rounded-2xl bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50/50 p-4 border border-orange-200 text-orange-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-orange-800 block">
+                    Password Gmail Wajib:
+                  </span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="font-mono text-base font-black text-orange-600 bg-white px-2.5 py-0.5 rounded-lg border border-orange-300 shadow-2xs select-all">
+                      {activePassword}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyPassword}
+                      className="px-2.5 py-1 rounded-lg bg-white hover:bg-orange-100 border border-orange-300 text-orange-700 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+                      title="Salin password"
+                    >
+                      {passwordCopied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-emerald-700 font-bold">Disalin</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Salin</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-orange-900 leading-snug sm:max-w-xs sm:text-right font-medium">
+                Semua akun Gmail yang disetor <strong className="font-bold">WAJIB</strong> memakai password di atas. Jika berbeda, akun otomatis ditolak.
+              </p>
+            </div>
+
+            {/* 2. LARANGAN KERAS 2FA & VERIFIKASI HP */}
+            <div className="rounded-2xl bg-rose-50/90 border border-rose-200 p-4 text-rose-950 flex items-start gap-3 shadow-2xs">
+              <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
+                <ShieldAlert className="w-4 h-4" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-black text-rose-900 uppercase tracking-wide">
+                  Larangan Keras: Jangan Aktifkan 2FA / Verifikasi Nomor HP
+                </h4>
+                <p className="text-xs text-rose-800 leading-relaxed font-medium">
+                  Dilarang menyalakan 2-Step Verification (2FA), verifikasi SMS, ataupun nomor telepon yang meminta OTP saat admin login. Akun yang meminta kode verifikasi akan <strong className="font-bold underline">langsung ditolak</strong> tanpa komisi.
+                </p>
+              </div>
+            </div>
+
+            {/* 3. SYARAT & KETENTUAN VALIDASI */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                Ketentuan & Syarat Validasi Akun:
+              </h4>
+              <div className="space-y-2">
+                {settings.rules?.map((rule, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50/80 hover:bg-indigo-50/40 border border-slate-200/70 transition text-xs text-slate-800 leading-relaxed"
+                  >
+                    <span className="w-5 h-5 rounded-lg bg-purple-100 text-purple-800 font-black text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                      {idx + 1}
+                    </span>
+                    <span className="font-medium pt-0.5">{rule}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. PERBANDINGAN TIPE STORAN */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs space-y-1">
+                <div className="flex items-center gap-1.5 font-black text-indigo-950">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>STOR Gmail Khusus (Rp 3.000)</span>
+                </div>
+                <p className="text-[11px] text-indigo-900 leading-relaxed font-medium">
+                  Alamat email <strong className="font-bold">WAJIB</strong> diambil dari generator akun khusus di atas dan disetor sama persis.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-teal-50/70 border border-teal-100 text-xs space-y-1">
+                <div className="flex items-center gap-1.5 font-black text-teal-950">
+                  <Globe className="w-3.5 h-3.5 text-teal-600" />
+                  <span>STOR Gmail Bebas (Rp 2.700)</span>
+                </div>
+                <p className="text-[11px] text-teal-900 leading-relaxed font-medium">
+                  Bebas memakai nama Gmail apa saja kreasi Anda (tanpa generate), password wajib <strong className="font-mono text-orange-600 font-bold">{activePassword}</strong>.
+                </p>
+              </div>
+            </div>
+
+            {/* 5. ESTIMASI WAKTU & BANTUAN */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5 text-slate-700">
+                <Clock className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span>
+                  Estimasi verifikasi: <strong>dalam pengecekan admin tunggu 24-30 jam</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={openContactModal}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition cursor-pointer self-start sm:self-auto"
+              >
+                Punya Pertanyaan? Tanya Admin WA →
+              </button>
+            </div>
           </div>
 
           <div className="p-4 rounded-2xl bg-white border border-slate-200/80 text-slate-600 text-xs flex items-center justify-between gap-3 shadow-2xs">

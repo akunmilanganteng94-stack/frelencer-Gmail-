@@ -21,6 +21,7 @@ import { db } from '../lib/firebase';
 import { useGmailStock } from '../hooks/useGmailStock';
 import { AdminAllStorTab } from '../components/AdminAllStorTab';
 import { AdminYesterdayPendingTab } from '../components/AdminYesterdayPendingTab';
+import { AdminAllCekAdminTab } from '../components/AdminAllCekAdminTab';
 import { AdminBulkConfirmModal } from '../components/AdminBulkConfirmModal';
 import { AdminBulkRejectModal } from '../components/AdminBulkRejectModal';
 import { AdminBulkCheckModal } from '../components/AdminBulkCheckModal';
@@ -56,6 +57,7 @@ import {
   History,
   X,
   MessageSquareWarning,
+  Power,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GmailLogo } from '../components/GmailLogo';
@@ -88,7 +90,15 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   } = useGmailStock();
 
   const [activeTab, setActiveTab] = useState<
-    'all_stor' | 'yesterday_pending' | 'stats' | 'submissions' | 'withdrawals' | 'users' | 'settings' | 'stock'
+    | 'all_stor'
+    | 'yesterday_pending'
+    | 'all_cek_admin'
+    | 'stats'
+    | 'submissions'
+    | 'withdrawals'
+    | 'users'
+    | 'settings'
+    | 'stock'
   >('all_stor');
 
   const [usersList, setUsersList] = useState<UserProfile[]>([]);
@@ -568,6 +578,76 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     }
   };
 
+  const handleToggleWithdrawal = async () => {
+    const nextVal = settings.withdrawalOpen === false;
+    try {
+      await updateSettings({ withdrawalOpen: nextVal });
+      showToast(
+        nextVal ? 'success' : 'info',
+        `Penarikan ${nextVal ? 'DIBUKA' : 'DITUTUP'}`,
+        `Fitur penarikan saldo sekarang ${nextVal ? 'dibuka (aktif)' : 'ditutup sementara'}.`
+      );
+    } catch (err: unknown) {
+      showToast('error', 'Gagal Mengubah Status', err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleToggleGenerator = async () => {
+    const nextVal = settings.generatorOpen === false;
+    try {
+      await updateSettings({ generatorOpen: nextVal });
+      showToast(
+        nextVal ? 'success' : 'info',
+        `Generator Akun ${nextVal ? 'DIBUKA' : 'DITUTUP'}`,
+        `Fitur generator akun Gmail sekarang ${nextVal ? 'dibuka (aktif)' : 'ditutup sementara'}.`
+      );
+    } catch (err: unknown) {
+      showToast('error', 'Gagal Mengubah Status', err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleToggleStoranKhusus = async () => {
+    const nextVal = settings.storanKhususOpen === false;
+    try {
+      await updateSettings({ storanKhususOpen: nextVal });
+      showToast(
+        nextVal ? 'success' : 'info',
+        `STOR Khusus ${nextVal ? 'DIBUKA' : 'DITUTUP'}`,
+        `Layanan STOR an Khusus (3k / generate) sekarang ${nextVal ? 'dibuka (aktif)' : 'ditutup sementara'}.`
+      );
+    } catch (err: unknown) {
+      showToast('error', 'Gagal Mengubah Status', err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleToggleStoranBebas = async () => {
+    const nextVal = settings.storanBebasOpen === false;
+    try {
+      await updateSettings({ storanBebasOpen: nextVal });
+      showToast(
+        nextVal ? 'success' : 'info',
+        `STOR Bebas ${nextVal ? 'DIBUKA' : 'DITUTUP'}`,
+        `Layanan STOR an Bebas (2.7k) sekarang ${nextVal ? 'dibuka (aktif)' : 'ditutup sementara'}.`
+      );
+    } catch (err: unknown) {
+      showToast('error', 'Gagal Mengubah Status', err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleToggleSemuaStoran = async () => {
+    const nextVal = !settings.storanOpen;
+    try {
+      await updateSettings({ storanOpen: nextVal });
+      showToast(
+        nextVal ? 'success' : 'info',
+        `Semua STOR ${nextVal ? 'DIBUKA' : 'DITUTUP'}`,
+        `Layanan semua storan sekarang ${nextVal ? 'dibuka (aktif)' : 'ditutup sementara'}.`
+      );
+    } catch (err: unknown) {
+      showToast('error', 'Gagal Mengubah Status', err instanceof Error ? err.message : String(err));
+    }
+  };
+
   const handleSaveSingleStock = async (e: FormEvent) => {
     e.preventDefault();
     if (!newStockEmail.trim()) {
@@ -736,6 +816,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const pendingYesterdayCount = submissionsList.filter(
     (s) => s.status === 'Pending' && isEarlierThanTodayWIB(s.createdAt)
   ).length;
+  const cekAdminCount = submissionsList.filter((s) => s.status === 'Cek Admin').length;
   const submissionDiterima = submissionsList.filter((s) => s.status === 'Diterima').length;
   const submissionDitolak = submissionsList.filter((s) => s.status === 'Ditolak').length;
 
@@ -836,14 +917,116 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             <ListX className="w-4 h-4" />
             <span>Tolak Bulk</span>
           </button>
+        </div>
+      </div>
+
+      {/* SAKLAR OPERASIONAL LAYANAN (TUTUP / BUKA) */}
+      <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/90 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+            <Power className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+              <span>Saklar Operasional Layanan (Tutup / Buka)</span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Klik saklar status di bawah ini untuk membuka atau menutup akses layanan realtime
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 1. TUTUP / BUKA PENARIKAN */}
           <button
             type="button"
-            onClick={() => updateSettings({ storanOpen: !settings.storanOpen })}
-            className={`px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition border cursor-pointer ${
+            onClick={handleToggleWithdrawal}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition border cursor-pointer active:scale-95 shadow-2xs ${
+              settings.withdrawalOpen !== false
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                : 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
+            }`}
+            title="Klik untuk membuka atau menutup pengajuan penarikan saldo (WD)"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                settings.withdrawalOpen !== false ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+              }`}
+            />
+            <Wallet className="w-3.5 h-3.5" />
+            <span>Penarikan: {settings.withdrawalOpen !== false ? 'BUKA' : 'TUTUP'}</span>
+          </button>
+
+          {/* 2. TUTUP / BUKA GENERATE */}
+          <button
+            type="button"
+            onClick={handleToggleGenerator}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition border cursor-pointer active:scale-95 shadow-2xs ${
+              settings.generatorOpen !== false
+                ? 'bg-purple-50 text-purple-800 border-purple-300 hover:bg-purple-100'
+                : 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
+            }`}
+            title="Klik untuk membuka atau menutup generator nama akun Gmail"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                settings.generatorOpen !== false ? 'bg-purple-500 animate-pulse' : 'bg-rose-500'
+              }`}
+            />
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Generate: {settings.generatorOpen !== false ? 'BUKA' : 'TUTUP'}</span>
+          </button>
+
+          {/* 3. TUTUP / BUKA STOR AN KHUSUS */}
+          <button
+            type="button"
+            onClick={handleToggleStoranKhusus}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition border cursor-pointer active:scale-95 shadow-2xs ${
+              settings.storanKhususOpen !== false
+                ? 'bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100'
+                : 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
+            }`}
+            title="Klik untuk membuka atau menutup storan Gmail Khusus (3k / akun)"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                settings.storanKhususOpen !== false ? 'bg-blue-500 animate-pulse' : 'bg-rose-500'
+              }`}
+            />
+            <Layers className="w-3.5 h-3.5" />
+            <span>STOR Khusus: {settings.storanKhususOpen !== false ? 'BUKA' : 'TUTUP'}</span>
+          </button>
+
+          {/* 4. TUTUP / BUKA STORAN BEBAS */}
+          <button
+            type="button"
+            onClick={handleToggleStoranBebas}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition border cursor-pointer active:scale-95 shadow-2xs ${
+              settings.storanBebasOpen !== false
+                ? 'bg-teal-50 text-teal-800 border-teal-300 hover:bg-teal-100'
+                : 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
+            }`}
+            title="Klik untuk membuka atau menutup storan Gmail Bebas (2.7k / akun)"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                settings.storanBebasOpen !== false ? 'bg-teal-500 animate-pulse' : 'bg-rose-500'
+              }`}
+            />
+            <Globe className="w-3.5 h-3.5" />
+            <span>STOR Bebas: {settings.storanBebasOpen !== false ? 'BUKA' : 'TUTUP'}</span>
+          </button>
+
+          {/* 5. MASTER SEMUA STOR */}
+          <button
+            type="button"
+            onClick={handleToggleSemuaStoran}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition border cursor-pointer active:scale-95 shadow-2xs ${
               settings.storanOpen
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
                 : 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
             }`}
+            title="Master switch untuk seluruh penerimaan akun baru"
           >
             <span
               className={`w-2 h-2 rounded-full ${
@@ -863,6 +1046,12 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             label: `Pendingan Kemarin (${pendingYesterdayCount})`,
             icon: History,
             highlight: pendingYesterdayCount > 0 ? 'amber' : undefined,
+          },
+          {
+            id: 'all_cek_admin',
+            label: `All Cek Admin (${cekAdminCount})`,
+            icon: ClipboardCheck,
+            highlight: cekAdminCount > 0 ? 'blue' : undefined,
           },
           { id: 'stats', label: 'Statistik & Ringkasan', icon: TrendingUp },
           { id: 'stock', label: `Stok Generator (${availableStock.length})`, icon: Sparkles },
@@ -884,6 +1073,10 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             btnClass = 'bg-amber-600 text-white shadow-xs';
           } else if (!isActive && tab.highlight === 'amber') {
             btnClass = 'text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200';
+          } else if (isActive && tab.highlight === 'blue') {
+            btnClass = 'bg-blue-600 text-white shadow-xs';
+          } else if (!isActive && tab.highlight === 'blue') {
+            btnClass = 'text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200';
           }
           return (
             <button
@@ -930,6 +1123,24 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             setRejectionReason(PRESET_REASONS[0]);
           }}
           processingSubId={processingSubId}
+        />
+      )}
+
+      {activeTab === 'all_cek_admin' && (
+        <AdminAllCekAdminTab
+          submissions={submissionsList}
+          defaultPassword={settings.gmailDefaultPassword || 'sgsg1122'}
+          onOpenBulkCheckModal={() => setShowBulkCheckModal(true)}
+          onOpenBulkConfirmModal={() => setShowBulkConfirmModal(true)}
+          onOpenBulkRejectModal={() => setShowBulkRejectModal(true)}
+          onAcceptSubmission={handleAcceptSubmission}
+          onRejectSubmission={(sub) => {
+            setRejectModalSub(sub);
+            setRejectionReason(PRESET_REASONS[0]);
+          }}
+          processingSubId={processingSubId}
+          onNavigateToYesterdayPending={() => setActiveTab('yesterday_pending')}
+          onNavigateToAllStor={() => setActiveTab('all_stor')}
         />
       )}
 
@@ -1423,6 +1634,58 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
 
       {activeTab === 'withdrawals' && (
         <div className="space-y-4">
+          {/* Status Penarikan Banner & Toggle */}
+          <div
+            className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs transition ${
+              settings.withdrawalOpen !== false
+                ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                : 'bg-rose-50/70 border-rose-200 text-rose-950'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  settings.withdrawalOpen !== false
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-rose-100 text-rose-700'
+                }`}
+              >
+                <Wallet className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-sm font-black flex items-center gap-2">
+                  <span>Status Layanan Penarikan Saldo:</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-md text-xs font-extrabold ${
+                      settings.withdrawalOpen !== false
+                        ? 'bg-emerald-200/80 text-emerald-900'
+                        : 'bg-rose-200/80 text-rose-900'
+                    }`}
+                  >
+                    {settings.withdrawalOpen !== false ? 'SEDANG BUKA' : 'SEDANG TUTUP'}
+                  </span>
+                </div>
+                <p className="text-xs opacity-85 mt-0.5">
+                  {settings.withdrawalOpen !== false
+                    ? 'Pengguna dapat mengajukan penarikan saldo DANA dan GoPay.'
+                    : 'Pengajuan penarikan baru ditutup sementara bagi semua freelancer.'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleToggleWithdrawal}
+              className={`px-4 py-2 rounded-xl text-xs font-black shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0 ${
+                settings.withdrawalOpen !== false
+                  ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              }`}
+            >
+              <Power className="w-3.5 h-3.5" />
+              <span>{settings.withdrawalOpen !== false ? 'Tutup Penarikan' : 'Buka Penarikan'}</span>
+            </button>
+          </div>
+
           <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
@@ -1665,6 +1928,231 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           </div>
 
           <div className="space-y-5">
+            {/* SAKLAR BUKA / TUTUP FITUR OPERASIONAL */}
+            <div className="p-5 rounded-2xl bg-slate-50/90 border border-slate-200/90 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                    <Power className="w-4 h-4 text-indigo-600" />
+                    <span>Kontrol Buka / Tutup Layanan (Operasional)</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Saklar realtime untuk mengaktifkan atau menonaktifkan fitur bagi pengguna
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* 1. TUTUP / BUKA PENARIKAN */}
+                <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                        settings.withdrawalOpen !== false
+                          ? 'bg-emerald-50 text-emerald-600'
+                          : 'bg-rose-50 text-rose-600'
+                      }`}
+                    >
+                      <Wallet className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-slate-900 truncate">Penarikan Saldo</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-black ${
+                            settings.withdrawalOpen !== false
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {settings.withdrawalOpen !== false ? 'BUKA' : 'TUTUP'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                        Pencairan dana ke DANA / GoPay
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleWithdrawal}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer active:scale-95 shrink-0 ${
+                      settings.withdrawalOpen !== false
+                        ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs'
+                    }`}
+                  >
+                    {settings.withdrawalOpen !== false ? 'Tutup' : 'Buka'}
+                  </button>
+                </div>
+
+                {/* 2. TUTUP / BUKA GENERATE */}
+                <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                        settings.generatorOpen !== false
+                          ? 'bg-purple-50 text-purple-600'
+                          : 'bg-rose-50 text-rose-600'
+                      }`}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-slate-900 truncate">Generator Akun</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-black ${
+                            settings.generatorOpen !== false
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {settings.generatorOpen !== false ? 'BUKA' : 'TUTUP'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                        Ambil nama Gmail dari stok admin
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleGenerator}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer active:scale-95 shrink-0 ${
+                      settings.generatorOpen !== false
+                        ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                        : 'bg-purple-600 hover:bg-purple-700 text-white shadow-2xs'
+                    }`}
+                  >
+                    {settings.generatorOpen !== false ? 'Tutup' : 'Buka'}
+                  </button>
+                </div>
+
+                {/* 3. TUTUP / BUKA STOR AN KHUSUS */}
+                <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                        settings.storanKhususOpen !== false
+                          ? 'bg-blue-50 text-blue-600'
+                          : 'bg-rose-50 text-rose-600'
+                      }`}
+                    >
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-slate-900 truncate">STOR an Khusus</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-black ${
+                            settings.storanKhususOpen !== false
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {settings.storanKhususOpen !== false ? 'BUKA (3k)' : 'TUTUP'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                        Setoran akun hasil generate (Rp 3.000)
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleStoranKhusus}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer active:scale-95 shrink-0 ${
+                      settings.storanKhususOpen !== false
+                        ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-2xs'
+                    }`}
+                  >
+                    {settings.storanKhususOpen !== false ? 'Tutup' : 'Buka'}
+                  </button>
+                </div>
+
+                {/* 4. TUTUP / BUKA STORAN BEBAS */}
+                <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                        settings.storanBebasOpen !== false
+                          ? 'bg-teal-50 text-teal-600'
+                          : 'bg-rose-50 text-rose-600'
+                      }`}
+                    >
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-slate-900 truncate">STOR an Bebas</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-black ${
+                            settings.storanBebasOpen !== false
+                              ? 'bg-teal-100 text-teal-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {settings.storanBebasOpen !== false ? 'BUKA (2.7k)' : 'TUTUP'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                        Setoran nama bebas kreasi (Rp 2.700)
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleStoranBebas}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer active:scale-95 shrink-0 ${
+                      settings.storanBebasOpen !== false
+                        ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                        : 'bg-teal-600 hover:bg-teal-700 text-white shadow-2xs'
+                    }`}
+                  >
+                    {settings.storanBebasOpen !== false ? 'Tutup' : 'Buka'}
+                  </button>
+                </div>
+              </div>
+
+              {/* 5. MASTER SWITCH SEMUA STOR */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-slate-100 to-indigo-50/40 border border-slate-300/70 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`w-3 h-3 rounded-full shrink-0 ${
+                      settings.storanOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                    }`}
+                  />
+                  <div>
+                    <div className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                      <span>Master Switch Semua Layanan Storan</span>
+                      <span
+                        className={`px-1.5 py-0.2 rounded text-[10px] font-black ${
+                          settings.storanOpen ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                        }`}
+                      >
+                        {settings.storanOpen ? 'BUKA' : 'TUTUP'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Saklar utama untuk mengizinkan atau memblokir seluruh penerimaan akun Gmail baru
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleSemuaStoran}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer active:scale-95 shrink-0 ${
+                    settings.storanOpen
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
+                >
+                  {settings.storanOpen ? 'Tutup Semua STOR' : 'Buka Semua STOR'}
+                </button>
+              </div>
+            </div>
             <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 space-y-2">
               <label className="block text-xs font-bold text-slate-800">
                 Harga Imbalan Per Submission (Rp)

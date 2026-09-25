@@ -59,6 +59,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             storanOpen: data.storanOpen !== undefined ? data.storanOpen : true,
             storanKhususOpen: data.storanKhususOpen !== undefined ? data.storanKhususOpen : true,
             storanBebasOpen: data.storanBebasOpen !== undefined ? data.storanBebasOpen : true,
+            withdrawalOpen: data.withdrawalOpen !== undefined ? data.withdrawalOpen : true,
             gmailDefaultPassword: data.gmailDefaultPassword || DEFAULT_GMAIL_PASSWORD,
             generatorOpen: data.generatorOpen !== undefined ? data.generatorOpen : true,
             adminWhatsApp: data.adminWhatsApp || '6285199219856',

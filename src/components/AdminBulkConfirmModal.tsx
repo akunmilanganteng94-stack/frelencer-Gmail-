@@ -6,9 +6,12 @@ import {
   AlertCircle,
   Sparkles,
   X,
+  History,
+  Zap,
+  Globe,
 } from 'lucide-react';
 import { Submission } from '../types';
-import { formatRupiah } from '../lib/utils';
+import { formatRupiah, isEarlierThanTodayWIB, isTodayWIB } from '../lib/utils';
 import { doc, runTransaction } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useToast } from '../context/ToastContext';
@@ -31,14 +34,70 @@ export function AdminBulkConfirmModal({
   const [processedCount, setProcessedCount] = useState(0);
   const [processedTotalReward, setProcessedTotalReward] = useState(0);
 
-  // Extract clean email from submission content
   const getCleanEmailFromSubmission = (dataContent: string): string => {
     if (!dataContent) return '';
     const parts = dataContent.split('|');
     return parts[0].trim().toLowerCase();
   };
 
-  // Parse input lines
+  const getSubmissionType = (sub: Submission): 'khusus' | 'bebas' => {
+    if (sub.submissionType) return sub.submissionType;
+    if (sub.rewardAmount === 2700) return 'bebas';
+    return 'khusus';
+  };
+
+  const pendingYesterdaySubs = useMemo(() => {
+    return submissions.filter(
+      (s) => (s.status === 'Pending' || s.status === 'Cek Admin') && isEarlierThanTodayWIB(s.createdAt)
+    );
+  }, [submissions]);
+
+  const pendingTodaySubs = useMemo(() => {
+    return submissions.filter(
+      (s) => (s.status === 'Pending' || s.status === 'Cek Admin') && isTodayWIB(s.createdAt)
+    );
+  }, [submissions]);
+
+  const pendingYesterdayKhususEmails = useMemo(() => {
+    return pendingYesterdaySubs
+      .filter((s) => getSubmissionType(s) === 'khusus')
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [pendingYesterdaySubs]);
+
+  const pendingYesterdayBebasEmails = useMemo(() => {
+    return pendingYesterdaySubs
+      .filter((s) => getSubmissionType(s) === 'bebas')
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [pendingYesterdaySubs]);
+
+  const pendingTodayKhususEmails = useMemo(() => {
+    return pendingTodaySubs
+      .filter((s) => getSubmissionType(s) === 'khusus')
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [pendingTodaySubs]);
+
+  const pendingTodayBebasEmails = useMemo(() => {
+    return pendingTodaySubs
+      .filter((s) => getSubmissionType(s) === 'bebas')
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [pendingTodaySubs]);
+
+  const pendingYesterdayEmails = useMemo(() => {
+    return pendingYesterdaySubs
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [pendingYesterdaySubs]);
+
+  const pendingTodayEmails = useMemo(() => {
+    return pendingTodaySubs
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [pendingTodaySubs]);
+
   const parsedEmails = useMemo(() => {
     if (!inputText.trim()) return [];
     const lines = inputText.split('\n');
@@ -56,14 +115,13 @@ export function AdminBulkConfirmModal({
     return result;
   }, [inputText]);
 
-  // Match parsed emails against submissions
   const matchAnalysis = useMemo(() => {
     const pendingSubsMap = new Map<string, Submission>();
     const acceptedSubsMap = new Map<string, Submission>();
 
     for (const sub of submissions) {
       const cleanEmail = getCleanEmailFromSubmission(sub.dataContent);
-      if (sub.status === 'Pending') {
+      if (sub.status === 'Pending' || sub.status === 'Cek Admin') {
         if (!pendingSubsMap.has(cleanEmail)) {
           pendingSubsMap.set(cleanEmail, sub);
         }
@@ -132,6 +190,7 @@ export function AdminBulkConfirmModal({
 
           const reward =
             typeof sub.rewardAmount === 'number' && sub.rewardAmount > 0 ? sub.rewardAmount : 3000;
+
           const userDoc = await transaction.get(userRef);
 
           transaction.update(subRef, {
@@ -158,7 +217,6 @@ export function AdminBulkConfirmModal({
             const userData = userDoc.data();
             const currentBalance = userData.balance || 0;
             const currentEarned = userData.totalEarned || 0;
-
             transaction.update(userRef, {
               balance: currentBalance + reward,
               totalEarned: currentEarned + reward,
@@ -203,7 +261,6 @@ export function AdminBulkConfirmModal({
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]"
       >
-        {/* Header */}
         <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 p-5 sm:p-6 text-white relative shrink-0">
           <button
             type="button"
@@ -233,7 +290,6 @@ export function AdminBulkConfirmModal({
           </div>
         </div>
 
-        {/* Modal Body */}
         <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-5">
           {step === 'input' && (
             <div className="space-y-4">
@@ -245,6 +301,110 @@ export function AdminBulkConfirmModal({
                 <p>
                   Tempel daftar alamat Gmail yang ingin Anda konfirmasi terima. Masukkan <strong>1 baris = 1 akun Gmail</strong>. Sistem akan mencocokkan akun tersebut dengan storan berstatus <strong>Pending</strong>, lalu otomatis mengubah status menjadi <strong>Diterima</strong> dan menambahkan saldo pengguna.
                 </p>
+              </div>
+
+              <div className="space-y-2.5 p-3 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                <span className="text-[11px] font-extrabold text-slate-600 block">
+                  Pintasan Muat Antrean (Kemarin vs Hari Ini - Dipisah Khusus & Bebas):
+                </span>
+                
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded">Kemarin:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pendingYesterdayKhususEmails.length === 0) {
+                        showToast('info', 'Kosong', 'Tidak ada pendingan kemarin tipe Khusus.');
+                        return;
+                      }
+                      setInputText(pendingYesterdayKhususEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${pendingYesterdayKhususEmails.length} akun kemarin (Khusus 3k) dimuat.`);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Khusus 3k ({pendingYesterdayKhususEmails.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pendingYesterdayBebasEmails.length === 0) {
+                        showToast('info', 'Kosong', 'Tidak ada pendingan kemarin tipe Bebas.');
+                        return;
+                      }
+                      setInputText(pendingYesterdayBebasEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${pendingYesterdayBebasEmails.length} akun kemarin (Bebas 2.7k) dimuat.`);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Globe className="w-3 h-3" />
+                    <span>Bebas 2.7k ({pendingYesterdayBebasEmails.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pendingYesterdayEmails.length === 0) {
+                        showToast('info', 'Kosong', 'Tidak ada antrean pendingan kemarin.');
+                        return;
+                      }
+                      setInputText(pendingYesterdayEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${pendingYesterdayEmails.length} semua akun kemarin dimuat.`);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <History className="w-3 h-3" />
+                    <span>Semua Kemarin ({pendingYesterdayEmails.length})</span>
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-200/60">
+                  <span className="text-[10px] font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded">Hari Ini:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pendingTodayKhususEmails.length === 0) {
+                        showToast('info', 'Kosong', 'Tidak ada pendingan hari ini tipe Khusus.');
+                        return;
+                      }
+                      setInputText(pendingTodayKhususEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${pendingTodayKhususEmails.length} akun hari ini (Khusus 3k) dimuat.`);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Khusus 3k ({pendingTodayKhususEmails.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pendingTodayBebasEmails.length === 0) {
+                        showToast('info', 'Kosong', 'Tidak ada pendingan hari ini tipe Bebas.');
+                        return;
+                      }
+                      setInputText(pendingTodayBebasEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${pendingTodayBebasEmails.length} akun hari ini (Bebas 2.7k) dimuat.`);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Globe className="w-3 h-3" />
+                    <span>Bebas 2.7k ({pendingTodayBebasEmails.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pendingTodayEmails.length === 0) {
+                        showToast('info', 'Kosong', 'Tidak ada antrean pendingan hari ini.');
+                        return;
+                      }
+                      setInputText(pendingTodayEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${pendingTodayEmails.length} semua akun hari ini dimuat.`);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Zap className="w-3 h-3" />
+                    <span>Semua Hari Ini ({pendingTodayEmails.length})</span>
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -407,7 +567,6 @@ export function AdminBulkConfirmModal({
           )}
         </div>
 
-        {/* Footer Actions */}
         {step !== 'result' && (
           <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3 shrink-0">
             {step === 'input' ? (
@@ -436,7 +595,7 @@ export function AdminBulkConfirmModal({
                   onClick={() => setStep('input')}
                   className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-white transition cursor-pointer"
                 >
-                  ← Kembali Edit List
+                  Kembali Edit List
                 </button>
                 <button
                   type="button"

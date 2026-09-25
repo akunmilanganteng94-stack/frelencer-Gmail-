@@ -51,7 +51,6 @@ export function checkIsEmailGenerated(email: string, userId?: string): boolean {
   const rawTarget = email.trim().toLowerCase();
   const normalizedTarget = rawTarget.includes('@') ? rawTarget : `${rawTarget}@gmail.com`;
   const targetPrefix = normalizedTarget.split('@')[0];
-
   const activeKey = `gmail_gen_saved_${userId}`;
   try {
     const raw = localStorage.getItem(activeKey);
@@ -139,7 +138,6 @@ export async function verifyUserGeneratedEmail(email: string, userId?: string): 
       return docEmail === normalizedTarget || docEmail.split('@')[0] === targetPrefix;
     });
     if (matched) {
-      // Cache ke riwayat lokal agar pengecekan berikutnya instan
       try {
         const historyKey = `gmail_gen_all_${userId}`;
         const existingRaw = localStorage.getItem(historyKey);
@@ -204,7 +202,6 @@ export function GmailGenerator({
   const { showToast } = useToast();
   const { currentUser } = useAuth();
   const { availableStock, claimAccounts } = useGmailStock();
-
   const [count, setCount] = useState<number>(1);
   const [generating, setGenerating] = useState<boolean>(false);
   const [results, setResults] = useState<GeneratedResultItem[]>([]);
@@ -310,7 +307,6 @@ export function GmailGenerator({
         const combinedAll = Array.from(new Set([...existingAll, ...newEmails]));
         localStorage.setItem(historyKey, JSON.stringify(combinedAll));
 
-        // Sinkronisasi ke profil Firestore user agar tersimpan permanen untuk user ini
         if (currentUser?.uid) {
           const userRef = doc(db, 'users', currentUser.uid);
           await updateDoc(userRef, {
@@ -399,17 +395,10 @@ export function GmailGenerator({
             </span>
           </div>
         </div>
-        <div className="text-xs text-slate-600 leading-relaxed space-y-2">
+        <div className="text-xs text-slate-600 leading-relaxed space-y-1">
           <p>
-            Ambil nama Gmail dari stok yang sudah disiapkan admin, lalu daftarkan akun Gmail asli memakai nama tersebut sebelum disetorkan pada kolom storan di bagian bawah halaman.
+            Fitur generator nama Gmail khusus saat ini sedang ditutup oleh admin. Anda tetap dapat melakukan storan melalui opsi <strong>STOR Gmail Bebas</strong> (Rp 2.700 / akun).
           </p>
-          <ol className="list-decimal list-inside space-y-1 text-slate-700 font-medium">
-            <li>Tekan tombol Generate Gmail dan pilih jumlah yang Anda butuhkan.</li>
-            <li>Salin nama Gmail satu per satu, atau salin semuanya sekaligus.</li>
-            <li>Daftarkan akun Gmail dengan nama tersebut dan pw tersebut di google/Gmail.</li>
-            <li>Tempel Gmail yang sudah jadi ke kolom storan di bawah, lalu kirim.</li>
-          </ol>
-          <p className="font-bold text-orange-600">Password wajib: sgsg1122</p>
         </div>
         {onOpenContactAdmin && (
           <button
@@ -434,13 +423,13 @@ export function GmailGenerator({
           </div>
           <div>
             <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
-              <span>Generator Akun Gmail</span>
+              <span>Generator Akun Gmail Khusus</span>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60">
-                Stok Admin
+                Rp 3.000 / Akun
               </span>
             </h2>
             <p className="text-xs text-slate-500">
-              Ambil akun Gmail & password langsung dari stok yang disediakan admin
+              Ambil nama akun langsung dari stok admin untuk STOR Gmail Khusus
             </p>
           </div>
         </div>
@@ -449,29 +438,23 @@ export function GmailGenerator({
           <div
             className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 ${
               remainingQuota > 0
-                ? 'bg-purple-50 border-purple-200 text-purple-800'
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
                 : 'bg-rose-50 border-rose-200 text-rose-800'
             }`}
             title={`Batas generate per hari: ${dailyLimit} akun/hari`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
             <span>Kuota Hari Ini: {todayGenerated}/{dailyLimit}</span>
           </div>
         </div>
       </div>
 
-      <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-xs text-slate-700 space-y-2">
-        <p className="font-medium text-slate-800 leading-relaxed">
-          Ambil nama Gmail dari stok yang sudah disiapkan admin, lalu daftarkan akun Gmail asli memakai nama tersebut sebelum disetorkan pada kolom storan di bagian bawah halaman.
-        </p>
-        <ol className="list-decimal list-inside space-y-1 text-slate-600 font-medium">
-          <li>Tekan tombol Generate Gmail dan pilih jumlah yang Anda butuhkan.</li>
-          <li>Salin nama Gmail satu per satu, atau salin semuanya sekaligus.</li>
-          <li>Daftarkan akun Gmail dengan nama tersebut dan pw tersebut di google/Gmail.</li>
-          <li>Tempel Gmail yang sudah jadi ke kolom storan di bawah, lalu kirim.</li>
-        </ol>
-        <div className="pt-0.5 text-xs font-bold text-orange-600">
-          Password wajib: sgsg1122
+      <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs text-indigo-950 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
+          <span className="font-semibold leading-relaxed">
+            Generator Khusus (Rp 3.000/akun): Pilih jumlah & generate nama, buat di Google dengan password wajib <strong className="font-mono text-indigo-900 bg-white px-1.5 py-0.5 rounded border border-indigo-200">{activePassword}</strong>, lalu masukkan ke form storan.
+          </span>
         </div>
       </div>
 
@@ -567,6 +550,7 @@ export function GmailGenerator({
                 : `Generate ${count} Akun Dari Stok`}
             </span>
           </button>
+
           {availableStock.length === 0 && onOpenContactAdmin && (
             <button
               type="button"
@@ -600,6 +584,7 @@ export function GmailGenerator({
                   </span>
                 </div>
               </div>
+
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
@@ -672,6 +657,7 @@ export function GmailGenerator({
                           </span>
                         )}
                       </div>
+
                       <div className="flex items-center gap-2 pl-7 text-xs">
                         <span className="text-slate-400 font-semibold text-[11px]">PW:</span>
                         <span className="font-mono font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200 text-xs">

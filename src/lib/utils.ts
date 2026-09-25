@@ -48,7 +48,6 @@ export function formatRelativeTime(isoOrDate: string | Date | number): string {
 }
 
 export function isValidPhoneNumber(phone: string): boolean {
-  // Indonesian phone numbers usually start with 08 or +628 or 628, 9-14 digits
   const cleaned = phone.replace(/[^0-9+]/g, '');
   return /^(08|\+628|628)[0-9]{8,12}$/.test(cleaned);
 }
@@ -79,4 +78,3 @@ export function isEarlierThanTodayWIB(isoOrDate: string | Date | number): boolea
   const todayStr = getDateStringWIB(new Date());
   return dateStr !== '' && dateStr < todayStr;
 }
-

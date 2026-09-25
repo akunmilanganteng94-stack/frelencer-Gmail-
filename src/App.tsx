@@ -74,6 +74,7 @@ function MainApp() {
             </div>
             <span className="font-bold text-slate-800">AZGmail</span>
           </div>
+
           <div className="flex items-center gap-4 text-slate-500">
             <span>Operasional: {settings.storanSchedule}</span>
             <span>·</span>

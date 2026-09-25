@@ -30,12 +30,15 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   const { settings } = useSettings();
   const { openContactModal } = useContactAdmin();
   const { showToast } = useToast();
+
   const [copiedUid, setCopiedUid] = useState(false);
   const [copiedWa, setCopiedWa] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+
   const [nameInput, setNameInput] = useState(userProfile?.displayName || '');
   const [savingName, setSavingName] = useState(false);
+
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
@@ -45,7 +48,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   const formattedNumber = rawNumber.startsWith('62')
     ? `+62 ${rawNumber.substring(2, 5)}-${rawNumber.substring(5, 9)}-${rawNumber.substring(9)}`
     : rawNumber;
-
   const waUrl = `https://wa.me/${rawNumber}?text=${encodeURIComponent(
     'Halo Admin AZGmail, saya ingin bertanya terkait storan akun Gmail & saldo saya.'
   )}`;
@@ -96,6 +98,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
       setPassError('Konfirmasi kata sandi tidak cocok.');
       return;
     }
+
     setSavingPassword(true);
     try {
       await changePassword(newPassword);
@@ -266,6 +269,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                   </p>
                 </div>
               </div>
+
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
@@ -344,7 +348,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         )}
 
         <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
-          <span className="text-xs text-slate-400">AZGmail Freelancer   Session Aman</span>
+          <span className="text-xs text-slate-400">AZGmail Freelancer · Session Aman</span>
           <button
             onClick={() => logoutUser()}
             className="px-4 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 font-bold text-xs transition flex items-center gap-2 cursor-pointer"

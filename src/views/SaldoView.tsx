@@ -29,9 +29,11 @@ export function SaldoView() {
   const { userProfile, currentUser } = useAuth();
   const { settings } = useSettings();
   const { showToast } = useToast();
+
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+
   const [amountInput, setAmountInput] = useState<string>('');
   const [method, setMethod] = useState<WithdrawalMethod>('DANA');
   const [targetNumber, setTargetNumber] = useState('');
@@ -50,6 +52,7 @@ export function SaldoView() {
       collection(db, 'withdrawals'),
       where('userId', '==', currentUser.uid)
     );
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -66,6 +69,7 @@ export function SaldoView() {
         setLoading(false);
       }
     );
+
     return () => unsubscribe();
   }, [currentUser]);
 
@@ -78,6 +82,7 @@ export function SaldoView() {
       showToast('error', 'Akun Dibatasi', 'Akun Anda sedang dibatasi. Tidak dapat melakukan penarikan.');
       return;
     }
+
     const currentBalance = userProfile?.balance || 0;
     if (currentBalance < minWithdrawal) {
       showToast(
@@ -87,6 +92,7 @@ export function SaldoView() {
       );
       return;
     }
+
     setAmountInput('');
     setFormError('');
     setIsConfirmed(false);
@@ -190,6 +196,7 @@ export function SaldoView() {
         'Penarikan Berhasil Diajukan',
         `Permintaan penarikan ${formatRupiah(numericAmount)} ke ${method} (${cleanedNumber}) sedang diproses admin.`
       );
+
       setShowWithdrawModal(false);
       setTargetNumber('');
       setRecipientName('');
@@ -235,7 +242,6 @@ export function SaldoView() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Kartu Saldo Tersedia - Warna Biru Tua dengan Gradient Biru Muda */}
         <div className="rounded-[28px] bg-gradient-to-br from-[#1e3a8a] via-[#1d4ed8] to-[#38bdf8] p-6 text-white shadow-xl shadow-blue-900/25 border border-blue-400/20 relative overflow-hidden flex flex-col justify-between">
-          {/* Decorative glowing accent */}
           <div className="absolute -right-6 -top-6 w-36 h-36 rounded-full bg-sky-300/20 blur-xl pointer-events-none" />
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-3">
@@ -254,6 +260,7 @@ export function SaldoView() {
               <strong className="text-white font-bold">{formatRupiah(minWithdrawal)} (Bulat)</strong>
             </div>
           </div>
+
           <div className="mt-4 pt-3 border-t border-white/20 relative z-10">
             <button
               type="button"
@@ -354,6 +361,7 @@ export function SaldoView() {
                       </div>
                     </div>
                   </div>
+
                   <div className="flex items-center gap-3 self-end sm:self-auto">
                     <span className="text-[11px] text-slate-400">
                       {formatIndonesianDateTime(w.createdAt)}
@@ -398,7 +406,6 @@ export function SaldoView() {
               exit={{ opacity: 0, scale: 0.96, y: 10 }}
               className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 p-4 sm:p-5 space-y-3.5 max-h-[92vh] overflow-y-auto"
             >
-              {/* Header Ringkas dengan Info Saldo Terintegrasi */}
               <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
@@ -429,7 +436,6 @@ export function SaldoView() {
               )}
 
               <form onSubmit={handleWithdrawSubmit} className="space-y-3">
-                {/* Nominal Penarikan */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-bold text-slate-800">
@@ -439,7 +445,6 @@ export function SaldoView() {
                       Sisa: <strong className={userBalance - parsedAmount < 0 ? 'text-rose-600' : 'text-slate-700'}>{formatRupiah(Math.max(0, userBalance - parsedAmount))}</strong>
                     </span>
                   </div>
-
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-bold text-xs">
                       Rp
@@ -477,7 +482,6 @@ export function SaldoView() {
                       Maksimal
                     </button>
                   </div>
-
                   {hasPerakan ? (
                     <p className="mt-1 text-[11px] text-rose-600 font-semibold flex items-center gap-1">
                       <span>⚠️ Dilarang perakan (Rp {(parsedAmount % 1000).toLocaleString('id-ID')}). Wajib kelipatan 1.000.</span>
@@ -489,7 +493,6 @@ export function SaldoView() {
                   )}
                 </div>
 
-                {/* Metode & Nomor Tujuan dalam 2 Kolom Ringkas */}
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
                   <div className="sm:col-span-5">
                     <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -512,7 +515,6 @@ export function SaldoView() {
                       ))}
                     </div>
                   </div>
-
                   <div className="sm:col-span-7">
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Nomor {method}
@@ -528,7 +530,6 @@ export function SaldoView() {
                   </div>
                 </div>
 
-                {/* Nama Pemilik Akun */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Nama Pemilik Akun {method}
@@ -543,7 +544,6 @@ export function SaldoView() {
                   />
                 </div>
 
-                {/* Checkbox Konfirmasi Ringkas */}
                 <label className="flex items-center gap-2 cursor-pointer text-[11px] text-slate-600 pt-0.5">
                   <input
                     type="checkbox"
@@ -554,7 +554,6 @@ export function SaldoView() {
                   <span>Data nomor dan nama pemilik {method} sudah benar.</span>
                 </label>
 
-                {/* Tombol Aksi Ringkas */}
                 <div className="pt-1.5 flex items-center gap-2.5">
                   <button
                     type="button"

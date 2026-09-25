@@ -52,12 +52,22 @@ import {
   ListX,
   ClipboardCheck,
   Globe,
-  AlertTriangle,
   Flame,
   History,
+  X,
+  MessageSquareWarning,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GmailLogo } from '../components/GmailLogo';
+
+const PRESET_REASONS = [
+  'Password / sandi tidak cocok',
+  'Meminta verifikasi nomor HP / 2FA aktif',
+  'Akun dinonaktifkan / ditangguhkan Google',
+  'Akun bukan fresh / sudah pernah digunakan',
+  'Format data salah / tidak sesuai aturan',
+  'Akun tidak dapat login / sesi kedaluwarsa',
+];
 
 export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => void }) {
   const { isAdmin, currentUser } = useAuth();
@@ -91,10 +101,13 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
 
   const [subFilter, setSubFilter] = useState<'All' | 'Pending' | 'Cek Admin' | 'Diterima' | 'Ditolak'>('Pending');
   const [subSearch, setSubSearch] = useState('');
+
+  // Single submission rejection modal state
   const [rejectModalSub, setRejectModalSub] = useState<Submission | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [processingSubId, setProcessingSubId] = useState<string | null>(null);
 
+  // Single withdrawal rejection modal state
   const [withFilter, setWithFilter] = useState<'All' | 'Pending' | 'Selesai' | 'Ditolak'>('Pending');
   const [withSearch, setWithSearch] = useState('');
   const [rejectModalWith, setRejectModalWith] = useState<Withdrawal | null>(null);
@@ -121,8 +134,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const [tempStoranClosedReason, setTempStoranClosedReason] = useState(
     settings.storanClosedReason || ''
   );
-  const [rulesList, setRulesList] = useState<string[]>(settings?.rules || []);
-  const [newRuleInput, setNewRuleInput] = useState('');
+  const [rulesList] = useState<string[]>(settings?.rules || []);
   const [savingSettings, setSavingSettings] = useState(false);
 
   const [stockFilter, setStockFilter] = useState<'All' | 'available' | 'used'>('All');
@@ -136,7 +148,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const [editStockEmail, setEditStockEmail] = useState('');
   const [editStockPass, setEditStockPass] = useState('');
   const [editStockStatus, setEditStockStatus] = useState<'available' | 'used'>('available');
-  const [savingStock, setSavingStock] = useState(false);
+  const [, setSavingStock] = useState(false);
 
   interface StockConfirmDialog {
     title: string;
@@ -174,6 +186,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
 
   useEffect(() => {
     if (!isAdmin) return;
+
     const unsubUsers = onSnapshot(
       collection(db, 'users'),
       (snap) => {
@@ -225,7 +238,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     setTempSchedule(settings.storanSchedule);
     setTempAnnouncement(settings.announcement);
     setTempDailyGenerateLimit(settings.dailyGenerateLimit || 10);
-    setRulesList(settings.rules);
   }, [settings]);
 
   if (!isAdmin) {
@@ -337,6 +349,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       showToast('error', 'Wajib Alasan', 'Harap isi alasan penolakan submission.');
       return;
     }
+
     setProcessingSubId(rejectModalSub.id);
     try {
       await updateDoc(doc(db, 'submissions', rejectModalSub.id), {
@@ -375,6 +388,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           completedAt: new Date().toISOString(),
           rejectionReason: '',
         });
+
         transaction.update(userRef, {
           pendingWithdrawn,
           totalWithdrawn,
@@ -399,6 +413,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       showToast('error', 'Wajib Alasan', 'Harap isi alasan penolakan penarikan.');
       return;
     }
+
     setProcessingWithId(rejectModalWith.id);
     try {
       const withRef = doc(db, 'withdrawals', rejectModalWith.id);
@@ -470,11 +485,13 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       showToast('error', 'Nominal Tidak Valid', 'Masukkan nominal saldo yang benar (angka positif).');
       return;
     }
+
     setSavingBalance(true);
     try {
       const currentBal = balanceModalUser.balance || 0;
       let newBal = currentBal;
       let newTotalEarned = balanceModalUser.totalEarned || 0;
+
       if (balanceMode === 'add') {
         newBal = currentBal + parsed;
         if (includeTotalEarned) {
@@ -483,13 +500,16 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       } else {
         newBal = parsed;
       }
+
       const updatePayload: Record<string, any> = {
         balance: newBal,
       };
       if (balanceMode === 'add' && includeTotalEarned) {
         updatePayload.totalEarned = newTotalEarned;
       }
+
       await updateDoc(doc(db, 'users', balanceModalUser.uid), updatePayload);
+
       setUsersList((prev) =>
         prev.map((u) =>
           u.uid === balanceModalUser.uid
@@ -497,6 +517,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             : u
         )
       );
+
       if (selectedUser?.uid === balanceModalUser.uid) {
         setSelectedUser({
           ...selectedUser,
@@ -504,6 +525,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           totalEarned: updatePayload.totalEarned ?? selectedUser.totalEarned,
         });
       }
+
       showToast(
         'success',
         'Saldo Berhasil Diperbarui',
@@ -714,11 +736,9 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const pendingYesterdayCount = submissionsList.filter(
     (s) => s.status === 'Pending' && isEarlierThanTodayWIB(s.createdAt)
   ).length;
-  const pendingTodayCount = submissionsList.filter(
-    (s) => s.status === 'Pending' && isTodayWIB(s.createdAt)
-  ).length;
   const submissionDiterima = submissionsList.filter((s) => s.status === 'Diterima').length;
   const submissionDitolak = submissionsList.filter((s) => s.status === 'Ditolak').length;
+
   const totalSaldoUser = usersList.reduce((acc, u) => acc + (u.balance || 0), 0);
   const totalPembayaranSelesai = withdrawalsList
     .filter((w) => w.status === 'Selesai')
@@ -784,7 +804,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             Admin Panel AZGmail
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Kelola verifikasi akun Gmail, fitur All STOR User, konfirmasi terima bulk, generator, dan saldo
+            Kelola verifikasi akun Gmail, fitur All STOR User, konfirmasi terima bulk, tolak bulk, dan saldo
           </p>
         </div>
 
@@ -831,71 +851,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               }`}
             />
             <span>Semua STOR: {settings.storanOpen ? 'BUKA' : 'TUTUP'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              updateSettings({
-                storanKhususOpen: settings.storanKhususOpen !== false ? false : true,
-              })
-            }
-            className={`px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition border cursor-pointer ${
-              settings.storanKhususOpen !== false
-                ? 'bg-indigo-50 text-indigo-800 border-indigo-300 hover:bg-indigo-100'
-                : 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Khusus: {settings.storanKhususOpen !== false ? 'BUKA' : 'TUTUP'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              updateSettings({
-                storanBebasOpen: settings.storanBebasOpen !== false ? false : true,
-              })
-            }
-            className={`px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition border cursor-pointer ${
-              settings.storanBebasOpen !== false
-                ? 'bg-teal-50 text-teal-800 border-teal-300 hover:bg-teal-100'
-                : 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5 text-teal-600" />
-            <span>Bebas: {settings.storanBebasOpen !== false ? 'BUKA' : 'TUTUP'}</span>
-          </button>
-          <button
-            onClick={() => updateSettings({ withdrawalOpen: !settings.withdrawalOpen })}
-            className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition border cursor-pointer ${
-              settings.withdrawalOpen
-                ? 'bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100'
-                : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                settings.withdrawalOpen ? 'bg-blue-500' : 'bg-amber-500'
-              }`}
-            />
-            <span>WD: {settings.withdrawalOpen ? 'OPEN' : 'CLOSE'}</span>
-          </button>
-          <button
-            onClick={() =>
-              updateSettings({ generatorOpen: settings.generatorOpen === false ? true : false })
-            }
-            className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition border cursor-pointer ${
-              settings.generatorOpen !== false
-                ? 'bg-purple-50 text-purple-800 border-purple-300 hover:bg-purple-100'
-                : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
-            }`}
-          >
-            <GmailLogo className="w-3.5 h-3.5" />
-            <span
-              className={`w-2 h-2 rounded-full ${
-                settings.generatorOpen !== false ? 'bg-purple-500 animate-pulse' : 'bg-slate-400'
-              }`}
-            />
-            <span>Generator: {settings.generatorOpen !== false ? 'OPEN' : 'CLOSE'}</span>
           </button>
         </div>
       </div>
@@ -952,7 +907,10 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           onOpenBulkRejectModal={() => setShowBulkRejectModal(true)}
           onAcceptSubmission={handleAcceptSubmission}
           onCheckSubmission={handleCheckSubmission}
-          onRejectSubmission={(sub) => setRejectModalSub(sub)}
+          onRejectSubmission={(sub) => {
+            setRejectModalSub(sub);
+            setRejectionReason(PRESET_REASONS[0]);
+          }}
           processingSubId={processingSubId}
           onNavigateToYesterdayPending={() => setActiveTab('yesterday_pending')}
         />
@@ -967,7 +925,10 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           onOpenBulkRejectModal={() => setShowBulkRejectModal(true)}
           onAcceptSubmission={handleAcceptSubmission}
           onCheckSubmission={handleCheckSubmission}
-          onRejectSubmission={(sub) => setRejectModalSub(sub)}
+          onRejectSubmission={(sub) => {
+            setRejectModalSub(sub);
+            setRejectionReason(PRESET_REASONS[0]);
+          }}
           processingSubId={processingSubId}
         />
       )}
@@ -1109,46 +1070,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-3xl p-4 sm:p-5 border border-indigo-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-xs font-black text-indigo-950 flex items-center gap-2">
-                  <span>Nominal Batas Generate User per Hari:</span>
-                  <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-white font-mono font-bold text-xs">
-                    {settings.dailyGenerateLimit || 10} Akun/User/Hari
-                  </span>
-                </div>
-                <p className="text-[11px] text-indigo-700 mt-0.5">
-                  Setiap freelancer dibatasi maksimal mengambil nominal akun ini per hari. Ubah angka di samping lalu klik Simpan.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min="1"
-                max="100"
-                value={tempDailyGenerateLimit}
-                onChange={(e) => setTempDailyGenerateLimit(Math.max(1, Number(e.target.value)))}
-                className="w-24 px-3 py-2 rounded-xl border border-indigo-300 font-mono font-bold text-xs bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none"
-              />
-              <button
-                type="button"
-                onClick={async () => {
-                  const val = Math.max(1, Number(tempDailyGenerateLimit) || 10);
-                  await updateSettings({ dailyGenerateLimit: val });
-                  showToast('success', 'Batas Kuota Disimpan', `Batas generate akun user diubah menjadi ${val} akun/hari.`);
-                }}
-                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition shrink-0 cursor-pointer"
-              >
-                Simpan Kuota
-              </button>
-            </div>
-          </div>
-
           <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
               <div className="flex flex-wrap gap-1.5 p-1 bg-slate-100 rounded-xl">
@@ -1251,19 +1172,8 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                   {stockSearch ? 'Tidak ada akun yang cocok' : 'Belum ada stok akun Gmail'}
                 </h4>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                  {stockSearch
-                    ? `Tidak ditemukan akun dengan kata kunci "${stockSearch}".`
-                    : 'Tambahkan akun Gmail baru agar freelancer dapat melakukan generate akun.'}
+                  Tambahkan akun Gmail baru agar freelancer dapat melakukan generate akun.
                 </p>
-                <div className="mt-4 flex items-center justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddSingleModal(true)}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition cursor-pointer"
-                  >
-                    + Tambah Akun Sekarang
-                  </button>
-                </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1303,23 +1213,9 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                             </div>
                           </td>
                           <td className="px-5 py-3.5 font-mono text-slate-600">
-                            <div className="flex items-center gap-2">
-                              <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                {item.password || settings.gmailDefaultPassword || 'sgsg1122'}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const pw = item.password || settings.gmailDefaultPassword || 'sgsg1122';
-                                  navigator.clipboard.writeText(pw);
-                                  showToast('info', 'Disalin', `Password: ${pw}`);
-                                }}
-                                className="text-slate-400 hover:text-indigo-600 transition cursor-pointer"
-                                title="Salin password"
-                              >
-                                <Copy className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                            <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                              {item.password || settings.gmailDefaultPassword || 'sgsg1122'}
+                            </span>
                           </td>
                           <td className="px-5 py-3.5">
                             {isAvail ? (
@@ -1336,9 +1232,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                           </td>
                           <td className="px-5 py-3.5 text-slate-400 text-[11px]">
                             {item.usedAt ? (
-                              <span>
-                                Diambil: {formatIndonesianDateTime(item.usedAt)}
-                              </span>
+                              <span>Diambil: {formatIndonesianDateTime(item.usedAt)}</span>
                             ) : (
                               <span>Dibuat: {formatIndonesianDateTime(item.addedAt || item.createdAt || new Date().toISOString())}</span>
                             )}
@@ -1381,7 +1275,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         </div>
       )}
 
-      {/* Other tabs: submissions, withdrawals, users, settings */}
       {activeTab === 'submissions' && (
         <div className="space-y-4">
           <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-4">
@@ -1433,6 +1326,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               </div>
             </div>
           </div>
+
           {filteredSubs.length === 0 ? (
             <div className="bg-white rounded-3xl p-12 text-center text-slate-400 border border-slate-200/80 text-xs font-medium">
               Tidak ada data submission yang cocok.
@@ -1468,15 +1362,18 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                       </span>
                     </div>
                   </div>
+
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs text-slate-800 break-all select-all flex items-center gap-2">
                     <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                     <span>{sub.dataContent}</span>
                   </div>
+
                   {sub.status === 'Ditolak' && sub.rejectionReason && (
                     <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800">
                       <strong>Alasan Penolakan:</strong> {sub.rejectionReason}
                     </div>
                   )}
+
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                     <div className="flex items-center gap-2 text-xs text-slate-600">
                       <span>Imbalan: <strong className="text-blue-700">{formatRupiah(sub.rewardAmount || 3000)}</strong></span>
@@ -1495,13 +1392,18 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                           </button>
                         )}
                         <button
-                          onClick={() => setRejectModalSub(sub)}
+                          type="button"
+                          onClick={() => {
+                            setRejectModalSub(sub);
+                            setRejectionReason(PRESET_REASONS[0]);
+                          }}
                           disabled={processingSubId === sub.id}
                           className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold border border-rose-200 transition cursor-pointer"
                         >
                           Tolak
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleAcceptSubmission(sub)}
                           disabled={processingSubId === sub.id}
                           className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
@@ -1550,6 +1452,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               </div>
             </div>
           </div>
+
           {filteredWiths.length === 0 ? (
             <div className="bg-white rounded-3xl p-12 text-center text-slate-400 border border-slate-200/80 text-xs font-medium">
               Tidak ada data penarikan yang cocok.
@@ -1583,6 +1486,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                       </span>
                     </div>
                   </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slate-50 rounded-xl text-xs">
                     <div>
                       <span className="text-slate-400 block font-semibold">Nominal Tarik:</span>
@@ -1593,7 +1497,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                     <div>
                       <span className="text-slate-400 block font-semibold">Metode & Tujuan:</span>
                       <strong className="text-slate-800">
-                        {w.method}   {w.targetNumber}
+                        {w.method} · {w.targetNumber}
                       </strong>
                     </div>
                     <div>
@@ -1601,16 +1505,22 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                       <strong className="text-slate-800">{w.recipientName}</strong>
                     </div>
                   </div>
+
                   {w.status === 'Pending' && (
                     <div className="flex items-center justify-end gap-2 pt-1">
                       <button
-                        onClick={() => setRejectModalWith(w)}
+                        type="button"
+                        onClick={() => {
+                          setRejectModalWith(w);
+                          setWithRejectionReason('Nomor e-wallet tidak valid atau nama tidak sesuai');
+                        }}
                         disabled={processingWithId === w.id}
                         className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold border border-rose-200 transition cursor-pointer"
                       >
                         Tolak & Refund Saldo
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleMarkWithdrawalPaid(w)}
                         disabled={processingWithId === w.id}
                         className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
@@ -1664,19 +1574,9 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 <Flame className="w-3.5 h-3.5 text-amber-500" />
                 <span>Saldo Terbanyak</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setUserSortMode('has_balance')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
-                  userSortMode === 'has_balance'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
-                }`}
-              >
-                <span>Ada Saldo ({usersList.filter((u) => (u.balance || 0) > 0).length})</span>
-              </button>
             </div>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredUsers.map((u) => (
               <div
@@ -1701,6 +1601,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                       {u.status === 'active' ? 'Aktif' : 'Suspended'}
                     </span>
                   </div>
+
                   <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <span className="text-slate-400 text-[11px] block">Saldo Aktif:</span>
@@ -1716,6 +1617,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                     </div>
                   </div>
                 </div>
+
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
                   <div className="flex items-center gap-1.5">
                     <button
@@ -1732,7 +1634,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                       className="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition flex items-center gap-1 border border-indigo-200 cursor-pointer"
                     >
                       <Wallet className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Ubah/Tambah Saldo</span>
+                      <span>Ubah Saldo</span>
                     </button>
                   </div>
                   <button
@@ -1761,68 +1663,8 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               Perubahan disimpan langsung ke database Firestore dan aktif secara realtime
             </p>
           </div>
+
           <div className="space-y-5">
-            {/* Status Buka/Tutup Fitur Storan */}
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
-              <label className="block text-xs font-bold text-slate-800">
-                Kontrol Status Buka/Tutup Fitur Storan
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <button
-                  type="button"
-                  onClick={() => updateSettings({ storanOpen: !settings.storanOpen })}
-                  className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
-                    settings.storanOpen
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                      : 'bg-rose-50 text-rose-800 border-rose-300'
-                  }`}
-                >
-                  <span>Semua Storan:</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-white shadow-2xs">
-                    {settings.storanOpen ? 'BUKA' : 'TUTUP'}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateSettings({
-                      storanKhususOpen: settings.storanKhususOpen !== false ? false : true,
-                    })
-                  }
-                  className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
-                    settings.storanKhususOpen !== false
-                      ? 'bg-indigo-50 text-indigo-800 border-indigo-300'
-                      : 'bg-rose-50 text-rose-800 border-rose-300'
-                  }`}
-                >
-                  <span>STOR Khusus (3k):</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-white shadow-2xs">
-                    {settings.storanKhususOpen !== false ? 'BUKA' : 'TUTUP'}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateSettings({
-                      storanBebasOpen: settings.storanBebasOpen !== false ? false : true,
-                    })
-                  }
-                  className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
-                    settings.storanBebasOpen !== false
-                      ? 'bg-teal-50 text-teal-800 border-teal-300'
-                      : 'bg-rose-50 text-rose-800 border-rose-300'
-                  }`}
-                >
-                  <span>STOR Bebas (2.7k):</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-white shadow-2xs">
-                    {settings.storanBebasOpen !== false ? 'BUKA' : 'TUTUP'}
-                  </span>
-                </button>
-              </div>
-            </div>
-
             <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 space-y-2">
               <label className="block text-xs font-bold text-slate-800">
                 Harga Imbalan Per Submission (Rp)
@@ -1837,10 +1679,11 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                   className="w-48 px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-sm bg-white"
                 />
                 <span className="text-xs text-slate-500">
-                  Default: Rp3.000. Harga ini otomatis digunakan pada submission berikutnya.
+                  Default: Rp3.000.
                 </span>
               </div>
             </div>
+
             <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-2">
               <label className="block text-xs font-bold text-slate-800">
                 Minimum Penarikan Saldo (Rp)
@@ -1857,13 +1700,12 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 <span className="text-xs text-slate-500">Default: Rp4.000</span>
               </div>
             </div>
+
             <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-50 to-orange-50/70 border border-rose-200/90 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-black text-rose-950 flex items-center gap-2">
-                  <KeyRound className="w-4 h-4 text-rose-600" />
-                  <span>Password Wajib Akun Gmail</span>
-                </label>
-              </div>
+              <label className="block text-xs font-black text-rose-950 flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-rose-600" />
+                <span>Password Wajib Akun Gmail</span>
+              </label>
               <input
                 type="text"
                 required
@@ -1872,6 +1714,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 className="w-full sm:w-60 px-3.5 py-2.5 rounded-xl border border-rose-300 font-mono font-black text-rose-700 text-sm bg-white focus:ring-2 focus:ring-rose-500/20 outline-none"
               />
             </div>
+
             <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/90 space-y-2.5">
               <label className="block text-xs font-black text-emerald-950 flex items-center gap-2">
                 <MessageCircle className="w-4 h-4 text-emerald-600" />
@@ -1885,6 +1728,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 className="w-full sm:w-72 px-3.5 py-2.5 rounded-xl border border-emerald-300 font-mono font-black text-emerald-900 text-sm bg-white focus:ring-2 focus:ring-emerald-500/20 outline-none"
               />
             </div>
+
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 Jam Operasional Storan
@@ -1896,6 +1740,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs outline-none"
               />
             </div>
+
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 Isi Pengumuman Storan
@@ -1907,6 +1752,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs outline-none"
               />
             </div>
+
             <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
               <button
                 type="button"
@@ -1921,7 +1767,572 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         </div>
       )}
 
-      {/* Modals */}
+      {/* SINGLE SUBMISSION REJECT MODAL (PREVIOUSLY MISSING!) */}
+      <AnimatePresence>
+        {rejectModalSub && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden"
+            >
+              <div className="bg-gradient-to-r from-rose-600 to-red-700 p-5 text-white flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
+                    <XCircle className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black">Tolak Akun Gmail</h3>
+                    <p className="text-xs text-rose-100 font-mono truncate max-w-[240px]">
+                      {rejectModalSub.dataContent.split('|')[0].trim()}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRejectModalSub(null)}
+                  className="p-1 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-black text-slate-800 mb-1.5 flex items-center gap-1.5">
+                    <MessageSquareWarning className="w-4 h-4 text-rose-600" />
+                    <span>Pilih / Tulis Alasan Penolakan:</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5 mb-2.5">
+                    {PRESET_REASONS.map((reason) => (
+                      <button
+                        key={reason}
+                        type="button"
+                        onClick={() => setRejectionReason(reason)}
+                        className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition cursor-pointer ${
+                          rejectionReason === reason
+                            ? 'bg-rose-100 text-rose-800 border-rose-300 font-bold'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-rose-50'
+                        }`}
+                      >
+                        {reason}
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Tuliskan alasan penolakan yang akan dilihat user..."
+                    className="w-full p-3 text-xs rounded-xl border border-slate-300 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20 outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setRejectModalSub(null)}
+                    disabled={processingSubId === rejectModalSub.id}
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmRejectSubmission}
+                    disabled={processingSubId === rejectModalSub.id || !rejectionReason.trim()}
+                    className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {processingSubId === rejectModalSub.id ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <XCircle className="w-4 h-4" />
+                        <span>Konfirmasi Tolak</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* SINGLE WITHDRAWAL REJECT MODAL */}
+      <AnimatePresence>
+        {rejectModalWith && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden"
+            >
+              <div className="bg-gradient-to-r from-rose-600 to-red-700 p-5 text-white flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-black">Tolak Penarikan Saldo</h3>
+                  <p className="text-xs text-rose-100">
+                    Nominal: {formatRupiah(rejectModalWith.amount)} ke {rejectModalWith.method}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRejectModalWith(null)}
+                  className="p-1 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+                  Saldo sebesar <strong>{formatRupiah(rejectModalWith.amount)}</strong> akan otomatis dikembalikan ke akun pengguna.
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                    Alasan Penolakan:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={withRejectionReason}
+                    onChange={(e) => setWithRejectionReason(e.target.value)}
+                    placeholder="Contoh: Nomor e-wallet tidak terdaftar atau nama pemilik tidak cocok."
+                    className="w-full p-3 text-xs rounded-xl border border-slate-300 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20 outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setRejectModalWith(null)}
+                    disabled={processingWithId === rejectModalWith.id}
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmRejectWithdrawal}
+                    disabled={processingWithId === rejectModalWith.id || !withRejectionReason.trim()}
+                    className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {processingWithId === rejectModalWith.id ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <span>Tolak & Refund</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* USER DETAIL MODAL */}
+      <AnimatePresence>
+        {selectedUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-4"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                    {selectedUser.displayName ? selectedUser.displayName.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">{selectedUser.displayName}</h3>
+                    <p className="text-xs text-slate-500">{selectedUser.email}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedUser(null)}
+                  className="p-1 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-slate-400 block text-[11px]">Saldo Aktif:</span>
+                  <strong className="text-sm font-black text-indigo-700">
+                    {formatRupiah(selectedUser.balance || 0)}
+                  </strong>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-slate-400 block text-[11px]">Total Penghasilan:</span>
+                  <strong className="text-sm font-black text-slate-800">
+                    {formatRupiah(selectedUser.totalEarned || 0)}
+                  </strong>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-slate-400 block text-[11px]">Total Dicairkan:</span>
+                  <strong className="text-sm font-black text-slate-800">
+                    {formatRupiah(selectedUser.totalWithdrawn || 0)}
+                  </strong>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-slate-400 block text-[11px]">Status Akun:</span>
+                  <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
+                    selectedUser.status === 'active'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-rose-100 text-rose-800'
+                  }`}>
+                    {selectedUser.status === 'active' ? 'Aktif' : 'Suspended'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+                <div className="text-slate-400 font-semibold">User ID (UID):</div>
+                <div className="font-mono text-slate-800 select-all">{selectedUser.uid}</div>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenBalanceModal(selectedUser, 'add');
+                  }}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+                >
+                  Ubah / Tambah Saldo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedUser(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* BALANCE MODAL */}
+      <AnimatePresence>
+        {balanceModalUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-4"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 className="text-base font-bold text-slate-900">
+                  Ubah Saldo Pengguna
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setBalanceModalUser(null)}
+                  className="p-1 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-500">
+                User: <strong>{balanceModalUser.displayName}</strong> ({balanceModalUser.email})
+                <br />
+                Saldo saat ini: <strong className="text-indigo-600">{formatRupiah(balanceModalUser.balance || 0)}</strong>
+              </p>
+
+              <form onSubmit={handleSaveUserBalance} className="space-y-3.5">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBalanceMode('add')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                      balanceMode === 'add'
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    + Tambah Saldo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBalanceMode('set')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                      balanceMode === 'set'
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    Setel Saldo Tetap
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    {balanceMode === 'add' ? 'Nominal Tambahan (Rp)' : 'Nominal Saldo Baru (Rp)'}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    required
+                    value={balanceAmountInput}
+                    onChange={(e) => setBalanceAmountInput(e.target.value)}
+                    placeholder="Contoh: 10000"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono text-sm outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {balanceMode === 'add' && (
+                  <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeTotalEarned}
+                      onChange={(e) => setIncludeTotalEarned(e.target.checked)}
+                      className="rounded text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>Sertakan ke Total Penghasilan (Total Earned)</span>
+                  </label>
+                )}
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setBalanceModalUser(null)}
+                    disabled={savingBalance}
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingBalance || !balanceAmountInput.trim()}
+                    className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition cursor-pointer"
+                  >
+                    {savingBalance ? 'Menyimpan...' : 'Simpan Saldo'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ADD SINGLE STOCK MODAL */}
+      <AnimatePresence>
+        {showAddSingleModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-4"
+            >
+              <h3 className="text-base font-bold text-slate-900">Tambah Akun ke Stok Generator</h3>
+              <form onSubmit={handleSaveSingleStock} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Alamat Gmail (@gmail.com)
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={newStockEmail}
+                    onChange={(e) => setNewStockEmail(e.target.value)}
+                    placeholder="contoh.nama@gmail.com"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 outline-none focus:border-indigo-500 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Password (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    value={newStockPass}
+                    onChange={(e) => setNewStockPass(e.target.value)}
+                    placeholder={`Default: ${settings.gmailDefaultPassword || 'sgsg1122'}`}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 outline-none focus:border-indigo-500 font-mono"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddSingleModal(false)}
+                    className="flex-1 py-2 text-xs font-bold rounded-xl border border-slate-200 cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white cursor-pointer"
+                  >
+                    Tambah
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ADD BULK STOCK MODAL */}
+      <AnimatePresence>
+        {showAddBulkModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-4"
+            >
+              <h3 className="text-base font-bold text-slate-900">Import Massal Stok Gmail</h3>
+              <p className="text-xs text-slate-500">
+                Tempel daftar akun Gmail (1 baris 1 email, atau email|password):
+              </p>
+              <form onSubmit={handleSaveBulkStock} className="space-y-3">
+                <textarea
+                  rows={6}
+                  required
+                  value={bulkInputText}
+                  onChange={(e) => setBulkInputText(e.target.value)}
+                  placeholder="akun1@gmail.com&#10;akun2@gmail.com&#10;akun3@gmail.com|pass123"
+                  className="w-full p-3 font-mono text-xs rounded-xl border border-slate-300 outline-none focus:border-indigo-500"
+                />
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddBulkModal(false)}
+                    className="flex-1 py-2 text-xs font-bold rounded-xl border border-slate-200 cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white cursor-pointer"
+                  >
+                    Import Sekarang
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* EDIT STOCK MODAL */}
+      <AnimatePresence>
+        {editingStockItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-4"
+            >
+              <h3 className="text-base font-bold text-slate-900">Ubah Akun Stok</h3>
+              <form onSubmit={handleUpdateStockItem} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={editStockEmail}
+                    onChange={(e) => setEditStockEmail(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 outline-none font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                  <input
+                    type="text"
+                    value={editStockPass}
+                    onChange={(e) => setEditStockPass(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 outline-none font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Status</label>
+                  <select
+                    value={editStockStatus}
+                    onChange={(e) => setEditStockStatus(e.target.value as 'available' | 'used')}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 outline-none"
+                  >
+                    <option value="available">Tersedia (Fresh)</option>
+                    <option value="used">Terpakai</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingStockItem(null)}
+                    className="flex-1 py-2 text-xs font-bold rounded-xl border border-slate-200 cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white cursor-pointer"
+                  >
+                    Simpan
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* CONFIRMATION DIALOG */}
+      <AnimatePresence>
+        {stockConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-4"
+            >
+              <h3 className="text-base font-bold text-slate-900">{stockConfirm.title}</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">{stockConfirm.description}</p>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStockConfirm(null)}
+                  disabled={isConfirmingAction}
+                  className="flex-1 py-2.5 text-xs font-bold rounded-xl border border-slate-200 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteConfirm}
+                  disabled={isConfirmingAction}
+                  className={`flex-1 py-2.5 text-xs font-bold rounded-xl text-white cursor-pointer ${
+                    stockConfirm.confirmColor === 'red'
+                      ? 'bg-rose-600 hover:bg-rose-700'
+                      : stockConfirm.confirmColor === 'amber'
+                      ? 'bg-amber-600 hover:bg-amber-700'
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                >
+                  {isConfirmingAction ? 'Memproses...' : stockConfirm.confirmText}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* BULK MODALS */}
       <AdminBulkCheckModal
         isOpen={showBulkCheckModal}
         onClose={() => setShowBulkCheckModal(false)}

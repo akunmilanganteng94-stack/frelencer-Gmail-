@@ -36,6 +36,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const { settings } = useSettings();
   const { showToast } = useToast();
   const { openContactModal } = useContactAdmin();
+
   const activePassword = settings.gmailDefaultPassword || 'sgsg1122';
 
   const [inputData, setInputData] = useState('');
@@ -74,6 +75,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       collection(db, 'submissions'),
       where('userId', '==', currentUser.uid)
     );
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -88,6 +90,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         console.warn('Snapshot error:', err);
       }
     );
+
     return () => unsubscribe();
   }, [currentUser]);
 
@@ -100,19 +103,16 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       setInputError('Layanan storan saat ini tidak dapat diakses.');
       return;
     }
-
     if (storanType === 'khusus' && isKhususClosed) {
       showToast('error', 'Akses Dibatasi', 'Storan Gmail Khusus saat ini tidak dapat diakses.');
       setInputError('Storan Gmail Khusus saat ini tidak dapat diakses.');
       return;
     }
-
     if (storanType === 'bebas' && isBebasClosed) {
       showToast('error', 'Akses Dibatasi', 'Storan Gmail Bebas saat ini tidak dapat diakses.');
       setInputError('Storan Gmail Bebas saat ini tidak dapat diakses.');
       return;
     }
-
     if (userProfile?.status === 'suspended') {
       showToast('error', 'Akun Dibatasi', 'Akun kamu sedang dibatasi. Hubungi admin untuk informasi lebih lanjut.');
       return;
@@ -217,14 +217,12 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         setSubmitting(false);
         return;
       }
-
       if (storanType === 'khusus' && isKhususClosed) {
         showToast('error', 'Akses Dibatasi', 'Storan Gmail Khusus saat ini tidak dapat diakses.');
         setShowConfirmModal(false);
         setSubmitting(false);
         return;
       }
-
       if (storanType === 'bebas' && isBebasClosed) {
         showToast('error', 'Akses Dibatasi', 'Storan Gmail Bebas saat ini tidak dapat diakses.');
         setShowConfirmModal(false);
@@ -289,6 +287,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         `${validatedEmails.length} Akun Gmail (${storanType === 'khusus' ? 'Khusus 3k' : 'Bebas 2.7k'}) Berhasil Disetor`,
         'dalam pengecekan admin tunggu 24-30 jam'
       );
+
       setInputData('');
       setValidatedEmails([]);
       setShowConfirmModal(false);
@@ -309,6 +308,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       .split('\n')
       .map((l) => l.trim())
       .filter(Boolean);
+
     const lower = email.toLowerCase();
     if (currentLines.map((c) => c.toLowerCase()).includes(lower)) {
       showToast('info', 'Sudah Ada', `Akun ${email} sudah ada dalam daftar stor.`);
@@ -318,9 +318,11 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       showToast('info', 'Batas 5 Akun Penuh', 'Kolom storan sudah berisi 5 akun (maksimal 5 akun per proses).');
       return;
     }
+
     const updated = [...currentLines, lower].join('\n');
     setInputData(updated);
     setInputError('');
+
     const formEl = document.getElementById('submission-form-card');
     if (formEl) {
       formEl.scrollIntoView({ behavior: 'smooth' });
@@ -445,7 +447,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                   {isKhususClosed ? 'TUTUP' : '3k'}
                 </span>
               </button>
-
               <button
                 type="button"
                 disabled={isBebasClosed}
@@ -675,7 +676,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
               className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-5"
             >
@@ -719,23 +720,27 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                       ? 'bg-indigo-100 text-indigo-800'
                       : 'bg-teal-100 text-teal-800'
                   }`}>
-                    {storanType === 'khusus' ? '  Gmail Khusus (Rp 3.000/akun)' : '  Gmail Bebas (Rp 2.700/akun)'}
+                    {storanType === 'khusus' ? 'Gmail Khusus (Rp 3.000/akun)' : 'Gmail Bebas (Rp 2.700/akun)'}
                   </span>
                 </div>
+
                 <div className="flex items-center justify-between text-xs text-slate-600">
                   <span>Password Wajib:</span>
                   <span className="font-mono font-bold text-orange-600">{activePassword}</span>
                 </div>
+
                 <div className="flex items-center justify-between text-xs text-slate-600">
                   <span>Estimasi Imbalan ({validatedEmails.length} Akun):</span>
                   <span className="font-extrabold text-indigo-700 text-sm">
                     {formatRupiah(pricePerAccount * validatedEmails.length)}
                   </span>
                 </div>
+
                 <div className="flex items-center justify-between text-xs text-slate-600">
                   <span>Status 2FA:</span>
                   <span className="font-semibold text-emerald-700">Wajib Nonaktif</span>
                 </div>
+
                 <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2 font-semibold">
                   <Clock className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>dalam pengecekan admin tunggu 24-30 jam</span>

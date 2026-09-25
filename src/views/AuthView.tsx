@@ -15,7 +15,6 @@ import {
   ChevronUp,
   AlertCircle,
   HelpCircle,
-  ExternalLink,
   Sparkles,
 } from 'lucide-react';
 import { AZGmailLogo } from '../components/GmailLogo';
@@ -77,7 +76,6 @@ export function AuthView() {
       showToast('success', 'Login Google Berhasil', 'Selamat datang di AZGmail.');
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-
       if (
         errorMessage.includes('auth/popup-closed-by-user') ||
         errorMessage.includes('auth/cancelled-popup-request')
@@ -211,6 +209,7 @@ export function AuthView() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       let friendlyMsg = 'Terjadi kesalahan, silakan coba lagi.';
+
       if (
         errorMessage.includes('auth/invalid-credential') ||
         errorMessage.includes('auth/wrong-password') ||
@@ -230,6 +229,7 @@ export function AuthView() {
         console.error('Auth error:', errorMessage);
         friendlyMsg = errorMessage;
       }
+
       setFormError(friendlyMsg);
       showToast('error', 'Gagal Masuk', friendlyMsg);
     } finally {
@@ -299,7 +299,7 @@ export function AuthView() {
                 }}
                 className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 mb-2 cursor-pointer"
               >
-                  Kembali ke Login
+                ← Kembali ke Login
               </button>
               <h2 className="text-lg font-bold text-slate-900">Lupa Kata Sandi</h2>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -583,7 +583,6 @@ export function AuthView() {
 
           {showTroubleshoot && (
             <div className="mt-3 pt-3 border-t border-slate-100 space-y-3 text-slate-600">
-              {/* Point 1: Google Provider Enabled */}
               <div className="flex items-start gap-2.5">
                 <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] shrink-0 mt-0.5">
                   1
@@ -598,7 +597,6 @@ export function AuthView() {
                 </div>
               </div>
 
-              {/* Point 2: Domain Format */}
               <div className="flex items-start gap-2.5">
                 <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] shrink-0 mt-0.5">
                   2
@@ -625,7 +623,6 @@ export function AuthView() {
                 </div>
               </div>
 
-              {/* Point 3: Propagation */}
               <div className="flex items-start gap-2.5">
                 <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] shrink-0 mt-0.5">
                   3
@@ -635,12 +632,11 @@ export function AuthView() {
                     Waktu Sinkronisasi (Propagasi) Google CDN
                   </strong>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Setelah domain baru disimpan di Firebase, server Google memerlukan waktu <strong>1–3 menit</strong> agar domain aktif di seluruh dunia. Harap tunggu sebentar lalu muat ulang (Refresh / F5).
+                    Setelah domain baru disimpan di Firebase, server Google memerlukan waktu <strong>1 – 3 menit</strong> agar domain aktif di seluruh dunia. Harap tunggu sebentar lalu muat ulang (Refresh / F5).
                   </p>
                 </div>
               </div>
 
-              {/* Alternative tip */}
               <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-100 text-[11px] text-blue-900 flex items-start gap-2">
                 <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <span>

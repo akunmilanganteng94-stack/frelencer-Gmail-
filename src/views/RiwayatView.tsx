@@ -26,6 +26,7 @@ export function RiwayatView() {
   const { currentUser } = useAuth();
   const { settings } = useSettings();
   const activePassword = settings.gmailDefaultPassword || 'sgsg1122';
+
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'Semua' | SubmissionStatus>('Semua');
@@ -36,10 +37,12 @@ export function RiwayatView() {
 
   useEffect(() => {
     if (!currentUser) return;
+
     const q = query(
       collection(db, 'submissions'),
       where('userId', '==', currentUser.uid)
     );
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -56,6 +59,7 @@ export function RiwayatView() {
         setLoading(false);
       }
     );
+
     return () => unsubscribe();
   }, [currentUser]);
 
@@ -82,6 +86,7 @@ export function RiwayatView() {
       cleanEmail.includes(q) ||
       (sub.rejectionReason && sub.rejectionReason.toLowerCase().includes(q)) ||
       (sub.adminNotes && sub.adminNotes.toLowerCase().includes(q));
+
     return matchesFilter && matchesType && matchesSearch;
   });
 
@@ -102,7 +107,7 @@ export function RiwayatView() {
             <span>Riwayat Storan Akun Gmail</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Pantau alur status pengecekan Gmail Anda: Pending   Cek Admin   Diterima/Ditolak
+            Pantau alur status pengecekan Gmail Anda: Pending → Cek Admin → Diterima/Ditolak
           </p>
         </div>
       </div>
@@ -140,7 +145,7 @@ export function RiwayatView() {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>  Gmail Khusus (3k)</span>
+              <span>Gmail Khusus (3k)</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                 typeFilter === 'khusus' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-800'
               }`}>
@@ -157,7 +162,7 @@ export function RiwayatView() {
               }`}
             >
               <Globe className="w-3.5 h-3.5" />
-              <span>  Gmail Bebas (2.7k)</span>
+              <span>Gmail Bebas (2.7k)</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                 typeFilter === 'bebas' ? 'bg-white/20 text-white' : 'bg-teal-100 text-teal-800'
               }`}>
@@ -202,6 +207,7 @@ export function RiwayatView() {
               );
             })}
           </div>
+
           <div className="relative w-full md:w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <input
@@ -239,6 +245,7 @@ export function RiwayatView() {
             const subType = getSubmissionType(sub);
             const isKhusus = subType === 'khusus';
             const cleanEmail = sub.dataContent.split('|')[0].trim();
+
             return (
               <div
                 key={sub.id}
@@ -270,11 +277,13 @@ export function RiwayatView() {
                       <span>{isKhusus ? 'Khusus (3k)' : 'Bebas (2.7k)'}</span>
                     </span>
                   </div>
+
                   <div className="flex items-center gap-2.5">
                     <div className="flex items-center gap-1 text-[11px] text-slate-400">
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
                       <span>{formatIndonesianDateTime(sub.createdAt)}</span>
                     </div>
+
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
                         sub.status === 'Diterima'
@@ -305,10 +314,11 @@ export function RiwayatView() {
                         {cleanEmail}
                       </p>
                       <p className="text-[11px] text-slate-500">
-                        Password: <strong className="font-mono text-orange-600">{activePassword}</strong>   Imbalan: <strong className="text-indigo-700">{formatRupiah(sub.rewardAmount || (isKhusus ? 3000 : 2700))}</strong>
+                        Password: <strong className="font-mono text-orange-600">{activePassword}</strong> · Imbalan: <strong className="text-indigo-700">{formatRupiah(sub.rewardAmount || (isKhusus ? 3000 : 2700))}</strong>
                       </p>
                     </div>
                   </div>
+
                   <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
                     <button
                       type="button"
@@ -424,7 +434,7 @@ export function RiwayatView() {
                       Cek Status Akun Gmail
                     </h3>
                     <p className="text-xs text-slate-500">
-                      Alur verifikasi: Pending   Cek Admin   Diterima/Ditolak
+                      Alur verifikasi: Pending → Cek Admin → Diterima/Ditolak
                     </p>
                   </div>
                 </div>
@@ -450,8 +460,8 @@ export function RiwayatView() {
                     }`}
                   >
                     {getSubmissionType(selectedSubForCheck) === 'khusus'
-                      ? '  Gmail Khusus (Rp 3.000)'
-                      : '  Gmail Bebas (Rp 2.700)'}
+                      ? 'Gmail Khusus (Rp 3.000)'
+                      : 'Gmail Bebas (Rp 2.700)'}
                   </span>
                 </div>
                 <div className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2">
@@ -471,6 +481,7 @@ export function RiwayatView() {
                     )}
                   </button>
                 </div>
+
                 <div className="grid grid-cols-2 gap-2 pt-1 text-xs text-slate-600">
                   <div className="p-2.5 rounded-xl bg-white border border-slate-200/70">
                     <span className="text-[11px] text-slate-400 block">Password Wajib</span>
@@ -490,6 +501,7 @@ export function RiwayatView() {
                   <Clock className="w-4 h-4 text-indigo-600" />
                   <span>Tahapan Verifikasi Akun:</span>
                 </h4>
+
                 <div className="relative pl-6 space-y-5 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                   <div className="relative">
                     <div className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">

@@ -95,7 +95,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                   {formatRupiah(settings.pricePerSubmission)}
                 </strong>
               </p>
-              <span className="text-sky-300/60 hidden sm:inline">•</span>
+              <span className="text-sky-300/60 hidden sm:inline">·</span>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/15 backdrop-blur-xs text-sky-100 border border-white/15 font-medium">
                 Khusus 3k · Bebas 2.7k
               </span>
@@ -112,7 +112,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               <Download className="w-4 h-4 text-sky-200" />
               <span>Tarik Saldo</span>
             </button>
-
             <button
               type="button"
               onClick={() => onNavigate('riwayat')}
@@ -191,7 +190,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         </div>
       </div>
 
-      {/* Bagian Statistik Akun - DI ATAS PENGUMUMAN */}
+      {/* Bagian Statistik Akun */}
       <div>
         <div className="flex items-center justify-between mb-3 px-1">
           <div>
@@ -205,7 +204,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           </span>
         </div>
 
-        {/* 4 Kartu Statistik: 2 Kolom pada mobile & desktop */}
+        {/* 4 Kartu Statistik */}
         <div className="grid grid-cols-2 gap-3.5 sm:gap-4">
           {/* 1. DITERIMA */}
           <div className="bg-white rounded-[26px] p-4 sm:p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col justify-between space-y-3 hover:shadow-md transition">
@@ -354,7 +353,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                     </div>
                     <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-2">
                       <span>{formatIndonesianDateTime(sub.createdAt)}</span>
-                      <span> </span>
+                      <span>·</span>
                       <span className="font-semibold text-blue-700">
                         {formatRupiah(sub.rewardAmount)}
                       </span>

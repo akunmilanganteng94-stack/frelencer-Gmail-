@@ -98,6 +98,30 @@ export function AdminBulkConfirmModal({
       .filter(Boolean);
   }, [pendingTodaySubs]);
 
+  const cekAdminSubs = useMemo(() => {
+    return submissions.filter((s) => s.status === 'Cek Admin');
+  }, [submissions]);
+
+  const cekAdminKhususEmails = useMemo(() => {
+    return cekAdminSubs
+      .filter((s) => getSubmissionType(s) === 'khusus')
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [cekAdminSubs]);
+
+  const cekAdminBebasEmails = useMemo(() => {
+    return cekAdminSubs
+      .filter((s) => getSubmissionType(s) === 'bebas')
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [cekAdminSubs]);
+
+  const cekAdminEmails = useMemo(() => {
+    return cekAdminSubs
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [cekAdminSubs]);
+
   const parsedEmails = useMemo(() => {
     if (!inputText.trim()) return [];
     const lines = inputText.split('\n');
@@ -412,6 +436,55 @@ export function AdminBulkConfirmModal({
                   >
                     <Zap className="w-3 h-3" />
                     <span>Semua Hari Ini ({pendingTodayEmails.length})</span>
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
+                  <span className="text-[10px] font-bold text-indigo-900 bg-indigo-100 px-2 py-0.5 rounded">Cek Admin:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (cekAdminKhususEmails.length === 0) {
+                        showToast('info', 'Kosong', 'Tidak ada akun Cek Admin tipe Khusus.');
+                        return;
+                      }
+                      setInputText(cekAdminKhususEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${cekAdminKhususEmails.length} akun Cek Admin (Khusus 3k) dimuat.`);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3 text-indigo-600" />
+                    <span>Khusus 3k ({cekAdminKhususEmails.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (cekAdminBebasEmails.length === 0) {
+                        showToast('info', 'Kosong', 'Tidak ada akun Cek Admin tipe Bebas.');
+                        return;
+                      }
+                      setInputText(cekAdminBebasEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${cekAdminBebasEmails.length} akun Cek Admin (Bebas 2.7k) dimuat.`);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Globe className="w-3 h-3 text-teal-600" />
+                    <span>Bebas 2.7k ({cekAdminBebasEmails.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (cekAdminEmails.length === 0) {
+                        showToast('info', 'Kosong', 'Tidak ada akun dalam antrean Cek Admin.');
+                        return;
+                      }
+                      setInputText(cekAdminEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${cekAdminEmails.length} semua akun Cek Admin dimuat.`);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                  >
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Semua Cek Admin ({cekAdminEmails.length})</span>
                   </button>
                 </div>
               </div>

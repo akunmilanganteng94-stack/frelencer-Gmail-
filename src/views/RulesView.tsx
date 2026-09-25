@@ -50,7 +50,7 @@ export function RulesView({ onNavigate }: RulesViewProps) {
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
                 Panduan Resmi
               </span>
-              <span className="text-xs text-slate-400">•</span>
+              <span className="text-xs text-slate-400"> </span>
               <span className="text-xs text-slate-500 font-medium">
                 {settings.rules?.length || 0} Aturan Wajib
               </span>
@@ -129,7 +129,6 @@ export function RulesView({ onNavigate }: RulesViewProps) {
             </p>
           </div>
         </div>
-
         <div className="space-y-3 pt-1">
           {settings.rules?.map((rule, idx) => (
             <div

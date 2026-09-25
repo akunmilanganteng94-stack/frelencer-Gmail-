@@ -1,14 +1,37 @@
 import { useState, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Shield } from 'lucide-react';
+import {
+  Mail,
+  Lock,
+  User,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Shield,
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+  HelpCircle,
+  ExternalLink,
+  Sparkles,
+} from 'lucide-react';
 import { AZGmailLogo } from '../components/GmailLogo';
 import { motion, AnimatePresence } from 'motion/react';
+
+interface ErrorDiagnosis {
+  code: string;
+  title: string;
+  description: string;
+  solution: string[];
+  raw?: string;
+}
 
 export function AuthView() {
   const { loginUser, registerUser, resetPassword, loginWithGoogle } = useAuth();
   const { showToast } = useToast();
-
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -18,39 +41,131 @@ export function AuthView() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [formError, setFormError] = useState('');
+  const [diagnosis, setDiagnosis] = useState<ErrorDiagnosis | null>(null);
+  const [copiedHost, setCopiedHost] = useState(false);
+  const [showTroubleshoot, setShowTroubleshoot] = useState(false);
+
+  const currentHostname = typeof window !== 'undefined' ? window.location.hostname : '';
+
+  const copyDomain = async () => {
+    if (!currentHostname) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(currentHostname);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = currentHostname;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedHost(true);
+      showToast('success', 'Domain Disalin', currentHostname);
+      setTimeout(() => setCopiedHost(false), 3000);
+    } catch {
+      showToast('info', 'Domain Anda', currentHostname);
+    }
+  };
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     setFormError('');
+    setDiagnosis(null);
     try {
       await loginWithGoogle();
       showToast('success', 'Login Google Berhasil', 'Selamat datang di AZGmail.');
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
+
       if (
         errorMessage.includes('auth/popup-closed-by-user') ||
         errorMessage.includes('auth/cancelled-popup-request')
       ) {
-        // User voluntarily closed or cancelled the popup window
-        console.info('Google sign-in popup was dismissed by user.');
-        setFormError('Login Google dibatalkan.');
+        console.info('Google sign-in popup dismissed by user.');
+        setFormError('Jendela masuk Google ditutup sebelum selesai.');
         return;
       }
 
-      if (errorMessage.includes('auth/popup-blocked')) {
-        setFormError(
-          'Popup Google diblokir oleh peramban (browser). Harap izinkan pop-up untuk situs ini atau gunakan pendaftaran dengan email & sandi.'
-        );
-        showToast('error', 'Popup Diblokir', 'Izinkan pop-up di browser Anda untuk melanjutkan.');
+      console.error('Google Sign-In Error Details:', err);
+
+      if (
+        errorMessage.includes('auth/operation-not-allowed') ||
+        errorMessage.includes('CONFIGURATION_NOT_FOUND') ||
+        errorMessage.includes('configuration-not-found')
+      ) {
+        const diag: ErrorDiagnosis = {
+          code: 'auth/operation-not-allowed',
+          title: 'Penyedia Google Belum Diaktifkan di Firebase',
+          description:
+            'Firebase Authentication pada proyek Anda belum mengaktifkan fitur masuk dengan Google (Google Sign-in Provider).',
+          solution: [
+            'Buka Firebase Console > menu Authentication > tab "Sign-in method".',
+            'Klik tombol "Add new provider" atau pilih penyedia "Google".',
+            'Nyalakan sakelar "Enable" (Aktifkan).',
+            'Wajib pilih atau masukkan "Project support email" (Email dukungan proyek).',
+            'Klik tombol "Save" (Simpan).',
+          ],
+          raw: errorMessage,
+        };
+        setDiagnosis(diag);
+        setFormError('Penyedia Google belum diaktifkan di Firebase Console.');
+        showToast('error', 'Google Provider Belum Aktif', 'Aktifkan Google di menu Sign-in method Firebase.');
       } else if (errorMessage.includes('auth/unauthorized-domain')) {
-        setFormError(
-          'Domain web ini belum ditambahkan ke Firebase Authorized Domains. Buka Firebase Console > Authentication > Settings > Authorized Domains lalu tambahkan domain aplikasi.'
-        );
-        showToast('error', 'Domain Belum Diizinkan', 'Harap daftarkan domain aplikasi di Firebase.');
+        const diag: ErrorDiagnosis = {
+          code: 'auth/unauthorized-domain',
+          title: 'Domain Belum Diizinkan atau Masih Sinkronisasi',
+          description: `Domain web yang sedang Anda buka (${currentHostname}) belum terverifikasi oleh Firebase.`,
+          solution: [
+            `Salin domain saat ini: "${currentHostname}" (klik tombol Salin di bawah).`,
+            'Buka Firebase Console > Authentication > tab "Settings" > gulir ke "Authorized domains".',
+            'Pastikan domain ditempelkan TANPA awalan "https://" dan TANPA garis miring "/" di belakang.',
+            'PENTING: Setelah klik Add/Simpan, server Google butuh 1 hingga 3 menit untuk menyebarkan domain baru. Tunggu sebentar lalu refresh halaman.',
+          ],
+          raw: errorMessage,
+        };
+        setDiagnosis(diag);
+        setFormError(`Domain "${currentHostname}" belum diizinkan atau masih proses propagasi di Firebase.`);
+        showToast('error', 'Domain Belum Diizinkan', 'Periksa Authorized Domains di Firebase Console.');
+      } else if (errorMessage.includes('auth/popup-blocked')) {
+        const diag: ErrorDiagnosis = {
+          code: 'auth/popup-blocked',
+          title: 'Pop-up Browser Diblokir',
+          description:
+            'Peramban (browser) Anda memblokir jendela sembulan (pop-up) untuk masuk dengan Google.',
+          solution: [
+            'Periksa bilah alamat browser (address bar) di bagian kanan atas atau ikon gembok.',
+            'Klik izin "Selalu izinkan pop-up untuk situs ini".',
+            'Coba klik tombol "Masuk dengan Google" kembali, atau gunakan pendaftaran manual dengan email.',
+          ],
+          raw: errorMessage,
+        };
+        setDiagnosis(diag);
+        setFormError('Jendela pop-up Google diblokir oleh browser.');
+        showToast('error', 'Popup Diblokir', 'Izinkan pop-up di pengaturan browser Anda.');
+      } else if (
+        errorMessage.includes('auth/network-request-failed') ||
+        errorMessage.includes('network error')
+      ) {
+        setFormError('Gagal terhubung ke server Google. Periksa koneksi internet atau matikan ekstensi AdBlock/VPN.');
+        showToast('error', 'Koneksi Terputus', 'Periksa koneksi internet Anda.');
       } else if (errorMessage.includes('auth/invalid-credential')) {
         setFormError('Autentikasi Google dibatalkan atau tidak valid. Silakan coba kembali.');
-        showToast('error', 'Login Google', 'Autentikasi akun Google tidak valid atau kedaluwarsa.');
+        showToast('error', 'Login Google', 'Autentikasi akun Google tidak valid.');
       } else {
+        const diag: ErrorDiagnosis = {
+          code: 'auth/general-error',
+          title: 'Kendala Autentikasi Google',
+          description: errorMessage,
+          solution: [
+            'Pastikan koneksi internet stabil.',
+            'Pastikan penyedia Google di Firebase Authentication > Sign-in method sudah berstatus Aktif.',
+            'Pastikan Authorized Domains sudah memuat domain ini.',
+            'Anda juga dapat mendaftar/masuk langsung dengan formulir Email & Kata Sandi di bawah.',
+          ],
+          raw: errorMessage,
+        };
+        setDiagnosis(diag);
         setFormError('Gagal login dengan Google: ' + errorMessage);
         showToast('error', 'Login Google', errorMessage);
       }
@@ -80,6 +195,7 @@ export function AuthView() {
 
     setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
+
     try {
       if (mode === 'login') {
         await loginUser(cleanEmail, password);
@@ -183,7 +299,7 @@ export function AuthView() {
                 }}
                 className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 mb-2 cursor-pointer"
               >
-                ← Kembali ke Login
+                  Kembali ke Login
               </button>
               <h2 className="text-lg font-bold text-slate-900">Lupa Kata Sandi</h2>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -192,7 +308,6 @@ export function AuthView() {
             </div>
           )}
 
-          {/* Google Sign-in / Sign-up Button */}
           {mode !== 'forgot' && (
             <div className="mb-5 space-y-3">
               <button
@@ -239,7 +354,70 @@ export function AuthView() {
             </div>
           )}
 
-          {formError && (
+          {diagnosis && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-5 p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-slate-800 text-xs shadow-xs"
+            >
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-amber-900 text-xs sm:text-sm">
+                    {diagnosis.title}
+                  </div>
+                  <p className="text-slate-600 mt-1 text-[11px] leading-relaxed">
+                    {diagnosis.description}
+                  </p>
+
+                  {/* Current domain badge with 1-click copy */}
+                  <div className="mt-2.5 p-2 rounded-xl bg-white border border-amber-200/80 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                        Domain Anda Saat Ini
+                      </span>
+                      <code className="text-xs font-mono font-semibold text-blue-700 truncate block">
+                        {currentHostname || 'Tidak terdeteksi'}
+                      </code>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={copyDomain}
+                      className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition shadow-xs cursor-pointer"
+                    >
+                      {copiedHost ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Tersalin!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Salin Domain</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Step by step fix checklist */}
+                  <div className="mt-2.5 space-y-1.5">
+                    <span className="text-[11px] font-bold text-amber-900 block">
+                      Solusi Perbaikan di Firebase Console:
+                    </span>
+                    <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-600 font-medium">
+                      {diagnosis.solution.map((step, idx) => (
+                        <li key={idx} className="leading-snug">
+                          {step}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {formError && !diagnosis && (
             <div className="mb-5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
               {formError}
             </div>
@@ -383,6 +561,94 @@ export function AuthView() {
             <Shield className="w-3.5 h-3.5 text-blue-600" />
             <span>Data terlindungi dengan Firebase Authentication &amp; Firestore</span>
           </div>
+        </div>
+
+        {/* Collapsible Firebase Domain & Provider Checklist */}
+        <div className="mt-4 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 p-4 shadow-xs text-xs">
+          <button
+            type="button"
+            onClick={() => setShowTroubleshoot(!showTroubleshoot)}
+            className="w-full flex items-center justify-between font-bold text-slate-700 hover:text-blue-600 transition cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-blue-600" />
+              <span>Mengapa Login Google Belum Bisa? (Cek 3 Hal Ini)</span>
+            </span>
+            {showTroubleshoot ? (
+              <ChevronUp className="w-4 h-4 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            )}
+          </button>
+
+          {showTroubleshoot && (
+            <div className="mt-3 pt-3 border-t border-slate-100 space-y-3 text-slate-600">
+              {/* Point 1: Google Provider Enabled */}
+              <div className="flex items-start gap-2.5">
+                <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] shrink-0 mt-0.5">
+                  1
+                </div>
+                <div>
+                  <strong className="text-slate-800 font-semibold block">
+                    Penyedia "Google" Harus Diaktifkan (Enabled)
+                  </strong>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Buka Firebase Console &gt; Authentication &gt; tab <strong>Sign-in method</strong>. Pastikan status <strong>Google</strong> berwarna hijau/Enabled dan Email Dukungan Proyek (Project support email) sudah terisi.
+                  </p>
+                </div>
+              </div>
+
+              {/* Point 2: Domain Format */}
+              <div className="flex items-start gap-2.5">
+                <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] shrink-0 mt-0.5">
+                  2
+                </div>
+                <div>
+                  <strong className="text-slate-800 font-semibold block">
+                    Format Domain di Authorized Domains
+                  </strong>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Di menu Authentication &gt; tab <strong>Settings</strong> &gt; <strong>Authorized domains</strong>, jangan sertakan <code>https://</code> atau tanda garis miring. Masukkan murni nama host.
+                  </p>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <code className="px-2 py-1 bg-slate-100 text-slate-800 rounded-md font-mono text-[11px] truncate flex-1">
+                      {currentHostname || 'ais-...run.app'}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={copyDomain}
+                      className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md text-[11px] transition shrink-0 cursor-pointer"
+                    >
+                      {copiedHost ? 'Disalin!' : 'Salin'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Point 3: Propagation */}
+              <div className="flex items-start gap-2.5">
+                <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] shrink-0 mt-0.5">
+                  3
+                </div>
+                <div>
+                  <strong className="text-slate-800 font-semibold block">
+                    Waktu Sinkronisasi (Propagasi) Google CDN
+                  </strong>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Setelah domain baru disimpan di Firebase, server Google memerlukan waktu <strong>1–3 menit</strong> agar domain aktif di seluruh dunia. Harap tunggu sebentar lalu muat ulang (Refresh / F5).
+                  </p>
+                </div>
+              </div>
+
+              {/* Alternative tip */}
+              <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-100 text-[11px] text-blue-900 flex items-start gap-2">
+                <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Alternatif Instan:</strong> Anda juga dapat mendaftar langsung dengan mengetikkan Nama, Email, dan Sandi di formulir di atas lalu klik tombol <em>Buat Akun Freelancer</em>. Fitur ini langsung aktif seketika!
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

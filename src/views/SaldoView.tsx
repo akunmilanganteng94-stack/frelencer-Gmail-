@@ -39,7 +39,6 @@ export function SaldoView() {
   const { userProfile, currentUser } = useAuth();
   const { settings } = useSettings();
   const { showToast } = useToast();
-
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -85,7 +84,7 @@ export function SaldoView() {
       showToast('error', 'Akun Dibatasi', 'Akun Anda sedang dibatasi. Tidak dapat melakukan penarikan.');
       return;
     }
-    const lowestNominal = WITHDRAWAL_PRESETS[0].value; // 2000 (2k)
+    const lowestNominal = WITHDRAWAL_PRESETS[0].value;
     if ((userProfile?.balance || 0) < lowestNominal) {
       showToast(
         'error',
@@ -94,7 +93,6 @@ export function SaldoView() {
       );
       return;
     }
-
     const currentValid = WITHDRAWAL_PRESETS.find(
       (opt) => opt.value === amount && opt.value <= (userProfile?.balance || 0)
     );
@@ -109,6 +107,7 @@ export function SaldoView() {
     setFormError('');
 
     if (!currentUser || !userProfile) return;
+
     if (!settings.withdrawalOpen) {
       setFormError('Layanan penarikan sedang ditutup oleh admin.');
       return;
@@ -131,10 +130,12 @@ export function SaldoView() {
       setFormError('Nomor tujuan e-wallet tidak valid. Format: 08xxx (10-13 digit).');
       return;
     }
+
     if (!recipientName.trim()) {
       setFormError('Nama pemilik akun e-wallet wajib diisi.');
       return;
     }
+
     if (!isConfirmed) {
       setFormError('Harap centang konfirmasi bahwa data nomor dan nama penerima sudah benar.');
       return;
@@ -153,6 +154,7 @@ export function SaldoView() {
 
         const userData = userDoc.data();
         const availableBal = userData.balance || 0;
+
         if (availableBal < amount) {
           throw new Error(`Saldo tidak mencukupi. Saldo saat ini: ${formatRupiah(availableBal)}`);
         }
@@ -225,76 +227,81 @@ export function SaldoView() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-3xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 p-6 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden flex flex-col justify-between">
-          <div>
+        {/* Kartu Saldo Tersedia - Warna Biru Tua dengan Gradient Biru Muda */}
+        <div className="rounded-[28px] bg-gradient-to-br from-[#1e3a8a] via-[#1d4ed8] to-[#38bdf8] p-6 text-white shadow-xl shadow-blue-900/25 border border-blue-400/20 relative overflow-hidden flex flex-col justify-between">
+          {/* Decorative glowing accent */}
+          <div className="absolute -right-6 -top-6 w-36 h-36 rounded-full bg-sky-300/20 blur-xl pointer-events-none" />
+          <div className="relative z-10">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold text-blue-100">Saldo Tersedia</span>
-              <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
-                <Wallet className="w-4 h-4 text-white" />
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-white/15 backdrop-blur-xs flex items-center justify-center border border-white/20">
+                  <Wallet className="w-3.5 h-3.5 text-sky-200" />
+                </div>
+                <span className="text-xs font-bold text-white tracking-wide uppercase">SALDO ANDA</span>
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-black tracking-tight">
+            <div className="text-3xl font-extrabold tracking-tight drop-shadow-xs">
               {formatRupiah(userBalance)}
             </div>
-            <div className="mt-2 text-xs text-blue-100 flex items-center justify-between">
+            <div className="mt-2 text-xs text-sky-100 flex items-center justify-between">
               <span>Min. Tarik:</span>
-              <strong>{formatRupiah(WITHDRAWAL_PRESETS[0].value)} ({WITHDRAWAL_PRESETS[0].label})</strong>
+              <strong className="text-white font-bold">{formatRupiah(WITHDRAWAL_PRESETS[0].value)} ({WITHDRAWAL_PRESETS[0].label})</strong>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-white/20">
+          <div className="mt-4 pt-3 border-t border-white/20 relative z-10">
             <button
               type="button"
               onClick={handleOpenWithdrawModal}
               disabled={!settings.withdrawalOpen || userBalance < WITHDRAWAL_PRESETS[0].value}
-              className="w-full py-2.5 px-4 rounded-xl bg-white text-blue-800 hover:bg-blue-50 font-bold text-xs shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              className="w-full py-2.5 px-4 rounded-2xl bg-white/20 hover:bg-white/30 text-white font-semibold text-xs border border-white/30 shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer active:scale-95"
             >
-              <ArrowDownLeft className="w-4 h-4 text-blue-700" />
+              <ArrowDownLeft className="w-4 h-4 text-sky-200" />
               <span>Tarik Saldo</span>
             </button>
           </div>
         </div>
 
-        <div className="rounded-3xl bg-white p-6 border border-slate-200/80 shadow-xs">
+        <div className="rounded-[28px] bg-white p-6 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-500">Total Penghasilan</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4" />
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Penghasilan</span>
+            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 stroke-[2.5]" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 tracking-tight">
+          <div className="text-2xl font-extrabold text-slate-800 tracking-tight">
             {formatRupiah(totalEarned)}
           </div>
           <div className="mt-2 text-xs text-slate-400">Akumulasi submission diterima</div>
         </div>
 
-        <div className="rounded-3xl bg-white p-6 border border-slate-200/80 shadow-xs">
+        <div className="rounded-[28px] bg-white p-6 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-500">Total Dicairkan</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4" />
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Dicairkan</span>
+            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 tracking-tight">
+          <div className="text-2xl font-extrabold text-slate-800 tracking-tight">
             {formatRupiah(totalWithdrawn)}
           </div>
           <div className="mt-2 text-xs text-slate-400">Dana telah masuk ke e-wallet</div>
         </div>
 
-        <div className="rounded-3xl bg-white p-6 border border-slate-200/80 shadow-xs">
+        <div className="rounded-[28px] bg-white p-6 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-500">Penarikan Pending</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Penarikan Pending</span>
+            <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+              <Clock className="w-4 h-4 stroke-[2.5]" />
             </div>
           </div>
-          <div className="text-2xl font-black text-amber-600 tracking-tight">
+          <div className="text-2xl font-extrabold text-amber-600 tracking-tight">
             {formatRupiah(pendingWithdrawn)}
           </div>
           <div className="mt-2 text-xs text-slate-400">Sedang diproses transfer admin</div>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs">
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-base font-bold text-slate-900">Riwayat Penarikan Saldo</h2>
@@ -381,7 +388,7 @@ export function SaldoView() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
               className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-5"
             >
@@ -428,12 +435,10 @@ export function SaldoView() {
                     </span>
                   </div>
 
-                  {/* 7 Nominal Pilihan Admin: 2k, 4k, 6k, 10k, 20k, 50k, 100k */}
                   <div className="grid grid-cols-4 gap-2">
                     {WITHDRAWAL_PRESETS.map((preset) => {
                       const isSelected = amount === preset.value;
                       const isAffordable = userBalance >= preset.value;
-
                       return (
                         <button
                           key={preset.value}
@@ -473,7 +478,6 @@ export function SaldoView() {
                     })}
                   </div>
 
-                  {/* Info Nominal Dipilih & Sisa Saldo */}
                   <div className="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
                     <div>
                       <span className="text-slate-500 block text-[11px]">Nominal Dipilih:</span>

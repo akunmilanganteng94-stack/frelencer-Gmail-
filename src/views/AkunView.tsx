@@ -30,7 +30,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   const { settings } = useSettings();
   const { openContactModal } = useContactAdmin();
   const { showToast } = useToast();
-
   const [copiedUid, setCopiedUid] = useState(false);
   const [copiedWa, setCopiedWa] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -125,7 +124,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         </p>
       </div>
 
-      {/* Main Profile Info Card */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
@@ -247,7 +245,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
           </div>
         </div>
 
-        {/* CHAT ADMIN SECTION (DIPINDAHKAN KE PROFIL) */}
         <div className="mt-8 pt-6 border-t border-slate-100">
           <div className="rounded-3xl bg-gradient-to-br from-emerald-50 via-teal-50/40 to-white border border-emerald-200/80 p-5 sm:p-6 space-y-4 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -269,7 +266,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                   </p>
                 </div>
               </div>
-
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
@@ -291,7 +287,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
               </div>
             </div>
 
-            {/* Quick WhatsApp Number Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white rounded-2xl border border-emerald-100 shadow-2xs">
               <div className="flex items-center gap-2.5 text-xs text-slate-700">
                 <PhoneCall className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -319,7 +314,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
               </div>
             </div>
 
-            {/* Operational schedule hint */}
             <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
               <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
               <span>
@@ -350,7 +344,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         )}
 
         <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
-          <span className="text-xs text-slate-400">AZGmail Freelancer • Session Aman</span>
+          <span className="text-xs text-slate-400">AZGmail Freelancer   Session Aman</span>
           <button
             onClick={() => logoutUser()}
             className="px-4 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 font-bold text-xs transition flex items-center gap-2 cursor-pointer"
@@ -361,7 +355,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         </div>
       </div>
 
-      {/* Edit Name Modal */}
       <AnimatePresence>
         {showEditModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -406,7 +399,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         )}
       </AnimatePresence>
 
-      {/* Password Change Modal */}
       <AnimatePresence>
         {showPasswordModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">

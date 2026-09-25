@@ -16,6 +16,8 @@ const DEFAULT_RULES = [
 
 const DEFAULT_SETTINGS: SystemSettings = {
   storanOpen: true,
+  storanKhususOpen: true,
+  storanBebasOpen: true,
   storanSchedule: 'Senin - Jumat, 07.00 - 17.00 WIB (Sabtu & Minggu CLOSE)',
   pricePerSubmission: 3000,
   withdrawalOpen: true,
@@ -53,6 +55,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           setSettings({
             ...DEFAULT_SETTINGS,
             ...data,
+            storanOpen: data.storanOpen !== undefined ? data.storanOpen : true,
+            storanKhususOpen: data.storanKhususOpen !== undefined ? data.storanKhususOpen : true,
+            storanBebasOpen: data.storanBebasOpen !== undefined ? data.storanBebasOpen : true,
             gmailDefaultPassword: data.gmailDefaultPassword || DEFAULT_GMAIL_PASSWORD,
             generatorOpen: data.generatorOpen !== undefined ? data.generatorOpen : true,
             adminWhatsApp: data.adminWhatsApp || '6285199219856',
@@ -67,7 +72,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             rules: Array.isArray(data.rules) && data.rules.length > 0 ? data.rules : DEFAULT_RULES,
           });
         } else {
-          // Document does not exist yet, seed with defaults
           setDoc(settingsDocRef, DEFAULT_SETTINGS).catch((err) => {
             console.warn('Could not auto-seed settings document:', err);
           });
@@ -79,7 +83,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     );
-
     return () => unsubscribe();
   }, []);
 

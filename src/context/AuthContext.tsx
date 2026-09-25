@@ -31,8 +31,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Admin email configured in system
-const ADMIN_EMAILS = ['apriliansyahazril10@gmail.com'];
+// Admin emails configured in system
+const ADMIN_EMAILS = ['apriliansyahazril10@gmail.com', 'nenioke659@gmail.com'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUserProfile(data);
           } else {
             // Document doesn't exist yet (e.g. newly signed up or social login)
-            const isDefaultAdmin = ADMIN_EMAILS.includes(user.email || '');
+            const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
             const newProfile: UserProfile = {
               uid: user.uid,
               email: user.email || '',
@@ -72,14 +72,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               createdAt: new Date().toISOString(),
             };
             setDoc(userDocRef, newProfile).catch((e) => {
-              console.warn('Error creating initial user doc:', e);
+              console.warn('Initial user profile sync notice:', e);
             });
             setUserProfile(newProfile);
           }
           setLoading(false);
         },
         (err) => {
-          console.error('User doc snapshot error:', err);
+          console.warn('User doc snapshot sync notice (using local profile while rules sync):', err?.message || err);
+          const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
+          setUserProfile((prev) => prev || {
+            uid: user.uid,
+            email: user.email || '',
+            displayName: user.displayName || user.email?.split('@')[0] || 'User',
+            role: isDefaultAdmin ? 'admin' : 'user',
+            balance: 0,
+            totalEarned: 0,
+            totalWithdrawn: 0,
+            pendingWithdrawn: 0,
+            status: 'active',
+            createdAt: new Date().toISOString(),
+          });
           setLoading(false);
         }
       );
@@ -103,7 +116,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), pass);
     const user = userCredential.user;
     await updateProfile(user, { displayName: name.trim() });
-
     const isDefaultAdmin = ADMIN_EMAILS.includes(email.toLowerCase().trim());
     const profile: UserProfile = {
       uid: user.uid,
@@ -117,7 +129,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status: 'active',
       createdAt: new Date().toISOString(),
     };
-
     await setDoc(doc(db, 'users', user.uid), profile);
     setUserProfile(profile);
   };
@@ -127,13 +138,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     provider.setCustomParameters({ prompt: 'select_account' });
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
-
     const userDocRef = doc(db, 'users', user.uid);
-    const docSnap = await getDoc(userDocRef);
-
     const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
-    if (!docSnap.exists()) {
-      const profile: UserProfile = {
+
+    try {
+      const docSnap = await getDoc(userDocRef);
+      if (!docSnap.exists()) {
+        const profile: UserProfile = {
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || user.email?.split('@')[0] || 'User Google',
+          role: isDefaultAdmin ? 'admin' : 'user',
+          balance: 0,
+          totalEarned: 0,
+          totalWithdrawn: 0,
+          pendingWithdrawn: 0,
+          status: 'active',
+          createdAt: new Date().toISOString(),
+        };
+        await setDoc(userDocRef, profile);
+        setUserProfile(profile);
+      } else {
+        const existing = docSnap.data() as UserProfile;
+        setUserProfile(existing);
+      }
+    } catch (fsErr) {
+      console.warn('Profile doc fetch/write issue during Google sign-in:', fsErr);
+      // Fallback: set basic profile in context so user is logged in
+      setUserProfile({
         uid: user.uid,
         email: user.email || '',
         displayName: user.displayName || user.email?.split('@')[0] || 'User Google',
@@ -144,12 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         pendingWithdrawn: 0,
         status: 'active',
         createdAt: new Date().toISOString(),
-      };
-      await setDoc(userDocRef, profile);
-      setUserProfile(profile);
-    } else {
-      const existing = docSnap.data() as UserProfile;
-      setUserProfile(existing);
+      });
     }
   };
 

@@ -4,6 +4,7 @@ import { db, handleFirestoreError } from '../lib/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 const DEFAULT_GMAIL_PASSWORD = 'sgsg1122';
+
 const DEFAULT_RULES = [
   'Password akun Gmail WAJIB menggunakan: sgsg1122 (atau sesuai konfigurasi aktif dari Admin).',
   'Akun Gmail harus fresh, aktif, dan dapat login tanpa terhalang 2FA atau verifikasi nomor yang terkunci.',
@@ -83,6 +84,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     );
+
     return () => unsubscribe();
   }, []);
 

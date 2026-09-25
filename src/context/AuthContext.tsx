@@ -140,7 +140,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const user = result.user;
     const userDocRef = doc(db, 'users', user.uid);
     const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
-
     try {
       const docSnap = await getDoc(userDocRef);
       if (!docSnap.exists()) {

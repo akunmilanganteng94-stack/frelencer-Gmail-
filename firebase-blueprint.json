@@ -2,12 +2,12 @@
   "entities": {
     "UserProfile": {
       "title": "UserProfile",
-      "description": "User profile data including role, balance, and account state",
+      "description": "User profile with balance and role",
       "type": "object",
       "properties": {
-        "uid": { "type": "string", "maxLength": 128 },
-        "email": { "type": "string", "maxLength": 128 },
-        "displayName": { "type": "string", "maxLength": 100 },
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
         "role": { "type": "string", "enum": ["user", "admin"] },
         "balance": { "type": "number" },
         "totalEarned": { "type": "number" },
@@ -16,79 +16,68 @@
         "status": { "type": "string", "enum": ["active", "suspended"] },
         "createdAt": { "type": "string" }
       },
-      "required": ["uid", "email", "displayName", "role", "balance", "status"]
+      "required": ["uid", "email", "role", "balance"]
     },
     "Submission": {
       "title": "Submission",
-      "description": "Freelancer data submission",
+      "description": "User Gmail accounts submission",
       "type": "object",
       "properties": {
-        "id": { "type": "string", "maxLength": 128 },
-        "userId": { "type": "string", "maxLength": 128 },
-        "userEmail": { "type": "string", "maxLength": 128 },
-        "userName": { "type": "string", "maxLength": 100 },
-        "dataContent": { "type": "string", "maxLength": 1000 },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "dataContent": { "type": "string" },
         "rewardAmount": { "type": "number" },
-        "status": { "type": "string", "enum": ["Pending", "Diterima", "Ditolak"] },
-        "rejectionReason": { "type": "string", "maxLength": 500 },
-        "adminNotes": { "type": "string", "maxLength": 500 },
-        "createdAt": { "type": "string" },
-        "reviewedAt": { "type": "string" }
+        "status": { "type": "string", "enum": ["Pending", "Cek Admin", "Diterima", "Ditolak"] },
+        "createdAt": { "type": "string" }
       },
-      "required": ["id", "userId", "userEmail", "dataContent", "rewardAmount", "status", "createdAt"]
+      "required": ["userId", "dataContent", "status"]
     },
     "Withdrawal": {
       "title": "Withdrawal",
-      "description": "User withdrawal request",
+      "description": "User balance withdrawal request",
       "type": "object",
       "properties": {
-        "id": { "type": "string", "maxLength": 128 },
-        "userId": { "type": "string", "maxLength": 128 },
-        "userEmail": { "type": "string", "maxLength": 128 },
-        "userName": { "type": "string", "maxLength": 100 },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
         "amount": { "type": "number" },
         "method": { "type": "string", "enum": ["DANA", "GoPay"] },
-        "targetNumber": { "type": "string", "maxLength": 30 },
-        "recipientName": { "type": "string", "maxLength": 100 },
+        "targetNumber": { "type": "string" },
+        "recipientName": { "type": "string" },
         "status": { "type": "string", "enum": ["Pending", "Selesai", "Ditolak"] },
-        "rejectionReason": { "type": "string", "maxLength": 500 },
-        "createdAt": { "type": "string" },
-        "completedAt": { "type": "string" }
+        "createdAt": { "type": "string" }
       },
-      "required": ["id", "userId", "amount", "method", "targetNumber", "recipientName", "status", "createdAt"]
+      "required": ["userId", "amount", "method", "targetNumber", "status"]
     },
     "SystemSettings": {
       "title": "SystemSettings",
-      "description": "Global operational and pricing parameters",
+      "description": "Platform global configuration and operational state",
       "type": "object",
       "properties": {
         "storanOpen": { "type": "boolean" },
-        "storanSchedule": { "type": "string", "maxLength": 200 },
         "pricePerSubmission": { "type": "number" },
-        "withdrawalOpen": { "type": "boolean" },
         "minWithdrawal": { "type": "number" },
-        "rules": { "type": "array" },
-        "announcement": { "type": "string", "maxLength": 1000 }
-      },
-      "required": ["storanOpen", "pricePerSubmission", "withdrawalOpen", "minWithdrawal"]
+        "rules": { "type": "array" }
+      }
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "UserProfile",
-      "description": "User account profile and balance info"
+      "description": "User account documents keyed by Firebase Auth UID"
     },
     "/submissions/{submissionId}": {
       "schema": "Submission",
-      "description": "Data submissions sent by freelancers"
+      "description": "Submissions submitted by freelancers for review"
     },
     "/withdrawals/{withdrawalId}": {
       "schema": "Withdrawal",
-      "description": "Withdrawal requests for DANA and GoPay"
+      "description": "Withdrawal requests submitted by freelancers"
     },
-    "/settings/{settingId}": {
+    "/settings/general": {
       "schema": "SystemSettings",
-      "description": "Global configuration including operational schedule and rates"
+      "description": "System operational parameters and limits"
     }
   }
 }

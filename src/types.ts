@@ -12,9 +12,11 @@ export interface UserProfile {
   pendingWithdrawn: number;
   status: UserStatus;
   createdAt: string;
+  generatedEmails?: string[];
 }
 
-export type SubmissionStatus = 'Pending' | 'Diterima' | 'Ditolak';
+export type SubmissionStatus = 'Pending' | 'Cek Admin' | 'Diterima' | 'Ditolak';
+export type SubmissionType = 'khusus' | 'bebas';
 
 export interface Submission {
   id: string;
@@ -24,10 +26,12 @@ export interface Submission {
   dataContent: string;
   rewardAmount: number;
   status: SubmissionStatus;
+  submissionType?: SubmissionType;
   rejectionReason?: string;
   adminNotes?: string;
   createdAt: string;
   reviewedAt?: string;
+  checkedAt?: string;
 }
 
 export type WithdrawalMethod = 'DANA' | 'GoPay';
@@ -63,6 +67,8 @@ export interface GmailStockItem {
 
 export interface SystemSettings {
   storanOpen: boolean;
+  storanKhususOpen?: boolean;
+  storanBebasOpen?: boolean;
   storanSchedule: string;
   pricePerSubmission: number;
   withdrawalOpen: boolean;

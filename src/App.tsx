@@ -17,11 +17,11 @@ import { AZGmailLogo } from './components/GmailLogo';
 import { motion, AnimatePresence } from 'motion/react';
 
 function MainApp() {
-  const { currentUser, loadingAuth } = useAuth();
+  const { currentUser, loading } = useAuth();
   const { settings } = useSettings();
   const [currentTab, setCurrentTab] = useState<NavigationTab>('home');
 
-  if (loadingAuth) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4 text-center">
@@ -43,11 +43,9 @@ function MainApp() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-blue-600 selection:text-white">
-      {/* Top Header & Navigation */}
+    <div className="min-h-screen bg-[#F4F7FC] text-slate-800 flex flex-col selection:bg-blue-600 selection:text-white font-sans">
       <Navigation currentTab={currentTab} onSelectTab={setCurrentTab} />
 
-      {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28 sm:pb-32">
         <AnimatePresence mode="wait">
           <motion.div
@@ -68,7 +66,6 @@ function MainApp() {
         </AnimatePresence>
       </main>
 
-      {/* Footer */}
       <footer className="hidden sm:block border-t border-slate-200/80 bg-white py-6 text-xs text-slate-500 mb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -79,14 +76,14 @@ function MainApp() {
           </div>
           <div className="flex items-center gap-4 text-slate-500">
             <span>Operasional: {settings.storanSchedule}</span>
-            <span>•</span>
+            <span>·</span>
             <button
               onClick={() => setCurrentTab('rules')}
               className="hover:text-blue-600 font-semibold cursor-pointer"
             >
               Ketentuan Storan
             </button>
-            <span>•</span>
+            <span>·</span>
             <button
               onClick={() => setCurrentTab('akun')}
               className="hover:text-blue-600 font-semibold cursor-pointer"

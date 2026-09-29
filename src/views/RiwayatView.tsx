@@ -79,6 +79,7 @@ export function RiwayatView() {
     const matchesFilter = activeFilter === 'Semua' || sub.status === activeFilter;
     const subType = getSubmissionType(sub);
     const matchesType = typeFilter === 'Semua' || subType === typeFilter;
+
     const cleanEmail = sub.dataContent.split('|')[0].trim().toLowerCase();
     const q = searchQuery.toLowerCase();
     const matchesSearch =
@@ -95,6 +96,7 @@ export function RiwayatView() {
   const countCekAdmin = submissions.filter((s) => s.status === 'Cek Admin').length;
   const countDiterima = submissions.filter((s) => s.status === 'Diterima').length;
   const countDitolak = submissions.filter((s) => s.status === 'Ditolak').length;
+
   const countKhusus = submissions.filter((s) => getSubmissionType(s) === 'khusus').length;
   const countBebas = submissions.filter((s) => getSubmissionType(s) === 'bebas').length;
 
@@ -103,7 +105,7 @@ export function RiwayatView() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-            <FileText className="w-7 h-7 text-indigo-600" />
+            <FileText className="w-7 h-7 text-blue-600" />
             <span>Riwayat Storan Akun Gmail</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -115,9 +117,10 @@ export function RiwayatView() {
       <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-            <Layers className="w-4 h-4 text-indigo-600" />
+            <Layers className="w-4 h-4 text-blue-600" />
             <span>Kategori Storan:</span>
           </div>
+
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -135,23 +138,25 @@ export function RiwayatView() {
                 {countSemua}
               </span>
             </button>
+
             <button
               type="button"
               onClick={() => setTypeFilter('khusus')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
                 typeFilter === 'khusus'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Gmail Khusus (3k)</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                typeFilter === 'khusus' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-800'
+                typeFilter === 'khusus' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-800'
               }`}>
                 {countKhusus}
               </span>
             </button>
+
             <button
               type="button"
               onClick={() => setTypeFilter('bebas')}
@@ -191,14 +196,14 @@ export function RiwayatView() {
                   onClick={() => setActiveFilter(tab.value)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                     isActive
-                      ? 'bg-white text-indigo-700 shadow-xs'
+                      ? 'bg-white text-blue-700 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   <span>{tab.label}</span>
                   <span
                     className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-                      isActive ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-600'
+                      isActive ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-600'
                     }`}
                   >
                     {tab.count}
@@ -215,7 +220,7 @@ export function RiwayatView() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari email, ID, atau catatan..."
-              className="w-full pl-10 pr-3.5 py-2 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-xs outline-none transition bg-white"
+              className="w-full pl-10 pr-3.5 py-2 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-xs outline-none transition bg-white"
             />
           </div>
         </div>
@@ -249,7 +254,7 @@ export function RiwayatView() {
             return (
               <div
                 key={sub.id}
-                className="bg-white rounded-3xl p-5 border border-slate-200/80 hover:border-indigo-200 hover:shadow-md transition space-y-3 relative overflow-hidden"
+                className="bg-white rounded-3xl p-5 border border-slate-200/80 hover:border-blue-200 hover:shadow-md transition space-y-3 relative overflow-hidden"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
                   <div className="flex flex-wrap items-center gap-2">
@@ -269,7 +274,7 @@ export function RiwayatView() {
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${
                         isKhusus
-                          ? 'bg-indigo-100 text-indigo-800 border border-indigo-200/70'
+                          ? 'bg-blue-100 text-blue-800 border border-blue-200/70'
                           : 'bg-teal-100 text-teal-800 border border-teal-200/70'
                       }`}
                     >
@@ -306,7 +311,7 @@ export function RiwayatView() {
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-indigo-600 font-bold text-xs shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-blue-600 font-bold text-xs shrink-0">
                       @
                     </div>
                     <div className="min-w-0">
@@ -314,7 +319,7 @@ export function RiwayatView() {
                         {cleanEmail}
                       </p>
                       <p className="text-[11px] text-slate-500">
-                        Password: <strong className="font-mono text-orange-600">{activePassword}</strong> · Imbalan: <strong className="text-indigo-700">{formatRupiah(sub.rewardAmount || (isKhusus ? 3000 : 2700))}</strong>
+                        Password: <strong className="font-mono text-orange-600">{activePassword}</strong> • Imbalan: <strong className="text-blue-700">{formatRupiah(sub.rewardAmount || (isKhusus ? 3000 : 2700))}</strong>
                       </p>
                     </div>
                   </div>
@@ -337,11 +342,10 @@ export function RiwayatView() {
                         </>
                       )}
                     </button>
-
                     <button
                       type="button"
                       onClick={() => setSelectedSubForCheck(sub)}
-                      className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] hover:from-[#1e3a8a] hover:to-sky-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Cek Gmail & Status</span>
@@ -426,7 +430,7 @@ export function RiwayatView() {
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                     <Eye className="w-5 h-5" />
                   </div>
                   <div>
@@ -455,7 +459,7 @@ export function RiwayatView() {
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                       getSubmissionType(selectedSubForCheck) === 'khusus'
-                        ? 'bg-indigo-100 text-indigo-800'
+                        ? 'bg-blue-100 text-blue-800'
                         : 'bg-teal-100 text-teal-800'
                     }`}
                   >
@@ -481,7 +485,6 @@ export function RiwayatView() {
                     )}
                   </button>
                 </div>
-
                 <div className="grid grid-cols-2 gap-2 pt-1 text-xs text-slate-600">
                   <div className="p-2.5 rounded-xl bg-white border border-slate-200/70">
                     <span className="text-[11px] text-slate-400 block">Password Wajib</span>
@@ -489,7 +492,7 @@ export function RiwayatView() {
                   </div>
                   <div className="p-2.5 rounded-xl bg-white border border-slate-200/70">
                     <span className="text-[11px] text-slate-400 block">Nominal Imbalan</span>
-                    <span className="font-bold text-indigo-700">
+                    <span className="font-bold text-blue-700">
                       {formatRupiah(selectedSubForCheck.rewardAmount)}
                     </span>
                   </div>
@@ -498,10 +501,9 @@ export function RiwayatView() {
 
               <div className="space-y-3">
                 <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-indigo-600" />
+                  <Clock className="w-4 h-4 text-blue-600" />
                   <span>Tahapan Verifikasi Akun:</span>
                 </h4>
-
                 <div className="relative pl-6 space-y-5 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                   <div className="relative">
                     <div className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
@@ -635,9 +637,9 @@ export function RiwayatView() {
               </div>
 
               {selectedSubForCheck.adminNotes && (
-                <div className="p-3.5 rounded-2xl bg-indigo-50/80 border border-indigo-100 text-xs text-indigo-950 space-y-1">
-                  <div className="font-bold text-indigo-900">Catatan dari Admin:</div>
-                  <p className="text-indigo-800 leading-relaxed">{selectedSubForCheck.adminNotes}</p>
+                <div className="p-3.5 rounded-2xl bg-blue-50/80 border border-blue-100 text-xs text-blue-950 space-y-1">
+                  <div className="font-bold text-blue-900">Catatan dari Admin:</div>
+                  <p className="text-blue-800 leading-relaxed">{selectedSubForCheck.adminNotes}</p>
                 </div>
               )}
 

@@ -5,6 +5,7 @@ import { useContactAdmin } from '../context/ContactAdminContext';
 import { useToast } from '../context/ToastContext';
 import { formatRupiah, formatIndonesianDateTime } from '../lib/utils';
 import { NavigationTab } from '../types';
+import { MisiReferralBanner } from '../components/MisiReferralBanner';
 import {
   User,
   Mail,
@@ -35,10 +36,8 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   const [copiedWa, setCopiedWa] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-
   const [nameInput, setNameInput] = useState(userProfile?.displayName || '');
   const [savingName, setSavingName] = useState(false);
-
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
@@ -48,6 +47,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   const formattedNumber = rawNumber.startsWith('62')
     ? `+62 ${rawNumber.substring(2, 5)}-${rawNumber.substring(5, 9)}-${rawNumber.substring(9)}`
     : rawNumber;
+
   const waUrl = `https://wa.me/${rawNumber}?text=${encodeURIComponent(
     'Halo Admin AZGmail, saya ingin bertanya terkait storan akun Gmail & saldo saya.'
   )}`;
@@ -98,7 +98,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
       setPassError('Konfirmasi kata sandi tidak cocok.');
       return;
     }
-
     setSavingPassword(true);
     try {
       await changePassword(newPassword);
@@ -123,14 +122,15 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
           <span>Profil Pengguna</span>
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Informasi identitas akun freelancer, bantuan admin, saldo, dan keamanan login
+          Informasi identitas akun freelancer, misi referral, bantuan admin, saldo, dan keamanan login
         </p>
       </div>
 
+      {/* Profile Card Header - Biru tua gak terlalu tua dan gradient biru muda */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-lg shadow-blue-500/20">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-[#1e40af] via-[#2563eb] to-[#38bdf8] text-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-lg shadow-blue-500/25">
               {userProfile?.displayName ? userProfile.displayName.charAt(0).toUpperCase() : 'U'}
             </div>
             <div>
@@ -139,7 +139,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                   {userProfile?.displayName || 'Freelancer'}
                 </h2>
                 {isAdmin ? (
-                  <span className="px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold">
+                  <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold">
                     Admin
                   </span>
                 ) : (
@@ -204,7 +204,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
 
           <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center justify-between gap-3.5">
             <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-white text-indigo-600 flex items-center justify-center shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-white text-blue-600 flex items-center justify-center shadow-xs">
                 <Fingerprint className="w-5 h-5" />
               </div>
               <div className="min-w-0 flex-1">
@@ -248,6 +248,12 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
           </div>
         </div>
 
+        {/* BANNER MISI REFERRAL SIMPLE & SLEEK (KLIK UNTUK BUKA HALAMAN) */}
+        <div className="mt-8 pt-6 border-t border-slate-100">
+          <MisiReferralBanner onNavigate={onNavigate} />
+        </div>
+
+        {/* WhatsApp Contact Box */}
         <div className="mt-8 pt-6 border-t border-slate-100">
           <div className="rounded-3xl bg-gradient-to-br from-emerald-50 via-teal-50/40 to-white border border-emerald-200/80 p-5 sm:p-6 space-y-4 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -328,19 +334,19 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         </div>
 
         {isAdmin && (
-          <div className="mt-6 p-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="mt-6 p-4 rounded-2xl bg-blue-50 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <ShieldCheck className="w-6 h-6 text-indigo-600 shrink-0" />
+              <ShieldCheck className="w-6 h-6 text-blue-600 shrink-0" />
               <div>
-                <h4 className="text-sm font-bold text-indigo-950">Akses Administrator Terdeteksi</h4>
-                <p className="text-xs text-indigo-700">
+                <h4 className="text-sm font-bold text-blue-950">Akses Administrator Terdeteksi</h4>
+                <p className="text-xs text-blue-800">
                   Kamu memiliki hak akses untuk mengelola submission, penarikan, pengguna, dan pengaturan sistem.
                 </p>
               </div>
             </div>
             <button
               onClick={() => onNavigate('admin')}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
             >
               Buka Admin Panel
             </button>
@@ -348,7 +354,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         )}
 
         <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
-          <span className="text-xs text-slate-400">AZGmail Freelancer · Session Aman</span>
+          <span className="text-xs text-slate-400">AZGmail Freelancer • Session Aman</span>
           <button
             onClick={() => logoutUser()}
             className="px-4 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 font-bold text-xs transition flex items-center gap-2 cursor-pointer"

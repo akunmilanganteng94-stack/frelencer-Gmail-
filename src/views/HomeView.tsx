@@ -5,6 +5,7 @@ import { formatRupiah, formatIndonesianDateTime } from '../lib/utils';
 import { Submission, NavigationTab } from '../types';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { MisiReferralBanner } from '../components/MisiReferralBanner';
 import {
   Wallet,
   Check,
@@ -32,10 +33,12 @@ export function HomeView({ onNavigate }: HomeViewProps) {
 
   useEffect(() => {
     if (!currentUser) return;
+
     const q = query(
       collection(db, 'submissions'),
       where('userId', '==', currentUser.uid)
     );
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -52,6 +55,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         setLoading(false);
       }
     );
+
     return () => unsubscribe();
   }, [currentUser]);
 
@@ -65,7 +69,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
   return (
     <div className="space-y-6">
       {/* Kartu Saldo Modern - Warna Biru Tua (tidak terlalu tua) dengan Gradient Biru Muda */}
-      <div className="relative overflow-hidden rounded-[28px] sm:rounded-3xl bg-gradient-to-br from-[#1e3a8a] via-[#1d4ed8] to-[#38bdf8] p-6 sm:p-7 text-white shadow-xl shadow-blue-900/25 border border-blue-400/20">
+      <div className="relative overflow-hidden rounded-[28px] sm:rounded-3xl bg-gradient-to-br from-[#1e40af] via-[#2563eb] to-[#38bdf8] p-6 sm:p-7 text-white shadow-xl shadow-blue-900/25 border border-blue-400/20">
         {/* Subtle decorative circles for depth */}
         <div className="absolute -right-8 -top-8 w-48 h-48 rounded-full bg-sky-300/20 blur-2xl pointer-events-none" />
         <div className="absolute -left-10 -bottom-10 w-44 h-44 rounded-full bg-blue-950/40 blur-xl pointer-events-none" />
@@ -95,9 +99,9 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                   {formatRupiah(settings.pricePerSubmission)}
                 </strong>
               </p>
-              <span className="text-sky-300/60 hidden sm:inline">·</span>
+              <span className="text-sky-300/60 hidden sm:inline">•</span>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/15 backdrop-blur-xs text-sky-100 border border-white/15 font-medium">
-                Khusus 3k · Bebas 2.7k
+                Khusus 3k • Bebas 2.7k
               </span>
             </div>
           </div>
@@ -132,19 +136,15 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             onClick={() => onNavigate('storan')}
             className="group flex flex-col items-center justify-center p-2 sm:p-3 rounded-2xl bg-blue-50/70 border border-blue-200/70 shadow-2xs hover:bg-blue-100/70 active:scale-95 transition cursor-pointer text-center relative"
           >
-            <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-[#1e3a8a] via-blue-600 to-[#38bdf8] flex items-center justify-center shadow-md shadow-blue-500/25 group-hover:scale-105 transition-all">
+            <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-[#1e40af] via-[#2563eb] to-[#38bdf8] flex items-center justify-center shadow-md shadow-blue-500/25 group-hover:scale-105 transition-all">
               <Send className="w-6 h-6 sm:w-7 sm:h-7 text-white stroke-[2.2] translate-x-0.5 -translate-y-0.5" />
             </div>
             <span className="mt-2 text-xs sm:text-sm font-black tracking-wide text-blue-900 group-hover:text-blue-700 transition">
               STOR
             </span>
-            {(isKhususClosed || isBebasClosed) && (
-              <span className="mt-0.5 text-[9px] font-bold text-amber-700 bg-amber-100/80 px-1.5 py-0.2 rounded-full border border-amber-300">
-                {isKhususClosed && isBebasClosed
-                  ? 'Tutup'
-                  : isKhususClosed
-                  ? 'Khusus Tutup'
-                  : 'Bebas Tutup'}
+            {(!settings.storanOpen || (isKhususClosed && isBebasClosed)) && (
+              <span className="mt-0.5 text-[9px] font-bold text-rose-700 bg-rose-100/80 px-1.5 py-0.2 rounded-full border border-rose-300">
+                Tutup
               </span>
             )}
           </button>
@@ -180,7 +180,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             onClick={() => onNavigate('rules')}
             className="group flex flex-col items-center justify-center p-2 sm:p-3 rounded-2xl border border-transparent hover:bg-blue-50/60 hover:border-blue-100 active:scale-95 transition cursor-pointer text-center"
           >
-            <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-[#1e3a8a] via-[#1d4ed8] to-[#38bdf8] flex items-center justify-center shadow-md shadow-blue-500/25 group-hover:scale-105 transition-all">
+            <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-[#1e40af] via-[#2563eb] to-[#38bdf8] flex items-center justify-center shadow-md shadow-blue-500/25 group-hover:scale-105 transition-all">
               <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-white stroke-[2.2]" />
             </div>
             <span className="mt-2 text-xs sm:text-sm font-black tracking-wide text-slate-800 group-hover:text-blue-700 transition">
@@ -189,6 +189,9 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           </button>
         </div>
       </div>
+
+      {/* BANNER MISI REFERRAL SIMPLE & SLEEK (KLIK UNTUK BUKA HALAMAN) */}
+      <MisiReferralBanner onNavigate={onNavigate} />
 
       {/* Bagian Statistik Akun */}
       <div>
@@ -271,7 +274,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       {/* Operational Announcement Card (Pengumuman Storan) */}
       <div className="rounded-3xl bg-white border border-blue-100/90 p-5 sm:p-6 shadow-xs relative overflow-hidden">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#1e3a8a] via-blue-600 to-[#38bdf8] text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#1e40af] via-blue-600 to-[#38bdf8] text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
             <Megaphone className="w-6 h-6" />
           </div>
           <div className="flex-1 min-w-0">
@@ -333,7 +336,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               <p className="text-sm font-medium">Belum ada submission data.</p>
               <button
                 onClick={() => onNavigate('storan')}
-                className="px-4 py-2 bg-gradient-to-r from-[#1e3a8a] via-blue-600 to-[#38bdf8] text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 hover:opacity-95 transition cursor-pointer"
+                className="px-4 py-2 bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 hover:opacity-95 transition cursor-pointer"
               >
                 Kirim Data Pertama
               </button>
@@ -353,7 +356,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                     </div>
                     <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-2">
                       <span>{formatIndonesianDateTime(sub.createdAt)}</span>
-                      <span>·</span>
+                      <span>•</span>
                       <span className="font-semibold text-blue-700">
                         {formatRupiah(sub.rewardAmount)}
                       </span>

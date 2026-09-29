@@ -33,7 +33,6 @@ export function SaldoView() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-
   const [amountInput, setAmountInput] = useState<string>('');
   const [method, setMethod] = useState<WithdrawalMethod>('DANA');
   const [targetNumber, setTargetNumber] = useState('');
@@ -48,6 +47,7 @@ export function SaldoView() {
 
   useEffect(() => {
     if (!currentUser) return;
+
     const q = query(
       collection(db, 'withdrawals'),
       where('userId', '==', currentUser.uid)
@@ -82,7 +82,6 @@ export function SaldoView() {
       showToast('error', 'Akun Dibatasi', 'Akun Anda sedang dibatasi. Tidak dapat melakukan penarikan.');
       return;
     }
-
     const currentBalance = userProfile?.balance || 0;
     if (currentBalance < minWithdrawal) {
       showToast(
@@ -92,7 +91,6 @@ export function SaldoView() {
       );
       return;
     }
-
     setAmountInput('');
     setFormError('');
     setIsConfirmed(false);
@@ -196,7 +194,6 @@ export function SaldoView() {
         'Penarikan Berhasil Diajukan',
         `Permintaan penarikan ${formatRupiah(numericAmount)} ke ${method} (${cleanedNumber}) sedang diproses admin.`
       );
-
       setShowWithdrawModal(false);
       setTargetNumber('');
       setRecipientName('');
@@ -241,7 +238,7 @@ export function SaldoView() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Kartu Saldo Tersedia - Warna Biru Tua dengan Gradient Biru Muda */}
-        <div className="rounded-[28px] bg-gradient-to-br from-[#1e3a8a] via-[#1d4ed8] to-[#38bdf8] p-6 text-white shadow-xl shadow-blue-900/25 border border-blue-400/20 relative overflow-hidden flex flex-col justify-between">
+        <div className="rounded-[28px] bg-gradient-to-br from-[#1e40af] via-[#2563eb] to-[#38bdf8] p-6 text-white shadow-xl shadow-blue-900/25 border border-blue-400/20 relative overflow-hidden flex flex-col justify-between">
           <div className="absolute -right-6 -top-6 w-36 h-36 rounded-full bg-sky-300/20 blur-xl pointer-events-none" />
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-3">
@@ -260,7 +257,6 @@ export function SaldoView() {
               <strong className="text-white font-bold">{formatRupiah(minWithdrawal)} (Bulat)</strong>
             </div>
           </div>
-
           <div className="mt-4 pt-3 border-t border-white/20 relative z-10">
             <button
               type="button"
@@ -290,7 +286,7 @@ export function SaldoView() {
         <div className="rounded-[28px] bg-white p-6 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Dicairkan</span>
-            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
             </div>
           </div>
@@ -361,7 +357,6 @@ export function SaldoView() {
                       </div>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-3 self-end sm:self-auto">
                     <span className="text-[11px] text-slate-400">
                       {formatIndonesianDateTime(w.createdAt)}
@@ -484,7 +479,7 @@ export function SaldoView() {
                   </div>
                   {hasPerakan ? (
                     <p className="mt-1 text-[11px] text-rose-600 font-semibold flex items-center gap-1">
-                      <span>⚠️ Dilarang perakan (Rp {(parsedAmount % 1000).toLocaleString('id-ID')}). Wajib kelipatan 1.000.</span>
+                      <span>• Dilarang perakan (Rp {(parsedAmount % 1000).toLocaleString('id-ID')}). Wajib kelipatan 1.000.</span>
                     </p>
                   ) : (
                     <p className="mt-1 text-[10px] text-slate-400">
@@ -515,6 +510,7 @@ export function SaldoView() {
                       ))}
                     </div>
                   </div>
+
                   <div className="sm:col-span-7">
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Nomor {method}

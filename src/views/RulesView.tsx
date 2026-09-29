@@ -48,10 +48,10 @@ export function RulesView({ onNavigate }: RulesViewProps) {
           )}
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
                 Panduan Resmi
               </span>
-              <span className="text-xs text-slate-400">·</span>
+              <span className="text-xs text-slate-400">•</span>
               <span className="text-xs text-slate-500 font-medium">
                 {settings.rules?.length || 0} Aturan Wajib
               </span>
@@ -67,7 +67,7 @@ export function RulesView({ onNavigate }: RulesViewProps) {
             <button
               type="button"
               onClick={() => onNavigate('storan')}
-              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2 bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] hover:from-[#1e3a8a] hover:to-sky-500 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-2 cursor-pointer active:scale-95"
             >
               <Send className="w-4 h-4" />
               <span>STOR Gmail Sekarang</span>
@@ -118,7 +118,7 @@ export function RulesView({ onNavigate }: RulesViewProps) {
 
       <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs space-y-4">
         <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-          <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shadow-xs">
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shadow-xs">
             <ClipboardList className="w-5 h-5" />
           </div>
           <div>
@@ -135,9 +135,9 @@ export function RulesView({ onNavigate }: RulesViewProps) {
           {settings.rules?.map((rule, idx) => (
             <div
               key={idx}
-              className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50/70 hover:bg-indigo-50/30 border border-slate-200/70 transition text-sm text-slate-800 leading-relaxed shadow-2xs"
+              className="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50/70 hover:bg-blue-50/30 border border-slate-200/70 transition text-sm text-slate-800 leading-relaxed shadow-2xs"
             >
-              <span className="w-6 h-6 rounded-xl bg-purple-100 text-purple-800 font-extrabold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+              <span className="w-6 h-6 rounded-xl bg-blue-100 text-blue-800 font-extrabold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                 {idx + 1}
               </span>
               <span className="font-medium pt-0.5">{rule}</span>
@@ -198,7 +198,7 @@ export function RulesView({ onNavigate }: RulesViewProps) {
         </div>
       </div>
 
-      <div className="p-6 rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-6 rounded-3xl bg-gradient-to-r from-[#1e40af] via-blue-700 to-sky-700 text-white shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg font-black tracking-tight">
             Sudah Paham dengan Ketentuan?
@@ -212,7 +212,7 @@ export function RulesView({ onNavigate }: RulesViewProps) {
             <button
               type="button"
               onClick={() => onNavigate('storan')}
-              className="px-5 py-2.5 bg-white text-blue-800 font-black rounded-xl text-xs hover:bg-blue-50 transition shadow-md flex items-center gap-2 cursor-pointer"
+              className="px-5 py-2.5 bg-white text-blue-800 font-black rounded-xl text-xs hover:bg-blue-50 transition shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
             >
               <Send className="w-4 h-4" />
               <span>Buka Menu STOR</span>
@@ -221,7 +221,7 @@ export function RulesView({ onNavigate }: RulesViewProps) {
           <button
             type="button"
             onClick={openContactModal}
-            className="px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white font-bold rounded-xl text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white font-bold rounded-xl text-xs border border-white/20 transition flex items-center gap-1.5 cursor-pointer active:scale-95"
           >
             <MessageCircle className="w-4 h-4" />
             <span>Tanya Admin WA</span>

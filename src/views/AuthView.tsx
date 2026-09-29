@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import {
@@ -16,6 +16,7 @@ import {
   AlertCircle,
   HelpCircle,
   Sparkles,
+  Gift,
 } from 'lucide-react';
 import { AZGmailLogo } from '../components/GmailLogo';
 import { motion, AnimatePresence } from 'motion/react';
@@ -36,6 +37,7 @@ export function AuthView() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [referralCodeInput, setReferralCodeInput] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -43,6 +45,18 @@ export function AuthView() {
   const [diagnosis, setDiagnosis] = useState<ErrorDiagnosis | null>(null);
   const [copiedHost, setCopiedHost] = useState(false);
   const [showTroubleshoot, setShowTroubleshoot] = useState(false);
+
+  // Check URL search params for ?ref=CODE
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const refParam = params.get('ref');
+      if (refParam) {
+        setReferralCodeInput(refParam.toUpperCase());
+        setMode('register');
+      }
+    }
+  }, []);
 
   const currentHostname = typeof window !== 'undefined' ? window.location.hostname : '';
 
@@ -84,9 +98,7 @@ export function AuthView() {
         setFormError('Jendela masuk Google ditutup sebelum selesai.');
         return;
       }
-
       console.error('Google Sign-In Error Details:', err);
-
       if (
         errorMessage.includes('auth/operation-not-allowed') ||
         errorMessage.includes('CONFIGURATION_NOT_FOUND') ||
@@ -199,7 +211,7 @@ export function AuthView() {
         await loginUser(cleanEmail, password);
         showToast('success', 'Login Berhasil', 'Selamat datang kembali di AZGmail.');
       } else if (mode === 'register') {
-        await registerUser(name.trim(), cleanEmail, password);
+        await registerUser(name.trim(), cleanEmail, password, referralCodeInput);
         showToast('success', 'Pendaftaran Berhasil', 'Akun kamu siap digunakan untuk mengirim storan.');
       } else if (mode === 'forgot') {
         await resetPassword(cleanEmail);
@@ -209,7 +221,6 @@ export function AuthView() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       let friendlyMsg = 'Terjadi kesalahan, silakan coba lagi.';
-
       if (
         errorMessage.includes('auth/invalid-credential') ||
         errorMessage.includes('auth/wrong-password') ||
@@ -229,7 +240,6 @@ export function AuthView() {
         console.error('Auth error:', errorMessage);
         friendlyMsg = errorMessage;
       }
-
       setFormError(friendlyMsg);
       showToast('error', 'Gagal Masuk', friendlyMsg);
     } finally {
@@ -240,14 +250,14 @@ export function AuthView() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-400/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-sky-400/20 rounded-full blur-3xl pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md px-4 relative z-10">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-[25px] bg-white shadow-lg shadow-blue-500/15 border border-blue-100 mb-3 p-1 overflow-hidden" style={{ borderRadius: '25px' }}>
             <AZGmailLogo className="w-full h-full" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-[#1e40af] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent">
             AZGmail
           </h1>
           <p className="mt-1.5 text-sm text-slate-500 font-medium">
@@ -369,8 +379,6 @@ export function AuthView() {
                   <p className="text-slate-600 mt-1 text-[11px] leading-relaxed">
                     {diagnosis.description}
                   </p>
-
-                  {/* Current domain badge with 1-click copy */}
                   <div className="mt-2.5 p-2 rounded-xl bg-white border border-amber-200/80 flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
@@ -398,8 +406,6 @@ export function AuthView() {
                       )}
                     </button>
                   </div>
-
-                  {/* Step by step fix checklist */}
                   <div className="mt-2.5 space-y-1.5">
                     <span className="text-[11px] font-bold text-amber-900 block">
                       Solusi Perbaikan di Firebase Console:
@@ -508,28 +514,56 @@ export function AuthView() {
 
             <AnimatePresence mode="wait">
               {mode === 'register' && (
-                <motion.div
-                  key="confirm-pass-field"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-1.5"
-                >
-                  <label className="block text-xs font-bold text-slate-700">
-                    Konfirmasi Kata Sandi
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                    <input
-                      type={showPass ? 'text' : 'password'}
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Ketik ulang kata sandi"
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm outline-none transition bg-white"
-                    />
-                  </div>
-                </motion.div>
+                <>
+                  <motion.div
+                    key="confirm-pass-field"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-1.5"
+                  >
+                    <label className="block text-xs font-bold text-slate-700">
+                      Konfirmasi Kata Sandi
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                      <input
+                        type={showPass ? 'text' : 'password'}
+                        required
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Ketik ulang kata sandi"
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm outline-none transition bg-white"
+                      />
+                    </div>
+                  </motion.div>
+
+                  {/* Kode Referral Field */}
+                  <motion.div
+                    key="referral-code-field"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <Gift className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Kode Referral Teman (Opsional)</span>
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-medium">Bisa dikosongkan</span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={referralCodeInput}
+                        onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
+                        placeholder="Contoh: AZG12345"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm font-mono uppercase tracking-wider outline-none transition bg-white"
+                      />
+                    </div>
+                  </motion.div>
+                </>
               )}
             </AnimatePresence>
 
@@ -537,7 +571,7 @@ export function AuthView() {
               <button
                 type="submit"
                 disabled={loading || googleLoading}
-                className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold rounded-xl text-sm shadow-md shadow-blue-500/25 transition disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 px-4 bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] hover:from-[#1e3a8a] hover:to-sky-500 text-white font-bold rounded-xl text-sm shadow-md shadow-blue-500/25 transition disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -580,7 +614,6 @@ export function AuthView() {
               <ChevronDown className="w-4 h-4 text-slate-400" />
             )}
           </button>
-
           {showTroubleshoot && (
             <div className="mt-3 pt-3 border-t border-slate-100 space-y-3 text-slate-600">
               <div className="flex items-start gap-2.5">
@@ -596,7 +629,6 @@ export function AuthView() {
                   </p>
                 </div>
               </div>
-
               <div className="flex items-start gap-2.5">
                 <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] shrink-0 mt-0.5">
                   2
@@ -622,7 +654,6 @@ export function AuthView() {
                   </div>
                 </div>
               </div>
-
               <div className="flex items-start gap-2.5">
                 <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[11px] shrink-0 mt-0.5">
                   3
@@ -636,7 +667,6 @@ export function AuthView() {
                   </p>
                 </div>
               </div>
-
               <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-100 text-[11px] text-blue-900 flex items-start gap-2">
                 <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <span>

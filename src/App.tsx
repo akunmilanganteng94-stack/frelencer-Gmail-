@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
@@ -15,12 +15,17 @@ import { AkunView } from './views/AkunView';
 import { AdminView } from './views/AdminView';
 import { ReferralView } from './views/ReferralView';
 import { AZGmailLogo } from './components/GmailLogo';
+import { captureReferralFromUrl } from './lib/referralHelper';
 import { motion, AnimatePresence } from 'motion/react';
 
 function MainApp() {
   const { currentUser, loading } = useAuth();
   const { settings } = useSettings();
   const [currentTab, setCurrentTab] = useState<NavigationTab>('home');
+
+  useEffect(() => {
+    captureReferralFromUrl();
+  }, []);
 
   if (loading) {
     return (

@@ -15,6 +15,9 @@ export interface UserProfile {
   generatedEmails?: string[];
   referralCode?: string;
   referredBy?: string;
+  referredByCode?: string;
+  inviterName?: string;
+  totalInvited?: number;
   referralRewardMilestones?: number[]; // [20, 40, ...] milestones already awarded
 }
 
@@ -27,6 +30,7 @@ export interface ReferralItem {
   invitedUid: string;
   invitedEmail: string;
   invitedName: string;
+  referralCodeUsed?: string;
   status: ReferralStatus; // 'pending_submission': registered, hasn't had accepted Gmail yet; 'completed': first Gmail accepted
   createdAt: string;
   completedAt?: string;

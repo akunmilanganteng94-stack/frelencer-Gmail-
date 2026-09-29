@@ -94,7 +94,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       await setDoc(doc(db, 'settings', 'general'), merged, { merge: true });
       setSettings(merged);
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, 'settings/general');
+      console.error('Error updating settings document:', error);
+      // Update local state so UI reflects the admin's changes immediately
+      const merged = { ...settings, ...newSettings };
+      setSettings(merged);
+      throw error;
     }
   };
 

@@ -76,6 +76,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               data.referralCode = myCode;
             }
             saveReferralCodeMapping(data.referralCode, user).catch(console.warn);
+
+            // If user has not been referred yet and arrived via referral link/code, link automatically upon login
+            if (!data.referredBy) {
+              const pendingCode = getPendingReferralCode();
+              if (pendingCode) {
+                recordReferralForNewUser(
+                  { uid: user.uid, email: user.email, displayName: data.displayName },
+                  pendingCode
+                ).catch(console.warn);
+              }
+            }
+
             setUserProfile(data);
           } else {
             // Document doesn't exist yet (e.g. newly signed up or social login)

@@ -82,6 +82,8 @@ export interface GmailStockItem {
   status: 'available' | 'used';
   addedAt: string;
   claimedBy?: string;
+  claimedByName?: string;
+  claimedByEmail?: string;
   claimedAt?: string;
   usedAt?: string;
   createdAt?: string;

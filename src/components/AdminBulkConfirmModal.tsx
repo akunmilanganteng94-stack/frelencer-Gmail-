@@ -15,6 +15,7 @@ import { formatRupiah, isEarlierThanTodayWIB, isTodayWIB } from '../lib/utils';
 import { doc, runTransaction } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useToast } from '../context/ToastContext';
+import { processReferralOnSubmissionAccepted } from '../lib/referralHelper';
 
 interface AdminBulkConfirmModalProps {
   isOpen: boolean;
@@ -127,6 +128,7 @@ export function AdminBulkConfirmModal({
     const lines = inputText.split('\n');
     const result: string[] = [];
     const seen = new Set<string>();
+
     for (const rawLine of lines) {
       const line = rawLine.trim();
       if (!line) continue;
@@ -249,6 +251,9 @@ export function AdminBulkConfirmModal({
           }
         });
 
+        // Trigger referral check
+        processReferralOnSubmissionAccepted(sub.userId, sub.id).catch(console.warn);
+
         successCount++;
         totalRewardPaid += sub.rewardAmount || 3000;
       } catch (itemErr: unknown) {
@@ -294,7 +299,7 @@ export function AdminBulkConfirmModal({
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]"
       >
-        <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 p-5 sm:p-6 text-white relative shrink-0">
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 p-5 sm:p-6 text-white relative shrink-0">
           <button
             type="button"
             onClick={onClose}
@@ -481,7 +486,7 @@ export function AdminBulkConfirmModal({
                       setInputText(cekAdminEmails.join('\n'));
                       showToast('success', 'Dimuat', `${cekAdminEmails.length} semua akun Cek Admin dimuat.`);
                     }}
-                    className="px-2.5 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                    className="px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
                   >
                     <CheckCircle2 className="w-3 h-3" />
                     <span>Semua Cek Admin ({cekAdminEmails.length})</span>
@@ -629,7 +634,6 @@ export function AdminBulkConfirmModal({
                   Sebanyak <strong>{processedCount} akun Gmail</strong> telah disetujui. Total saldo sebesar <strong>{formatRupiah(processedTotalReward)}</strong> telah langsung ditambahkan ke masing-masing akun pengguna.
                 </p>
               </div>
-
               <div className="pt-3 flex justify-center gap-2">
                 <button
                   type="button"
@@ -665,7 +669,7 @@ export function AdminBulkConfirmModal({
                   type="button"
                   onClick={handleProceedToPreview}
                   disabled={parsedEmails.length === 0}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-md shadow-indigo-500/20 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-md shadow-blue-500/20 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>Lanjut Tinjau ({parsedEmails.length} Akun)</span>
                 </button>

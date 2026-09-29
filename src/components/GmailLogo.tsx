@@ -51,7 +51,7 @@ export function GmailBlueLogo({ className = 'w-5 h-5' }: { className?: string })
   );
 }
 
-export function GmailLogo({ className = 'w-5 h-5', variant = 'multicolor' }: GmailLogoProps) {
+export function GmailLogo({ className = 'w-5 h-5', variant = 'blue' }: GmailLogoProps) {
   if (variant === 'custom') {
     return <AZGmailLogo className={className} />;
   }

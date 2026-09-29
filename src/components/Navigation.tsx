@@ -36,11 +36,10 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
               >
                 <AZGmailLogo className="w-full h-full" />
               </div>
-              <span className="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent leading-none select-none">
+              <span className="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-[#1e40af] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent leading-none select-none">
                 AZGmail
               </span>
             </button>
-
             <div className="hidden sm:flex items-center gap-1.5 ml-3 px-2.5 py-1 rounded-full text-xs font-semibold border shadow-xs transition-colors bg-white">
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -68,8 +67,8 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
                 onClick={() => onSelectTab('admin')}
                 className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition cursor-pointer ${
                   currentTab === 'admin'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
+                    ? 'bg-blue-700 text-white shadow-sm'
+                    : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
                 }`}
               >
                 <ShieldCheck className="w-4 h-4" />
@@ -82,7 +81,7 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
               className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-xl hover:bg-slate-100 transition text-slate-700 cursor-pointer"
               title="Pengaturan Akun & Profil"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#1e40af] via-[#2563eb] to-[#38bdf8] text-white flex items-center justify-center font-bold text-xs shadow-xs">
                 {userProfile?.displayName ? userProfile.displayName.charAt(0).toUpperCase() : 'U'}
               </div>
               <span className="hidden lg:inline text-xs font-semibold text-slate-800 max-w-[120px] truncate">
@@ -149,7 +148,7 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
             </span>
           </button>
 
-          {/* Center Elevated Button */}
+          {/* Center Elevated Button: Logo STOR dengan biru tua gak terlalu tua & gradient biru muda */}
           <div className="flex-1 flex flex-col items-center justify-center -mt-7 sm:-mt-8 relative">
             <div className="absolute top-1 w-14 h-14 rounded-full bg-blue-500/35 blur-md -z-10 pointer-events-none" />
             <button
@@ -157,8 +156,8 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
               onClick={() => onSelectTab('storan')}
               className={`w-14 h-14 rounded-full flex items-center justify-center transition-all transform active:scale-95 cursor-pointer border-4 border-white ${
                 currentTab === 'storan'
-                  ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-500/40 scale-105 ring-2 ring-blue-100'
-                  : 'bg-gradient-to-tr from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 hover:scale-105'
+                  ? 'bg-gradient-to-tr from-[#1e40af] via-[#2563eb] to-[#38bdf8] text-white shadow-xl shadow-blue-500/40 scale-105 ring-2 ring-blue-200'
+                  : 'bg-gradient-to-tr from-[#1e40af] via-[#2563eb] to-[#38bdf8] text-white shadow-lg shadow-blue-500/30 hover:scale-105'
               }`}
               title="Setor Akun Gmail"
             >
@@ -166,7 +165,7 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
             </button>
             <span
               className={`text-[11px] leading-none mt-1.5 tracking-tight font-black ${
-                currentTab === 'storan' ? 'text-blue-600' : 'text-slate-500'
+                currentTab === 'storan' ? 'text-blue-700' : 'text-slate-500'
               }`}
             >
               STOR

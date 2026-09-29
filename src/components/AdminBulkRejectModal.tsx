@@ -115,6 +115,7 @@ export function AdminBulkRejectModal({
     const lines = inputText.split('\n');
     const result: string[] = [];
     const seen = new Set<string>();
+
     for (const rawLine of lines) {
       const line = rawLine.trim();
       if (!line) continue;
@@ -208,6 +209,7 @@ export function AdminBulkRejectModal({
     for (const item of matchAnalysis.readyToReject) {
       const sub = item.submission;
       const subRef = doc(db, 'submissions', sub.id);
+
       try {
         await updateDoc(subRef, {
           status: 'Ditolak',
@@ -455,7 +457,6 @@ export function AdminBulkRejectModal({
                     className="w-full p-3 text-xs rounded-xl border border-slate-300 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20 outline-none bg-white shadow-2xs"
                   />
                 </div>
-
                 <div>
                   <span className="text-[11px] font-bold text-slate-500 block mb-1.5">
                     Pilih Template Alasan Cepat:
@@ -604,7 +605,6 @@ export function AdminBulkRejectModal({
                   <span className="font-bold text-slate-800">{rejectionReason}</span>
                 </div>
               </div>
-
               <div className="pt-3 flex justify-center gap-2">
                 <button
                   type="button"

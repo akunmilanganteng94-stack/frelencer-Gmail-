@@ -9,14 +9,13 @@ import {
 import { useToast } from '../context/ToastContext';
 import { doc, runTransaction, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { processReferralOnSubmissionAccepted } from '../lib/referralHelper';
 import {
-  Mail,
   Copy,
   Check,
   Search,
   CheckCircle2,
   XCircle,
-  KeyRound,
   ListCheck,
   ListX,
   History,
@@ -25,7 +24,6 @@ import {
   ClipboardCheck,
   Loader2,
   RotateCcw,
-  Sparkles,
 } from 'lucide-react';
 
 interface AdminAllCekAdminTabProps {
@@ -107,14 +105,12 @@ export function AdminAllCekAdminTab({
       const userName = (sub.userName || '').toLowerCase();
       const userEmail = (sub.userEmail || '').toLowerCase();
       const q = searchQuery.toLowerCase().trim();
-
       const matchesSearch = !q || email.includes(q) || userName.includes(q) || userEmail.includes(q);
       const matchesType = typeFilter === 'All' || getSubmissionType(sub) === typeFilter;
       const matchesTiming =
         timingFilter === 'All' ||
         (timingFilter === 'kemarin' && isEarlierThanTodayWIB(sub.createdAt)) ||
         (timingFilter === 'hari_ini' && isTodayWIB(sub.createdAt));
-
       return matchesSearch && matchesType && matchesTiming;
     });
   }, [allCekAdminSubs, searchQuery, typeFilter, timingFilter]);
@@ -193,7 +189,6 @@ export function AdminAllCekAdminTab({
 
     setIsBulkConfirming(true);
     setBulkConfirmProgress({ current: 0, total: targetSubs.length });
-
     let successCount = 0;
     let totalPaid = 0;
 
@@ -207,7 +202,6 @@ export function AdminAllCekAdminTab({
         await runTransaction(db, async (transaction) => {
           const subDoc = await transaction.get(subRef);
           if (!subDoc.exists()) return;
-
           const userDoc = await transaction.get(userRef);
 
           transaction.update(subRef, {
@@ -241,6 +235,8 @@ export function AdminAllCekAdminTab({
           }
         });
 
+        processReferralOnSubmissionAccepted(sub.userId, sub.id).catch(console.warn);
+
         successCount++;
         totalPaid += reward;
       } catch (err) {
@@ -252,7 +248,6 @@ export function AdminAllCekAdminTab({
     setIsBulkConfirming(false);
     setShowConfirmDirectModal(false);
     setSelectedIds(new Set());
-
     showToast(
       'success',
       'Konfirmasi Berhasil',
@@ -385,7 +380,6 @@ export function AdminAllCekAdminTab({
             <Copy className="w-3.5 h-3.5 text-indigo-600" />
             <span>Salin Cepat Alamat Gmail:</span>
           </span>
-
           <button
             type="button"
             onClick={() => handleCopyAllEmails()}
@@ -396,7 +390,6 @@ export function AdminAllCekAdminTab({
             <Copy className="w-3 h-3" />
             <span>Semua Gmail ({allCekAdminSubs.length})</span>
           </button>
-
           <button
             type="button"
             onClick={() => handleCopyAllEmails('khusus')}
@@ -407,7 +400,6 @@ export function AdminAllCekAdminTab({
             <Zap className="w-3 h-3 text-indigo-600" />
             <span>Khusus ({khususCount})</span>
           </button>
-
           <button
             type="button"
             onClick={() => handleCopyAllEmails('bebas')}
@@ -572,7 +564,6 @@ export function AdminAllCekAdminTab({
                   : 'Coba ubah kata kunci pencarian atau reset filter tipe/waktu.'}
               </p>
             </div>
-
             {allCekAdminSubs.length === 0 && (
               <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
                 {onOpenBulkCheckModal && (
@@ -651,11 +642,9 @@ export function AdminAllCekAdminTab({
                           className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
-
                       <td className="px-3 py-3.5 text-center text-slate-400 font-mono">
                         {idx + 1}
                       </td>
-
                       <td className="px-4 py-3.5">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
@@ -675,7 +664,6 @@ export function AdminAllCekAdminTab({
                               )}
                             </button>
                           </div>
-
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span
                               className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
@@ -686,11 +674,9 @@ export function AdminAllCekAdminTab({
                             >
                               {type === 'khusus' ? 'Khusus 3k' : 'Bebas 2.7k'}
                             </span>
-
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
                               Cek Admin
                             </span>
-
                             {isKemarin && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
                                 Kemarin
@@ -699,7 +685,6 @@ export function AdminAllCekAdminTab({
                           </div>
                         </div>
                       </td>
-
                       <td className="px-4 py-3.5 font-mono">
                         <div className="flex items-center gap-1.5">
                           <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-bold">
@@ -719,7 +704,6 @@ export function AdminAllCekAdminTab({
                           </button>
                         </div>
                       </td>
-
                       <td className="px-4 py-3.5">
                         <div className="text-slate-900 font-bold truncate max-w-[150px]">
                           {sub.userName || 'Freelancer'}
@@ -728,14 +712,12 @@ export function AdminAllCekAdminTab({
                           {sub.userEmail}
                         </div>
                       </td>
-
                       <td className="px-4 py-3.5 text-slate-500 text-[11px]">
                         <div>{formatIndonesianDateTime(sub.checkedAt || sub.createdAt)}</div>
                         <span className="text-[10px] text-slate-400">
                           Disetor: {formatIndonesianDateTime(sub.createdAt)}
                         </span>
                       </td>
-
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           {/* TOMBOL TERIMA (KONFIRMASI) */}
@@ -753,7 +735,6 @@ export function AdminAllCekAdminTab({
                             )}
                             <span>Terima</span>
                           </button>
-
                           {/* TOMBOL TOLAK */}
                           <button
                             type="button"
@@ -765,7 +746,6 @@ export function AdminAllCekAdminTab({
                             <XCircle className="w-3.5 h-3.5" />
                             <span>Tolak</span>
                           </button>
-
                           {/* KEMBALIKAN KE PENDING */}
                           <button
                             type="button"

@@ -18,6 +18,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
   const formattedNumber = rawNumber.startsWith('62')
     ? `+62 ${rawNumber.substring(2, 5)}-${rawNumber.substring(5, 9)}-${rawNumber.substring(9)}`
     : rawNumber;
+
   const waUrl = `https://wa.me/${rawNumber}?text=${encodeURIComponent(
     'Halo Admin AZGmail, saya ingin bertanya terkait storan akun Gmail & saldo saya.'
   )}`;
@@ -209,7 +210,7 @@ export function ContactAdminFloatingButton({
       <button
         type="button"
         onClick={onClickChannel}
-        className="pointer-events-auto px-3.5 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full shadow-lg shadow-blue-500/25 flex items-center gap-2 font-bold text-xs sm:text-sm transition transform hover:scale-105 active:scale-95 border border-white/20 cursor-pointer"
+        className="pointer-events-auto px-3.5 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-[#1e40af] via-blue-700 to-sky-600 hover:from-blue-800 hover:to-sky-700 text-white rounded-full shadow-lg shadow-blue-500/25 flex items-center gap-2 font-bold text-xs sm:text-sm transition transform hover:scale-105 active:scale-95 border border-white/20 cursor-pointer"
         title="Buka Saluran Informasi WhatsApp Resmi"
       >
         <Megaphone className="w-4 h-4 animate-bounce shrink-0" />

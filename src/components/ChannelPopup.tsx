@@ -58,7 +58,7 @@ export function ChannelPopup({ isOpen: controlledIsOpen, onClose }: ChannelPopup
             className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-blue-100 overflow-hidden text-slate-800"
           >
             {/* Header banner */}
-            <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-6 text-white relative">
+            <div className="bg-gradient-to-r from-[#1e40af] via-blue-700 to-sky-600 p-6 text-white relative">
               <button
                 type="button"
                 onClick={handleDismiss}
@@ -79,7 +79,6 @@ export function ChannelPopup({ isOpen: controlledIsOpen, onClose }: ChannelPopup
               <p className="text-slate-600 text-sm leading-relaxed">
                 Jangan lewatkan informasi terbaru, update layanan, jam buka operasional, dan pengumuman penting seputar storan & penarikan saldo.
               </p>
-
               <div className="bg-blue-50/80 rounded-xl p-3 border border-blue-100 text-xs text-blue-800 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
                 <span>Update status storan realtime & info promo rate khusus anggota saluran!</span>

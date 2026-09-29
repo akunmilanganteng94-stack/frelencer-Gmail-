@@ -285,6 +285,7 @@ export function AdminAllStorTab({
               <span>Cek Bulk</span>
             </button>
           )}
+
           <button
             type="button"
             onClick={onOpenBulkConfirmModal}
@@ -293,6 +294,7 @@ export function AdminAllStorTab({
             <ListCheck className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>Terima Bulk</span>
           </button>
+
           {onOpenBulkRejectModal && (
             <button
               type="button"
@@ -318,7 +320,7 @@ export function AdminAllStorTab({
           </div>
           <div className="text-2xl font-black text-indigo-900 mt-1">{allKhususList.length}</div>
           <div className="text-[11px] text-indigo-700 mt-0.5 font-medium">
-            {pendingYesterdayKhusus.length} kemarin · {pendingTodayKhusus.length} hari ini
+            {pendingYesterdayKhusus.length} kemarin • {pendingTodayKhusus.length} hari ini
           </div>
         </div>
 
@@ -333,7 +335,7 @@ export function AdminAllStorTab({
           </div>
           <div className="text-2xl font-black text-teal-900 mt-1">{allBebasList.length}</div>
           <div className="text-[11px] text-teal-700 mt-0.5 font-medium">
-            {pendingYesterdayBebas.length} kemarin · {pendingTodayBebas.length} hari ini
+            {pendingYesterdayBebas.length} kemarin • {pendingTodayBebas.length} hari ini
           </div>
         </div>
 
@@ -558,6 +560,7 @@ export function AdminAllStorTab({
             <Layers className="w-4 h-4 text-indigo-600" />
             <span>Pisahkan Tipe Gmail STOR:</span>
           </div>
+
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -575,6 +578,7 @@ export function AdminAllStorTab({
                 {submissions.length}
               </span>
             </button>
+
             <button
               type="button"
               onClick={() => setTypeFilter('khusus')}
@@ -592,6 +596,7 @@ export function AdminAllStorTab({
                 {allKhususList.length}
               </span>
             </button>
+
             <button
               type="button"
               onClick={() => setTypeFilter('bebas')}

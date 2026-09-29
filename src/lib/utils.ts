@@ -1,5 +1,5 @@
 /**
- * Utility functions for Freelancer Storan
+ * Utility functions for Freelancer Storan AZGmail
  */
 
 export function formatRupiah(number: number): string {

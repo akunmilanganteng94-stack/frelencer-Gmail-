@@ -199,78 +199,85 @@ export async function findInviterByCode(
     }
   }
 
-  // 2. Query users collection (if currently signed in or rules permit)
-  if (auth.currentUser) {
-    try {
-      const usersRef = collection(db, 'users');
+  // 2. Query users collection
+  try {
+    const usersRef = collection(db, 'users');
 
-      // Check by referralCode field
-      for (const v of variants) {
-        try {
-          const qRef = query(usersRef, where('referralCode', '==', v));
-          const refSnap = await getDocs(qRef);
-          if (!refSnap.empty) {
-            const uDoc = refSnap.docs[0];
-            const uData = uDoc.data();
-            const resolvedCode = uData.referralCode || v;
-            // Backfill mapping to referral_codes for next time
-            saveReferralCodeMapping(resolvedCode, {
-              uid: uDoc.id,
-              email: uData?.email,
-              displayName: uData?.displayName,
-            }).catch(console.warn);
-
-            return {
-              uid: uDoc.id,
-              email: uData?.email || '',
-              displayName: uData?.displayName || uData?.email?.split('@')[0] || 'Teman Pengundang',
-              referralCode: resolvedCode,
-            };
-          }
-        } catch {}
-      }
-
-      // Check if code matches a UID directly
+    // Check by referralCode field
+    for (const v of variants) {
       try {
-        const directUserSnap = await getDoc(doc(db, 'users', cleanCode));
-        if (directUserSnap.exists()) {
-          const uData = directUserSnap.data();
-          const myCode = uData.referralCode || generateReferralCode(directUserSnap.id);
+        const qRef = query(usersRef, where('referralCode', '==', v));
+        const refSnap = await getDocs(qRef);
+        if (!refSnap.empty) {
+          const uDoc = refSnap.docs[0];
+          const uData = uDoc.data();
+          const resolvedCode = uData.referralCode || v;
+
+          // Backfill mapping to referral_codes for next time
+          saveReferralCodeMapping(resolvedCode, {
+            uid: uDoc.id,
+            email: uData?.email,
+            displayName: uData?.displayName,
+          }).catch(console.warn);
+
           return {
-            uid: directUserSnap.id,
+            uid: uDoc.id,
             email: uData?.email || '',
             displayName: uData?.displayName || uData?.email?.split('@')[0] || 'Teman Pengundang',
-            referralCode: myCode,
+            referralCode: resolvedCode,
           };
         }
       } catch {}
+    }
 
-      // Fallback: match by generated code from UID
-      const allUsersSnap = await getDocs(usersRef);
-      for (const uDoc of allUsersSnap.docs) {
-        const uData = uDoc.data();
-        const code = (uData.referralCode || generateReferralCode(uDoc.id)).toUpperCase();
-        for (const v of variants) {
-          if (code === v || uDoc.id.toUpperCase() === v || (uData.email && uData.email.toUpperCase() === v)) {
-            // Save mapping
-            saveReferralCodeMapping(code, {
-              uid: uDoc.id,
-              email: uData?.email,
-              displayName: uData?.displayName,
-            }).catch(console.warn);
+    // Check if code matches a UID directly
+    try {
+      const directUserSnap = await getDoc(doc(db, 'users', cleanCode));
+      if (directUserSnap.exists()) {
+        const uData = directUserSnap.data();
+        const myCode = uData.referralCode || generateReferralCode(directUserSnap.id);
+        return {
+          uid: directUserSnap.id,
+          email: uData?.email || '',
+          displayName: uData?.displayName || uData?.email?.split('@')[0] || 'Teman Pengundang',
+          referralCode: myCode,
+        };
+      }
+    } catch {}
 
-            return {
-              uid: uDoc.id,
-              email: uData?.email || '',
-              displayName: uData?.displayName || uData?.email?.split('@')[0] || 'Teman Pengundang',
-              referralCode: code,
-            };
-          }
+    // Fallback: search all users for matching generated referral code or prefix
+    const allUsersSnap = await getDocs(usersRef);
+    for (const uDoc of allUsersSnap.docs) {
+      const uData = uDoc.data();
+      const code = (uData.referralCode || generateReferralCode(uDoc.id)).toUpperCase();
+      const userUidClean = uDoc.id.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+      for (const v of variants) {
+        const vClean = v.startsWith('AZG') ? v.slice(3) : v;
+        if (
+          code === v ||
+          uDoc.id.toUpperCase() === v ||
+          userUidClean.startsWith(vClean) ||
+          (uData.email && uData.email.toUpperCase() === v)
+        ) {
+          // Save mapping
+          saveReferralCodeMapping(code, {
+            uid: uDoc.id,
+            email: uData?.email,
+            displayName: uData?.displayName,
+          }).catch(console.warn);
+
+          return {
+            uid: uDoc.id,
+            email: uData?.email || '',
+            displayName: uData?.displayName || uData?.email?.split('@')[0] || 'Teman Pengundang',
+            referralCode: code,
+          };
         }
       }
-    } catch (err) {
-      console.warn('Notice querying users for referral code:', err);
     }
+  } catch (err) {
+    console.warn('Notice querying users for referral code:', err);
   }
 
   return null;
@@ -309,26 +316,33 @@ export async function recordReferralForNewUser(
           createdAt: new Date().toISOString(),
         },
         { merge: true }
-      ).catch(console.warn);
+      );
 
-      // 2. Update new user document with referredBy and inviter details
+      // 2. Update new user document with referredBy and inviter details using setDoc with merge: true!
       const userDocRef = doc(db, 'users', newUser.uid);
-      await updateDoc(userDocRef, {
-        referredBy: inviter.uid,
-        referredByCode: targetCode,
-        inviterName: inviter.displayName,
-      }).catch(console.warn);
+      await setDoc(
+        userDocRef,
+        {
+          referredBy: inviter.uid,
+          referredByCode: targetCode,
+          inviterName: inviter.displayName,
+        },
+        { merge: true }
+      );
 
-      // Note: totalInvited will be officially updated once this user's first STOR is accepted by admin.
       clearPendingReferralCode();
       return true;
     } else {
       // Inviter not found or self-referral, but still save the code used on user doc
       try {
         const userDocRef = doc(db, 'users', newUser.uid);
-        await updateDoc(userDocRef, {
-          referredByCode: targetCode,
-        });
+        await setDoc(
+          userDocRef,
+          {
+            referredByCode: targetCode,
+          },
+          { merge: true }
+        );
       } catch {}
       clearPendingReferralCode();
       return false;
@@ -337,6 +351,100 @@ export async function recordReferralForNewUser(
     console.warn('Failed to record referral for new user:', err);
     return false;
   }
+}
+
+/**
+ * Auto-repair & link any unlinked referred users for an inviter.
+ * This guarantees that if user B registered with referral code of user A,
+ * but was not linked due to any timing/latency, it gets fixed immediately.
+ */
+export async function syncAndRepairReferralsForInviter(
+  inviterUid: string,
+  inviterCode: string,
+  inviterName?: string,
+  inviterEmail?: string
+): Promise<number> {
+  if (!inviterUid) return 0;
+  const cleanCode = normalizeReferralCode(inviterCode);
+  const strippedCode = cleanCode.startsWith('AZG') ? cleanCode.slice(3) : cleanCode;
+  let repairedCount = 0;
+
+  try {
+    const usersRef = collection(db, 'users');
+    const referralsRef = collection(db, 'referrals');
+
+    // Find all users who either:
+    // a) have referredBy == inviterUid
+    // b) have referredByCode matching inviter's code
+    const codesToMatch = [cleanCode, strippedCode, `AZG${strippedCode}`, inviterUid];
+
+    const usersSnap = await getDocs(usersRef);
+    for (const uDoc of usersSnap.docs) {
+      if (uDoc.id === inviterUid) continue;
+      const uData = uDoc.data();
+      const userReferredBy = uData.referredBy;
+      const userReferredByCode = normalizeReferralCode(uData.referredByCode || '');
+
+      const isMatchByUid = userReferredBy === inviterUid;
+      const isMatchByCode = userReferredByCode && codesToMatch.includes(userReferredByCode);
+
+      if (isMatchByUid || isMatchByCode) {
+        // Ensure user document has referredBy set
+        if (userReferredBy !== inviterUid) {
+          await setDoc(
+            doc(db, 'users', uDoc.id),
+            {
+              referredBy: inviterUid,
+              referredByCode: cleanCode,
+              inviterName: inviterName || 'Teman',
+            },
+            { merge: true }
+          );
+        }
+
+        // Check if referral doc exists in referrals collection
+        const refDocRef = doc(referralsRef, `${inviterUid}_${uDoc.id}`);
+        const refDocSnap = await getDoc(refDocRef);
+
+        if (!refDocSnap.exists()) {
+          // Check if user has already submitted a successful storan
+          let initialStatus: 'pending_submission' | 'completed' = 'pending_submission';
+          try {
+            const subQ = query(
+              collection(db, 'submissions'),
+              where('userId', '==', uDoc.id),
+              where('status', '==', 'Diterima')
+            );
+            const subSnap = await getDocs(subQ);
+            if (!subSnap.empty) {
+              initialStatus = 'completed';
+            }
+          } catch {}
+
+          await setDoc(
+            refDocRef,
+            {
+              inviterUid,
+              inviterEmail: inviterEmail || '',
+              inviterName: inviterName || 'Teman Pengundang',
+              invitedUid: uDoc.id,
+              invitedEmail: uData.email || '',
+              invitedName: uData.displayName || uData.email?.split('@')[0] || 'Freelancer',
+              referralCodeUsed: cleanCode,
+              status: initialStatus,
+              createdAt: uData.createdAt || new Date().toISOString(),
+            },
+            { merge: true }
+          );
+          repairedCount++;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Notice syncing/repairing referrals for inviter:', err);
+  }
+
+  return repairedCount;
 }
 
 /**
@@ -361,16 +469,14 @@ export async function applyReferralCodeForExistingUser(
       return { success: false, message: 'Data pengguna tidak ditemukan.' };
     }
     const userData = userSnap.data();
-
     if (userData.referredBy) {
       return { success: false, message: 'Anda sudah pernah menggunakan kode referral sebelumnya.' };
     }
 
     const inviter = await findInviterByCode(targetCode);
     if (!inviter) {
-      return { success: false, message: `Kode referral "${targetCode}" tidak ditemukan.` };
+      return { success: false, message: `Kode referral "${targetCode}" tidak ditemukan. Pastikan kode sudah benar.` };
     }
-
     if (inviter.uid === userId) {
       return { success: false, message: 'Anda tidak dapat menggunakan kode referral milik Anda sendiri.' };
     }
@@ -378,6 +484,21 @@ export async function applyReferralCodeForExistingUser(
     // Write referral doc
     const referralsRef = collection(db, 'referrals');
     const referralDocRef = doc(referralsRef, `${inviter.uid}_${userId}`);
+
+    // Check if this user already had an accepted submission
+    let initialStatus: 'pending_submission' | 'completed' = 'pending_submission';
+    try {
+      const subQ = query(
+        collection(db, 'submissions'),
+        where('userId', '==', userId),
+        where('status', '==', 'Diterima')
+      );
+      const subSnap = await getDocs(subQ);
+      if (!subSnap.empty) {
+        initialStatus = 'completed';
+      }
+    } catch {}
+
     await setDoc(
       referralDocRef,
       {
@@ -388,25 +509,22 @@ export async function applyReferralCodeForExistingUser(
         invitedEmail: userData.email || '',
         invitedName: userData.displayName || 'Freelancer',
         referralCodeUsed: targetCode,
-        status: 'pending_submission',
+        status: initialStatus,
         createdAt: new Date().toISOString(),
       },
       { merge: true }
     );
 
     // Update user doc
-    await updateDoc(userDocRef, {
-      referredBy: inviter.uid,
-      referredByCode: targetCode,
-      inviterName: inviter.displayName,
-    });
-
-    // Increment inviter's totalInvited
-    try {
-      await updateDoc(doc(db, 'users', inviter.uid), {
-        totalInvited: increment(1),
-      });
-    } catch {}
+    await setDoc(
+      userDocRef,
+      {
+        referredBy: inviter.uid,
+        referredByCode: targetCode,
+        inviterName: inviter.displayName,
+      },
+      { merge: true }
+    );
 
     return {
       success: true,
@@ -441,12 +559,10 @@ export async function processReferralOnSubmissionAccepted(
     const refSnap = await getDocs(q);
 
     let inviterUid = '';
-
     if (!refSnap.empty) {
       for (const refDoc of refSnap.docs) {
         const referralData = refDoc.data();
         inviterUid = referralData.inviterUid;
-
         if (referralData.status !== 'completed') {
           await updateDoc(doc(db, 'referrals', refDoc.id), {
             status: 'completed',
@@ -502,6 +618,7 @@ export async function processReferralOnSubmissionAccepted(
       const inviterDoc = await transaction.get(inviterUserRef);
       if (!inviterDoc.exists()) return;
       const inviterData = inviterDoc.data();
+
       const currentMilestones: number[] = Array.isArray(inviterData.referralRewardMilestones)
         ? inviterData.referralRewardMilestones
         : [];

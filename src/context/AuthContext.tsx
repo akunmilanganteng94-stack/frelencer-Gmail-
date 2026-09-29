@@ -11,9 +11,10 @@ import {
   updateProfile,
   updatePassword,
 } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { auth, db, handleFirestoreError } from '../lib/firebase';
 import { UserProfile, OperationType } from '../types';
+import { generateReferralCode } from '../lib/utils';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -21,7 +22,7 @@ interface AuthContextType {
   isAdmin: boolean;
   loading: boolean;
   loginUser: (email: string, pass: string) => Promise<void>;
-  registerUser: (name: string, email: string, pass: string) => Promise<void>;
+  registerUser: (name: string, email: string, pass: string, referralCodeInput?: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logoutUser: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -55,10 +56,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
+            // Ensure user has a referral code
+            if (!data.referralCode) {
+              const myCode = generateReferralCode(user.uid);
+              updateDoc(userDocRef, { referralCode: myCode }).catch(console.warn);
+              data.referralCode = myCode;
+            }
             setUserProfile(data);
           } else {
             // Document doesn't exist yet (e.g. newly signed up or social login)
             const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
+            const myCode = generateReferralCode(user.uid);
             const newProfile: UserProfile = {
               uid: user.uid,
               email: user.email || '',
@@ -70,6 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               pendingWithdrawn: 0,
               status: 'active',
               createdAt: new Date().toISOString(),
+              referralCode: myCode,
+              referralRewardMilestones: [],
             };
             setDoc(userDocRef, newProfile).catch((e) => {
               console.warn('Initial user profile sync notice:', e);
@@ -81,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (err) => {
           console.warn('User doc snapshot sync notice (using local profile while rules sync):', err?.message || err);
           const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
+          const myCode = generateReferralCode(user.uid);
           setUserProfile((prev) => prev || {
             uid: user.uid,
             email: user.email || '',
@@ -92,11 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             pendingWithdrawn: 0,
             status: 'active',
             createdAt: new Date().toISOString(),
+            referralCode: myCode,
+            referralRewardMilestones: [],
           });
           setLoading(false);
         }
       );
-
       return () => unsubscribeDoc();
     });
 
@@ -112,11 +124,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email.trim(), pass);
   };
 
-  const registerUser = async (name: string, email: string, pass: string) => {
+  const registerUser = async (name: string, email: string, pass: string, referralCodeInput?: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), pass);
     const user = userCredential.user;
     await updateProfile(user, { displayName: name.trim() });
     const isDefaultAdmin = ADMIN_EMAILS.includes(email.toLowerCase().trim());
+    const myReferralCode = generateReferralCode(user.uid);
+
+    let referredByUid: string | undefined = undefined;
+    let inviterData: { uid: string; email: string } | null = null;
+
+    if (referralCodeInput && referralCodeInput.trim()) {
+      try {
+        const cleanRefCode = referralCodeInput.trim().toUpperCase();
+        const usersRef = collection(db, 'users');
+        const qRef = query(usersRef, where('referralCode', '==', cleanRefCode));
+        const refSnap = await getDocs(qRef);
+        if (!refSnap.empty) {
+          const inviterDoc = refSnap.docs[0];
+          if (inviterDoc.id !== user.uid) {
+            referredByUid = inviterDoc.id;
+            inviterData = {
+              uid: inviterDoc.id,
+              email: inviterDoc.data()?.email || '',
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('Could not verify referral code on registration:', e);
+      }
+    }
+
     const profile: UserProfile = {
       uid: user.uid,
       email: email.trim(),
@@ -128,8 +166,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       pendingWithdrawn: 0,
       status: 'active',
       createdAt: new Date().toISOString(),
+      referralCode: myReferralCode,
+      referredBy: referredByUid,
+      referralRewardMilestones: [],
     };
+
     await setDoc(doc(db, 'users', user.uid), profile);
+
+    if (referredByUid && inviterData) {
+      try {
+        await addDoc(collection(db, 'referrals'), {
+          inviterUid: inviterData.uid,
+          inviterEmail: inviterData.email,
+          invitedUid: user.uid,
+          invitedEmail: email.trim(),
+          invitedName: name.trim(),
+          status: 'pending_submission',
+          createdAt: new Date().toISOString(),
+        });
+      } catch (refErr) {
+        console.warn('Could not record referral item:', refErr);
+      }
+    }
+
     setUserProfile(profile);
   };
 
@@ -140,6 +199,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const user = result.user;
     const userDocRef = doc(db, 'users', user.uid);
     const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
+    const myCode = generateReferralCode(user.uid);
+
     try {
       const docSnap = await getDoc(userDocRef);
       if (!docSnap.exists()) {
@@ -154,16 +215,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           pendingWithdrawn: 0,
           status: 'active',
           createdAt: new Date().toISOString(),
+          referralCode: myCode,
+          referralRewardMilestones: [],
         };
         await setDoc(userDocRef, profile);
         setUserProfile(profile);
       } else {
         const existing = docSnap.data() as UserProfile;
+        if (!existing.referralCode) {
+          await updateDoc(userDocRef, { referralCode: myCode });
+          existing.referralCode = myCode;
+        }
         setUserProfile(existing);
       }
     } catch (fsErr) {
       console.warn('Profile doc fetch/write issue during Google sign-in:', fsErr);
-      // Fallback: set basic profile in context so user is logged in
       setUserProfile({
         uid: user.uid,
         email: user.email || '',
@@ -175,6 +241,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         pendingWithdrawn: 0,
         status: 'active',
         createdAt: new Date().toISOString(),
+        referralCode: myCode,
+        referralRewardMilestones: [],
       });
     }
   };

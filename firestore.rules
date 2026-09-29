@@ -68,5 +68,12 @@ service cloud.firestore {
       allow update: if isSignedIn();
       allow delete: if isAdmin();
     }
+
+    // Referral codes lookup collection (public read so invitation links can resolve)
+    match /referral_codes/{code} {
+      allow read: if true;
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
   }
 }

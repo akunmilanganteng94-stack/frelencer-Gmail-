@@ -10,7 +10,6 @@ import { useToast } from '../context/ToastContext';
 import {
   Mail,
   Copy,
-  Check,
   Search,
   CheckCircle2,
   Clock,
@@ -28,6 +27,7 @@ import {
   Eye,
   ClipboardCheck,
   ArrowRight,
+  Check,
 } from 'lucide-react';
 
 interface AdminAllStorTabProps {
@@ -285,7 +285,6 @@ export function AdminAllStorTab({
               <span>Cek Bulk</span>
             </button>
           )}
-
           <button
             type="button"
             onClick={onOpenBulkConfirmModal}
@@ -294,7 +293,6 @@ export function AdminAllStorTab({
             <ListCheck className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>Terima Bulk</span>
           </button>
-
           {onOpenBulkRejectModal && (
             <button
               type="button"
@@ -560,7 +558,6 @@ export function AdminAllStorTab({
             <Layers className="w-4 h-4 text-indigo-600" />
             <span>Pisahkan Tipe Gmail STOR:</span>
           </div>
-
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -578,7 +575,6 @@ export function AdminAllStorTab({
                 {submissions.length}
               </span>
             </button>
-
             <button
               type="button"
               onClick={() => setTypeFilter('khusus')}
@@ -596,7 +592,6 @@ export function AdminAllStorTab({
                 {allKhususList.length}
               </span>
             </button>
-
             <button
               type="button"
               onClick={() => setTypeFilter('bebas')}

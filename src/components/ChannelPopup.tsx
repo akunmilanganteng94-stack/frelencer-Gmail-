@@ -79,6 +79,7 @@ export function ChannelPopup({ isOpen: controlledIsOpen, onClose }: ChannelPopup
               <p className="text-slate-600 text-sm leading-relaxed">
                 Jangan lewatkan informasi terbaru, update layanan, jam buka operasional, dan pengumuman penting seputar storan & penarikan saldo.
               </p>
+
               <div className="bg-blue-50/80 rounded-xl p-3 border border-blue-100 text-xs text-blue-800 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
                 <span>Update status storan realtime & info promo rate khusus anggota saluran!</span>

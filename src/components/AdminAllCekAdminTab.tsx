@@ -105,12 +105,14 @@ export function AdminAllCekAdminTab({
       const userName = (sub.userName || '').toLowerCase();
       const userEmail = (sub.userEmail || '').toLowerCase();
       const q = searchQuery.toLowerCase().trim();
+
       const matchesSearch = !q || email.includes(q) || userName.includes(q) || userEmail.includes(q);
       const matchesType = typeFilter === 'All' || getSubmissionType(sub) === typeFilter;
       const matchesTiming =
         timingFilter === 'All' ||
         (timingFilter === 'kemarin' && isEarlierThanTodayWIB(sub.createdAt)) ||
         (timingFilter === 'hari_ini' && isTodayWIB(sub.createdAt));
+
       return matchesSearch && matchesType && matchesTiming;
     });
   }, [allCekAdminSubs, searchQuery, typeFilter, timingFilter]);
@@ -189,6 +191,7 @@ export function AdminAllCekAdminTab({
 
     setIsBulkConfirming(true);
     setBulkConfirmProgress({ current: 0, total: targetSubs.length });
+
     let successCount = 0;
     let totalPaid = 0;
 
@@ -202,6 +205,7 @@ export function AdminAllCekAdminTab({
         await runTransaction(db, async (transaction) => {
           const subDoc = await transaction.get(subRef);
           if (!subDoc.exists()) return;
+
           const userDoc = await transaction.get(userRef);
 
           transaction.update(subRef, {
@@ -236,7 +240,6 @@ export function AdminAllCekAdminTab({
         });
 
         processReferralOnSubmissionAccepted(sub.userId, sub.id).catch(console.warn);
-
         successCount++;
         totalPaid += reward;
       } catch (err) {
@@ -295,7 +298,6 @@ export function AdminAllCekAdminTab({
               <ListCheck className="w-4 h-4" />
               <span>Modal Konfirmasi Bulk</span>
             </button>
-
             {onOpenBulkCheckModal && (
               <button
                 type="button"
@@ -307,7 +309,6 @@ export function AdminAllCekAdminTab({
                 <span>Input Cek Bulk</span>
               </button>
             )}
-
             {onOpenBulkRejectModal && (
               <button
                 type="button"
@@ -331,7 +332,6 @@ export function AdminAllCekAdminTab({
             <div className="text-lg sm:text-xl font-black mt-0.5">{allCekAdminSubs.length} Akun</div>
             <span className="text-[10px] text-blue-200">Dalam antrean aktif</span>
           </div>
-
           <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10">
             <span className="text-[10px] font-bold uppercase tracking-wider text-blue-200 block flex items-center gap-1">
               <Zap className="w-3 h-3 text-amber-300" />
@@ -340,7 +340,6 @@ export function AdminAllCekAdminTab({
             <div className="text-lg sm:text-xl font-black mt-0.5">{khususCount} Akun</div>
             <span className="text-[10px] text-blue-200">Rp 3.000 / akun</span>
           </div>
-
           <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10">
             <span className="text-[10px] font-bold uppercase tracking-wider text-blue-200 block flex items-center gap-1">
               <Globe className="w-3 h-3 text-teal-300" />
@@ -349,7 +348,6 @@ export function AdminAllCekAdminTab({
             <div className="text-lg sm:text-xl font-black mt-0.5">{bebasCount} Akun</div>
             <span className="text-[10px] text-blue-200">Rp 2.700 / akun</span>
           </div>
-
           <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10">
             <span className="text-[10px] font-bold uppercase tracking-wider text-blue-200 block flex items-center gap-1">
               <History className="w-3 h-3 text-amber-300" />
@@ -360,7 +358,6 @@ export function AdminAllCekAdminTab({
             </div>
             <span className="text-[10px] text-blue-200">Prioritas kemarin: {kemarinCount}</span>
           </div>
-
           <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10 col-span-2 sm:col-span-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-blue-200 block">
               Estimasi Komisi
@@ -445,7 +442,7 @@ export function AdminAllCekAdminTab({
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 ✕
               </button>
@@ -508,7 +505,6 @@ export function AdminAllCekAdminTab({
                 {selectedIds.size} akun Gmail terpilih ({formatRupiah(selectedRewardTotal)})
               </span>
             </div>
-
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -522,7 +518,6 @@ export function AdminAllCekAdminTab({
                 <Copy className="w-3 h-3" />
                 <span>Salin Terpilih</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => {
@@ -534,7 +529,6 @@ export function AdminAllCekAdminTab({
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Konfirmasi Terpilih ({selectedIds.size} Akun)</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => setSelectedIds(new Set())}
@@ -735,6 +729,7 @@ export function AdminAllCekAdminTab({
                             )}
                             <span>Terima</span>
                           </button>
+
                           {/* TOMBOL TOLAK */}
                           <button
                             type="button"
@@ -746,6 +741,7 @@ export function AdminAllCekAdminTab({
                             <XCircle className="w-3.5 h-3.5" />
                             <span>Tolak</span>
                           </button>
+
                           {/* KEMBALIKAN KE PENDING */}
                           <button
                             type="button"

@@ -5,6 +5,7 @@ import { ReferralItem } from '../types';
 import { collection, query, where, onSnapshot, doc, runTransaction } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { formatRupiah, formatIndonesianDateTime, maskEmail } from '../lib/utils';
+import { applyReferralCodeForExistingUser } from '../lib/referralHelper';
 import {
   Users,
   Copy,
@@ -33,76 +34,121 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [showFriendsList, setShowFriendsList] = useState(false);
+  const [inputCode, setInputCode] = useState('');
+  const [applyingCode, setApplyingCode] = useState(false);
 
   const referralCode = userProfile?.referralCode || 'AZGMAIL';
 
   useEffect(() => {
     if (!currentUser) return;
+    let listFromRef: ReferralItem[] = [];
+    let listFromUsers: ReferralItem[] = [];
 
-    const q = query(
+    const syncList = () => {
+      const map = new Map<string, ReferralItem>();
+      for (const item of listFromRef) {
+        map.set(item.invitedUid || item.id, item);
+      }
+      for (const uItem of listFromUsers) {
+        if (!map.has(uItem.invitedUid)) {
+          map.set(uItem.invitedUid, uItem);
+        }
+      }
+      const list = Array.from(map.values()).sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setReferrals(list);
+      setLoading(false);
+
+      // Auto sync bonus if user reached milestone
+      const completedCount = list.filter((r) => r.status === 'completed').length;
+      const currentMilestones = userProfile?.referralRewardMilestones || [];
+      const earnedMilestonesCount = Math.floor(completedCount / 20);
+      let needsSync = false;
+      for (let m = 1; m <= earnedMilestonesCount; m++) {
+        if (!currentMilestones.includes(m * 20)) {
+          needsSync = true;
+          break;
+        }
+      }
+
+      if (needsSync && currentUser.uid) {
+        const userRef = doc(db, 'users', currentUser.uid);
+        runTransaction(db, async (transaction) => {
+          const uDoc = await transaction.get(userRef);
+          if (!uDoc.exists()) return;
+          const uData = uDoc.data();
+          const milestones: number[] = Array.isArray(uData.referralRewardMilestones)
+            ? uData.referralRewardMilestones
+            : [];
+          let bonus = 0;
+          const updated = [...milestones];
+          for (let m = 1; m <= earnedMilestonesCount; m++) {
+            const val = m * 20;
+            if (!updated.includes(val)) {
+              updated.push(val);
+              bonus += 10000;
+            }
+          }
+          if (bonus > 0) {
+            transaction.update(userRef, {
+              balance: (uData.balance || 0) + bonus,
+              totalEarned: (uData.totalEarned || 0) + bonus,
+              referralRewardMilestones: updated,
+            });
+          }
+        }).catch(console.warn);
+      }
+    };
+
+    const qRef = query(
       collection(db, 'referrals'),
       where('inviterUid', '==', currentUser.uid)
     );
-
-    const unsubscribe = onSnapshot(
-      q,
+    const unsubRef = onSnapshot(
+      qRef,
       (snapshot) => {
         const list: ReferralItem[] = [];
         snapshot.forEach((docSnap) => {
           list.push({ id: docSnap.id, ...(docSnap.data() as Omit<ReferralItem, 'id'>) });
         });
-        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setReferrals(list);
-        setLoading(false);
-
-        // Auto sync bonus if user reached milestone
-        const completedCount = list.filter((r) => r.status === 'completed').length;
-        const currentMilestones = userProfile?.referralRewardMilestones || [];
-        const earnedMilestonesCount = Math.floor(completedCount / 20);
-
-        let needsSync = false;
-        for (let m = 1; m <= earnedMilestonesCount; m++) {
-          if (!currentMilestones.includes(m * 20)) {
-            needsSync = true;
-            break;
-          }
-        }
-
-        if (needsSync && currentUser.uid) {
-          const userRef = doc(db, 'users', currentUser.uid);
-          runTransaction(db, async (transaction) => {
-            const uDoc = await transaction.get(userRef);
-            if (!uDoc.exists()) return;
-            const uData = uDoc.data();
-            const milestones: number[] = Array.isArray(uData.referralRewardMilestones)
-              ? uData.referralRewardMilestones
-              : [];
-            let bonus = 0;
-            const updated = [...milestones];
-            for (let m = 1; m <= earnedMilestonesCount; m++) {
-              const val = m * 20;
-              if (!updated.includes(val)) {
-                updated.push(val);
-                bonus += 10000;
-              }
-            }
-            if (bonus > 0) {
-              transaction.update(userRef, {
-                balance: (uData.balance || 0) + bonus,
-                totalEarned: (uData.totalEarned || 0) + bonus,
-                referralRewardMilestones: updated,
-              });
-            }
-          }).catch(console.warn);
-        }
+        listFromRef = list;
+        syncList();
       },
-      (err) => {
-        console.warn('Referrals snapshot notice:', err);
-        setLoading(false);
-      }
+      () => syncList()
     );
 
-    return () => unsubscribe();
+    const qUsers = query(
+      collection(db, 'users'),
+      where('referredBy', '==', currentUser.uid)
+    );
+    const unsubUsers = onSnapshot(
+      qUsers,
+      (snapshot) => {
+        const list: ReferralItem[] = [];
+        snapshot.forEach((docSnap) => {
+          const uData = docSnap.data();
+          list.push({
+            id: docSnap.id,
+            inviterUid: currentUser.uid,
+            inviterEmail: currentUser.email || '',
+            invitedUid: docSnap.id,
+            invitedEmail: uData.email || '',
+            invitedName: uData.displayName || 'Freelancer',
+            status: 'pending_submission',
+            createdAt: uData.createdAt || new Date().toISOString(),
+          });
+        });
+        listFromUsers = list;
+        syncList();
+      },
+      () => syncList()
+    );
+
+    return () => {
+      unsubRef();
+      unsubUsers();
+    };
   }, [currentUser, userProfile?.referralRewardMilestones]);
 
   const totalUndangan = referrals.length;
@@ -131,6 +177,20 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
     const shareUrl = `${origin}/?ref=${referralCode}`;
     const text = `Halo! Yuk gabung freelance stor akun Gmail di AZGmail. Masukkan kode referral saya: *${referralCode}* saat daftar, atau klik tautan: ${shareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleApplyReferral = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !inputCode.trim()) return;
+    setApplyingCode(true);
+    const result = await applyReferralCodeForExistingUser(currentUser.uid, inputCode.trim());
+    setApplyingCode(false);
+    if (result.success) {
+      showToast('success', 'Berhasil Digunakan!', result.message);
+      setInputCode('');
+    } else {
+      showToast('error', 'Gagal', result.message);
+    }
   };
 
   return (
@@ -202,7 +262,32 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
         </button>
       </div>
 
-      {/* 3 Metric Cards: Total Undangan, Referral Berhasil, Total Bonus Diterima */}
+      {/* Input Kode Referral Teman (jika belum pernah terhubung) */}
+      {!userProfile?.referredBy && (
+        <form onSubmit={handleApplyReferral} className="p-3 sm:p-3.5 rounded-2xl bg-slate-50/90 border border-slate-200/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 relative z-10">
+          <div className="flex-1 min-w-0">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+              Punya Kode Referral Teman?
+            </label>
+            <input
+              type="text"
+              value={inputCode}
+              onChange={(e) => setInputCode(e.target.value.toUpperCase().trim())}
+              placeholder="Masukkan kode referral teman di sini..."
+              className="w-full mt-1 px-3 py-1.5 rounded-lg border border-slate-300 font-mono font-bold text-xs uppercase outline-none focus:border-blue-500 bg-white"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={applyingCode || !inputCode.trim()}
+            className="self-end sm:self-end px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-2xs transition disabled:opacity-50 cursor-pointer"
+          >
+            {applyingCode ? 'Memproses...' : 'Gunakan Kode'}
+          </button>
+        </form>
+      )}
+
+      {/* 3 Metric Cards */}
       <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 relative z-10">
         <div className="p-3 sm:p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs text-center sm:text-left">
           <div className="text-[10px] sm:text-xs font-bold text-slate-500 flex items-center justify-center sm:justify-start gap-1">

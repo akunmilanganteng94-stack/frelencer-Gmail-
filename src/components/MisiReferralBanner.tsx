@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { NavigationTab, ReferralItem } from '../types';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Gift, ArrowRight, Sparkles, Users } from 'lucide-react';
+import { Gift, ArrowRight, Users } from 'lucide-react';
 
 interface MisiReferralBannerProps {
   onNavigate: (tab: NavigationTab) => void;
@@ -13,32 +13,81 @@ interface MisiReferralBannerProps {
 export function MisiReferralBanner({ onNavigate, className = '' }: MisiReferralBannerProps) {
   const { currentUser } = useAuth();
   const [completedCount, setCompletedCount] = useState<number>(0);
-  const [totalCount, setTotalCount] = useState<number>(0);
+  const [, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (!currentUser) return;
-    const q = query(
+    let listFromRef: ReferralItem[] = [];
+    let listFromUsers: ReferralItem[] = [];
+
+    const updateCounts = () => {
+      const map = new Map<string, ReferralItem>();
+      for (const item of listFromRef) {
+        map.set(item.invitedUid || item.id, item);
+      }
+      for (const uItem of listFromUsers) {
+        if (!map.has(uItem.invitedUid)) {
+          map.set(uItem.invitedUid, uItem);
+        }
+      }
+      const combined = Array.from(map.values());
+      setTotalCount(combined.length);
+      setCompletedCount(combined.filter((r) => r.status === 'completed').length);
+      setLoading(false);
+    };
+
+    const qRef = query(
       collection(db, 'referrals'),
       where('inviterUid', '==', currentUser.uid)
     );
-    const unsubscribe = onSnapshot(
-      q,
+    const unsubRef = onSnapshot(
+      qRef,
       (snapshot) => {
         const list: ReferralItem[] = [];
         snapshot.forEach((docSnap) => {
           list.push({ id: docSnap.id, ...(docSnap.data() as Omit<ReferralItem, 'id'>) });
         });
-        setTotalCount(list.length);
-        setCompletedCount(list.filter((r) => r.status === 'completed').length);
-        setLoading(false);
+        listFromRef = list;
+        updateCounts();
       },
-      (err) => {
-        console.warn('Banner referrals snapshot error:', err);
-        setLoading(false);
+      () => {
+        updateCounts();
       }
     );
-    return () => unsubscribe();
+
+    const qUsers = query(
+      collection(db, 'users'),
+      where('referredBy', '==', currentUser.uid)
+    );
+    const unsubUsers = onSnapshot(
+      qUsers,
+      (snapshot) => {
+        const list: ReferralItem[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push({
+            id: docSnap.id,
+            inviterUid: currentUser.uid,
+            inviterEmail: currentUser.email || '',
+            invitedUid: docSnap.id,
+            invitedEmail: docSnap.data().email || '',
+            invitedName: docSnap.data().displayName || 'Freelancer',
+            status: 'pending_submission',
+            createdAt: docSnap.data().createdAt || new Date().toISOString(),
+          });
+        });
+        listFromUsers = list;
+        updateCounts();
+      },
+      () => {
+        updateCounts();
+      }
+    );
+
+    return () => {
+      unsubRef();
+      unsubUsers();
+    };
   }, [currentUser]);
 
   const currentProgress = completedCount % 20;

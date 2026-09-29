@@ -137,7 +137,6 @@ export async function verifyUserGeneratedEmail(email: string, userId?: string): 
       const docEmail = (docSnap.data().email || '').trim().toLowerCase();
       return docEmail === normalizedTarget || docEmail.split('@')[0] === targetPrefix;
     });
-
     if (matched) {
       try {
         const historyKey = `gmail_gen_all_${userId}`;
@@ -203,6 +202,7 @@ export function GmailGenerator({
   const { showToast } = useToast();
   const { currentUser } = useAuth();
   const { availableStock, claimAccounts } = useGmailStock();
+
   const [count, setCount] = useState<number>(1);
   const [generating, setGenerating] = useState<boolean>(false);
   const [results, setResults] = useState<GeneratedResultItem[]>([]);
@@ -434,7 +434,6 @@ export function GmailGenerator({
             </p>
           </div>
         </div>
-
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
           <div
             className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold flex items-center gap-1 ${
@@ -468,6 +467,7 @@ export function GmailGenerator({
               Sisa kuota Anda hari ini: <strong className={remainingQuota > 0 ? 'text-blue-600 font-bold' : 'text-rose-600 font-bold'}>{remainingQuota} akun</strong> (Batas: {dailyLimit}/hari)
             </p>
           </div>
+
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -549,7 +549,6 @@ export function GmailGenerator({
                 : `Generate ${count} Akun Dari Stok`}
             </span>
           </button>
-
           {availableStock.length === 0 && onOpenContactAdmin && (
             <button
               type="button"
@@ -656,6 +655,7 @@ export function GmailGenerator({
                           </span>
                         )}
                       </div>
+
                       <div className="flex items-center gap-2 pl-7 text-xs">
                         <span className="text-slate-400 font-semibold text-[11px]">PW:</span>
                         <span className="font-mono font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200 text-xs">

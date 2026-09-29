@@ -40,6 +40,7 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
                 AZGmail
               </span>
             </button>
+
             <div className="hidden sm:flex items-center gap-1.5 ml-3 px-2.5 py-1 rounded-full text-xs font-semibold border shadow-xs transition-colors bg-white">
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -148,7 +149,7 @@ export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
             </span>
           </button>
 
-          {/* Center Elevated Button: Logo STOR dengan biru tua gak terlalu tua & gradient biru muda */}
+          {/* Center Elevated Button: Logo STOR */}
           <div className="flex-1 flex flex-col items-center justify-center -mt-7 sm:-mt-8 relative">
             <div className="absolute top-1 w-14 h-14 rounded-full bg-blue-500/35 blur-md -z-10 pointer-events-none" />
             <button

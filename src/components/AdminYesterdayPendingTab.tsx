@@ -87,7 +87,6 @@ export function AdminYesterdayPendingTab({
       const email = getCleanEmail(sub.dataContent).toLowerCase();
       const userName = (sub.userName || '').toLowerCase();
       const userEmail = (sub.userEmail || '').toLowerCase();
-
       return (
         email.includes(q) ||
         userName.includes(q) ||
@@ -184,7 +183,6 @@ export function AdminYesterdayPendingTab({
               <span>Cek Bulk</span>
             </button>
           )}
-
           <button
             type="button"
             onClick={onOpenBulkConfirmModal}
@@ -193,7 +191,6 @@ export function AdminYesterdayPendingTab({
             <ListCheck className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>Terima Bulk</span>
           </button>
-
           <button
             type="button"
             onClick={onOpenBulkRejectModal}
@@ -358,7 +355,6 @@ export function AdminYesterdayPendingTab({
                 <span>Bebas ({yesterdayBebasList.length})</span>
               </button>
             </div>
-
             {selectedIds.size > 0 && (
               <button
                 type="button"
@@ -370,7 +366,6 @@ export function AdminYesterdayPendingTab({
               </button>
             )}
           </div>
-
           <div className="relative w-full md:w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
             <input

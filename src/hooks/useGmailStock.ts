@@ -114,7 +114,6 @@ export function useGmailStock() {
     if (exists) {
       throw new Error(`Email ${cleanEmail} sudah ada di dalam stok.`);
     }
-
     const newDocRef = doc(collection(db, 'gmail_stock'));
     await setDoc(newDocRef, {
       email: cleanEmail,
@@ -127,7 +126,6 @@ export function useGmailStock() {
   const addBulkAccounts = async (rawText: string, defaultPassword?: string): Promise<number> => {
     const lines = rawText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
     if (lines.length === 0) return 0;
-
     const existingEmails = new Set(stock.map((s) => s.email.toLowerCase()));
     let addedCount = 0;
     const batch = writeBatch(db);

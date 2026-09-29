@@ -13,6 +13,7 @@ import { SaldoView } from './views/SaldoView';
 import { RulesView } from './views/RulesView';
 import { AkunView } from './views/AkunView';
 import { AdminView } from './views/AdminView';
+import { ReferralView } from './views/ReferralView';
 import { AZGmailLogo } from './components/GmailLogo';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -25,7 +26,10 @@ function MainApp() {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="w-16 h-16 rounded-[25px] bg-white p-1 shadow-lg border border-blue-100 flex items-center justify-center overflow-hidden" style={{ borderRadius: '25px' }}>
+          <div
+            className="w-16 h-16 rounded-[25px] bg-white p-1 shadow-lg border border-blue-100 flex items-center justify-center overflow-hidden"
+            style={{ borderRadius: '25px' }}
+          >
             <AZGmailLogo className="w-full h-full" />
           </div>
           <div>
@@ -62,6 +66,7 @@ function MainApp() {
             {currentTab === 'rules' && <RulesView onNavigate={setCurrentTab} />}
             {currentTab === 'akun' && <AkunView onNavigate={setCurrentTab} />}
             {currentTab === 'admin' && <AdminView onNavigate={setCurrentTab} />}
+            {currentTab === 'referral' && <ReferralView onNavigate={setCurrentTab} />}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -69,22 +74,27 @@ function MainApp() {
       <footer className="hidden sm:block border-t border-slate-200/80 bg-white py-6 text-xs text-slate-500 mb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-[25px] bg-blue-50 flex items-center justify-center p-0.5 overflow-hidden" style={{ borderRadius: '25px' }}>
+            <div
+              className="w-6 h-6 rounded-[25px] bg-blue-50 flex items-center justify-center p-0.5 overflow-hidden"
+              style={{ borderRadius: '25px' }}
+            >
               <AZGmailLogo className="w-full h-full" />
             </div>
-            <span className="font-bold text-slate-800">AZGmail</span>
+            <span className="font-bold bg-gradient-to-r from-[#1e40af] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent">
+              AZGmail
+            </span>
           </div>
 
           <div className="flex items-center gap-4 text-slate-500">
             <span>Operasional: {settings.storanSchedule}</span>
-            <span>·</span>
+            <span>•</span>
             <button
               onClick={() => setCurrentTab('rules')}
               className="hover:text-blue-600 font-semibold cursor-pointer"
             >
               Ketentuan Storan
             </button>
-            <span>·</span>
+            <span>•</span>
             <button
               onClick={() => setCurrentTab('akun')}
               className="hover:text-blue-600 font-semibold cursor-pointer"

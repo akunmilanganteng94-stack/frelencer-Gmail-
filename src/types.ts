@@ -13,6 +13,24 @@ export interface UserProfile {
   status: UserStatus;
   createdAt: string;
   generatedEmails?: string[];
+  referralCode?: string;
+  referredBy?: string;
+  referralRewardMilestones?: number[]; // [20, 40, ...] milestones already awarded
+}
+
+export type ReferralStatus = 'pending_submission' | 'completed';
+
+export interface ReferralItem {
+  id: string;
+  inviterUid: string;
+  inviterEmail: string;
+  invitedUid: string;
+  invitedEmail: string;
+  invitedName: string;
+  status: ReferralStatus; // 'pending_submission': registered, hasn't had accepted Gmail yet; 'completed': first Gmail accepted
+  createdAt: string;
+  completedAt?: string;
+  firstSubmissionId?: string;
 }
 
 export type SubmissionStatus = 'Pending' | 'Cek Admin' | 'Diterima' | 'Ditolak';
@@ -82,7 +100,7 @@ export interface SystemSettings {
   storanClosedReason?: string;
 }
 
-export type NavigationTab = 'home' | 'storan' | 'riwayat' | 'saldo' | 'akun' | 'admin' | 'rules';
+export type NavigationTab = 'home' | 'storan' | 'riwayat' | 'saldo' | 'akun' | 'admin' | 'rules' | 'referral';
 
 export enum OperationType {
   CREATE = 'create',

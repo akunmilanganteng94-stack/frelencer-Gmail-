@@ -319,16 +319,7 @@ export async function recordReferralForNewUser(
         inviterName: inviter.displayName,
       }).catch(console.warn);
 
-      // 3. Update inviter's totalInvited count
-      try {
-        const inviterUserRef = doc(db, 'users', inviter.uid);
-        await updateDoc(inviterUserRef, {
-          totalInvited: increment(1),
-        });
-      } catch (inviterUpdErr) {
-        console.warn('Notice updating inviter totalInvited:', inviterUpdErr);
-      }
-
+      // Note: totalInvited will be officially updated once this user's first STOR is accepted by admin.
       clearPendingReferralCode();
       return true;
     } else {
@@ -528,15 +519,17 @@ export async function processReferralOnSubmissionAccepted(
         }
       }
 
+      const updateData: Record<string, any> = {
+        totalInvited: totalCompleted,
+      };
+
       if (bonusToAdd > 0) {
-        const newBalance = (inviterData.balance || 0) + bonusToAdd;
-        const newEarned = (inviterData.totalEarned || 0) + bonusToAdd;
-        transaction.update(inviterUserRef, {
-          balance: newBalance,
-          totalEarned: newEarned,
-          referralRewardMilestones: updatedMilestones,
-        });
+        updateData.balance = (inviterData.balance || 0) + bonusToAdd;
+        updateData.totalEarned = (inviterData.totalEarned || 0) + bonusToAdd;
+        updateData.referralRewardMilestones = updatedMilestones;
       }
+
+      transaction.update(inviterUserRef, updateData);
     });
   } catch (err) {
     console.warn('Error processing referral bonus on submission accepted:', err);

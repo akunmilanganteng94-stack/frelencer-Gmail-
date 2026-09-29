@@ -18,15 +18,17 @@ export function formatIndonesianDateTime(isoOrDate: string | Date | number): str
   try {
     const d = new Date(isoOrDate);
     if (isNaN(d.getTime())) return '-';
-    return new Intl.DateTimeFormat('id-ID', {
-      timeZone: 'Asia/Jakarta',
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).format(d) + ' WIB';
+    return (
+      new Intl.DateTimeFormat('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(d) + ' WIB'
+    );
   } catch {
     return '-';
   }
@@ -77,4 +79,17 @@ export function isEarlierThanTodayWIB(isoOrDate: string | Date | number): boolea
   const dateStr = getDateStringWIB(isoOrDate);
   const todayStr = getDateStringWIB(new Date());
   return dateStr !== '' && dateStr < todayStr;
+}
+
+export function generateReferralCode(uid: string): string {
+  const cleanUid = (uid || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  const suffix = cleanUid.slice(0, 6) || Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `AZG${suffix}`;
+}
+
+export function maskEmail(email: string): string {
+  if (!email || !email.includes('@')) return email;
+  const [user, domain] = email.split('@');
+  if (user.length <= 3) return `${user.slice(0, 1)}***@${domain}`;
+  return `${user.slice(0, 2)}***${user.slice(-1)}@${domain}`;
 }

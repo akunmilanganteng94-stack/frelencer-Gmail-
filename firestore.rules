@@ -19,11 +19,6 @@ service cloud.firestore {
       );
     }
 
-    // Default deny for unhandled routes
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
     // Settings collection
     match /settings/{settingId} {
       allow read: if true;
@@ -41,7 +36,7 @@ service cloud.firestore {
     // Submissions collection
     match /submissions/{submissionId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn();
       allow update: if isSignedIn();
       allow delete: if isAdmin();
     }
@@ -49,7 +44,7 @@ service cloud.firestore {
     // Withdrawals collection
     match /withdrawals/{withdrawalId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn();
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
@@ -58,7 +53,7 @@ service cloud.firestore {
     match /gmail_stock/{stockId} {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn();
-      allow delete: if isAdmin();
+      allow delete: if isSignedIn();
     }
 
     // Referrals collection

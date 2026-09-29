@@ -110,6 +110,7 @@ export function RulesView({ onNavigate }: RulesViewProps) {
               </div>
             </div>
           </div>
+
           <div className="text-xs text-orange-950 font-medium sm:text-right max-w-sm">
             Semua akun Gmail yang dibuat dan disetor <strong className="font-bold">WAJIB</strong> menggunakan password di atas. Jika password berbeda, akun akan otomatis ditolak saat pengecekan.
           </div>

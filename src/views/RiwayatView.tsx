@@ -37,12 +37,10 @@ export function RiwayatView() {
 
   useEffect(() => {
     if (!currentUser) return;
-
     const q = query(
       collection(db, 'submissions'),
       where('userId', '==', currentUser.uid)
     );
-
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -59,7 +57,6 @@ export function RiwayatView() {
         setLoading(false);
       }
     );
-
     return () => unsubscribe();
   }, [currentUser]);
 
@@ -79,7 +76,6 @@ export function RiwayatView() {
     const matchesFilter = activeFilter === 'Semua' || sub.status === activeFilter;
     const subType = getSubmissionType(sub);
     const matchesType = typeFilter === 'Semua' || subType === typeFilter;
-
     const cleanEmail = sub.dataContent.split('|')[0].trim().toLowerCase();
     const q = searchQuery.toLowerCase();
     const matchesSearch =
@@ -87,7 +83,6 @@ export function RiwayatView() {
       cleanEmail.includes(q) ||
       (sub.rejectionReason && sub.rejectionReason.toLowerCase().includes(q)) ||
       (sub.adminNotes && sub.adminNotes.toLowerCase().includes(q));
-
     return matchesFilter && matchesType && matchesSearch;
   });
 
@@ -96,7 +91,6 @@ export function RiwayatView() {
   const countCekAdmin = submissions.filter((s) => s.status === 'Cek Admin').length;
   const countDiterima = submissions.filter((s) => s.status === 'Diterima').length;
   const countDitolak = submissions.filter((s) => s.status === 'Ditolak').length;
-
   const countKhusus = submissions.filter((s) => getSubmissionType(s) === 'khusus').length;
   const countBebas = submissions.filter((s) => getSubmissionType(s) === 'bebas').length;
 
@@ -109,7 +103,7 @@ export function RiwayatView() {
             <span>Riwayat Storan Akun Gmail</span>
           </h1>
           <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
-            Pantau alur status pengecekan Gmail Anda: Pending → Cek Admin → Diterima/Ditolak
+            Pantau alur status pengecekan Gmail Anda: Pending • Cek Admin • Diterima/Ditolak
           </p>
         </div>
       </div>
@@ -120,7 +114,6 @@ export function RiwayatView() {
             <Layers className="w-3.5 h-3.5 text-blue-600" />
             <span>Kategori Storan:</span>
           </div>
-
           <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
@@ -138,7 +131,6 @@ export function RiwayatView() {
                 {countSemua}
               </span>
             </button>
-
             <button
               type="button"
               onClick={() => setTypeFilter('khusus')}
@@ -156,7 +148,6 @@ export function RiwayatView() {
                 {countKhusus}
               </span>
             </button>
-
             <button
               type="button"
               onClick={() => setTypeFilter('bebas')}
@@ -288,7 +279,6 @@ export function RiwayatView() {
                       <Calendar className="w-3 h-3 text-slate-400" />
                       <span>{formatIndonesianDateTime(sub.createdAt)}</span>
                     </div>
-
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold flex items-center gap-1 ${
                         sub.status === 'Diterima'
@@ -324,7 +314,7 @@ export function RiwayatView() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 self-start sm:self-center shrink-0">
+                  <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
                     <button
                       type="button"
                       onClick={() => copyToClipboard(cleanEmail)}
@@ -438,7 +428,7 @@ export function RiwayatView() {
                       Cek Status Akun Gmail
                     </h3>
                     <p className="text-[11px] text-slate-500">
-                      Alur verifikasi: Pending → Cek Admin → Diterima/Ditolak
+                      Alur verifikasi: Pending • Cek Admin • Diterima/Ditolak
                     </p>
                   </div>
                 </div>
@@ -504,6 +494,7 @@ export function RiwayatView() {
                   <Clock className="w-4 h-4 text-blue-600" />
                   <span>Tahapan Verifikasi Akun:</span>
                 </h4>
+
                 <div className="relative pl-6 space-y-5 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                   <div className="relative">
                     <div className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">

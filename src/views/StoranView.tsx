@@ -35,6 +35,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const { settings } = useSettings();
   const { showToast } = useToast();
   const { openContactModal } = useContactAdmin();
+
   const activePassword = settings.gmailDefaultPassword || 'sgsg1122';
 
   const [inputData, setInputData] = useState('');
@@ -44,6 +45,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     if (khususClosed && !bebasClosed) return 'bebas';
     return 'khusus';
   });
+
   const [validatedEmails, setValidatedEmails] = useState<string[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -52,6 +54,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
 
   const isKhususClosed = settings.storanKhususOpen === false || !settings.storanOpen;
   const isBebasClosed = settings.storanBebasOpen === false || !settings.storanOpen;
+
   const isCurrentTypeClosed =
     !settings.storanOpen ||
     (storanType === 'khusus' && isKhususClosed) ||
@@ -99,19 +102,16 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       setInputError('Layanan storan saat ini tidak dapat diakses.');
       return;
     }
-
     if (storanType === 'khusus' && isKhususClosed) {
       showToast('error', 'Akses Dibatasi', 'Storan Gmail Khusus saat ini tidak dapat diakses.');
       setInputError('Storan Gmail Khusus saat ini tidak dapat diakses.');
       return;
     }
-
     if (storanType === 'bebas' && isBebasClosed) {
       showToast('error', 'Akses Dibatasi', 'Storan Gmail Bebas saat ini tidak dapat diakses.');
       setInputError('Storan Gmail Bebas saat ini tidak dapat diakses.');
       return;
     }
-
     if (userProfile?.status === 'suspended') {
       showToast('error', 'Akun Dibatasi', 'Akun kamu sedang dibatasi. Hubungi admin untuk informasi lebih lanjut.');
       return;
@@ -135,7 +135,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     }
 
     const cleanedEmails: string[] = [];
-
     for (let i = 0; i < rawLines.length; i++) {
       const line = rawLines[i];
       const lineNum = i + 1;
@@ -208,6 +207,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const handleConfirmSubmit = async () => {
     if (!currentUser || !userProfile || validatedEmails.length === 0) return;
     setSubmitting(true);
+
     try {
       if (!settings.storanOpen) {
         showToast('error', 'Layanan Tidak Tersedia', 'Layanan storan saat ini sedang tidak dapat diakses.');
@@ -215,14 +215,12 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         setSubmitting(false);
         return;
       }
-
       if (storanType === 'khusus' && isKhususClosed) {
         showToast('error', 'Akses Dibatasi', 'Storan Gmail Khusus saat ini tidak dapat diakses.');
         setShowConfirmModal(false);
         setSubmitting(false);
         return;
       }
-
       if (storanType === 'bebas' && isBebasClosed) {
         showToast('error', 'Akses Dibatasi', 'Storan Gmail Bebas saat ini tidak dapat diakses.');
         setShowConfirmModal(false);
@@ -414,78 +412,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       {/* RULES CARD DI ATAS */}
       <RulesCard onNavigate={onNavigate} />
 
-      {/* CARD: PILIHAN JENIS STORAN (SEGMENTED CONTROL SOFT UI) */}
-      <div className="bg-white rounded-xl sm:rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 shadow-2xs space-y-1.5">
-        <div className="flex items-center justify-between px-1">
-          <div className="text-xs font-black text-slate-800 tracking-tight">
-            <span>Jenis Storan:</span>
-          </div>
-          <span className="text-[11px] font-bold text-slate-400">Pilih salah satu</span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            disabled={isKhususClosed}
-            onClick={() => {
-              if (isKhususClosed) return;
-              setStoranType('khusus');
-              setInputError('');
-            }}
-            className={`py-2 px-3 rounded-lg sm:rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 relative cursor-pointer active:scale-98 ${
-              isKhususClosed
-                ? 'opacity-60 cursor-not-allowed bg-slate-100 text-slate-400 select-none shadow-none border border-slate-200'
-                : storanType === 'khusus'
-                ? 'bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] text-white shadow-xs shadow-blue-600/25 ring-2 ring-blue-500/20'
-                : 'bg-slate-100/90 hover:bg-slate-200/80 text-slate-700'
-            }`}
-          >
-            <span>Gmail Khusus</span>
-            <span
-              className={`px-2 py-0.2 rounded-full text-[10px] font-black ${
-                isKhususClosed
-                  ? 'bg-rose-100 text-rose-700'
-                  : storanType === 'khusus'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-slate-200 text-slate-800'
-              }`}
-            >
-              {isKhususClosed ? 'TUTUP' : '3k'}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            disabled={isBebasClosed}
-            onClick={() => {
-              if (isBebasClosed) return;
-              setStoranType('bebas');
-              setInputError('');
-            }}
-            className={`py-2 px-3 rounded-lg sm:rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 relative cursor-pointer active:scale-98 ${
-              isBebasClosed
-                ? 'opacity-60 cursor-not-allowed bg-slate-100 text-slate-400 select-none shadow-none border border-slate-200'
-                : storanType === 'bebas'
-                ? 'bg-gradient-to-r from-teal-600 via-teal-600 to-emerald-600 text-white shadow-xs shadow-teal-500/25 ring-2 ring-teal-500/20'
-                : 'bg-slate-100/90 hover:bg-slate-200/80 text-slate-700'
-            }`}
-          >
-            <span>Gmail Bebas</span>
-            <span
-              className={`px-2 py-0.2 rounded-full text-[10px] font-black ${
-                isBebasClosed
-                  ? 'bg-rose-100 text-rose-700'
-                  : storanType === 'bebas'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-slate-200 text-slate-800'
-              }`}
-            >
-              {isBebasClosed ? 'TUTUP' : '2.7k'}
-            </span>
-          </button>
-        </div>
-      </div>
-
       {/* GENERATOR ATAU KETENTUAN BEBAS CARD */}
       {storanType === 'khusus' && !isKhususClosed && (
         <GmailGenerator
@@ -512,8 +438,80 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         </div>
       )}
 
-      {/* FORM SETORAN CARD */}
+      {/* FORM SETORAN CARD - JENIS STORAN SUDAH DIPINDAHKAN KE DALAM KOTAK INI */}
       <div id="submission-form-card" className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-4.5 border border-slate-200/80 shadow-2xs space-y-3 sm:space-y-3.5">
+        {/* PILIHAN JENIS STORAN (DIPINDAHKAN KE DALAM KOTAK FORM STORAN) */}
+        <div className="space-y-1.5 pb-2 border-b border-slate-100">
+          <div className="flex items-center justify-between px-0.5">
+            <div className="text-xs font-black text-slate-800 tracking-tight">
+              <span>Jenis Storan:</span>
+            </div>
+            <span className="text-[11px] font-bold text-slate-400">Pilih salah satu</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={isKhususClosed}
+              onClick={() => {
+                if (isKhususClosed) return;
+                setStoranType('khusus');
+                setInputError('');
+              }}
+              className={`py-2 px-3 rounded-lg sm:rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 relative cursor-pointer active:scale-98 ${
+                isKhususClosed
+                  ? 'opacity-60 cursor-not-allowed bg-slate-100 text-slate-400 select-none shadow-none border border-slate-200'
+                  : storanType === 'khusus'
+                  ? 'bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] text-white shadow-xs shadow-blue-600/25 ring-2 ring-blue-500/20'
+                  : 'bg-slate-100/90 hover:bg-slate-200/80 text-slate-700'
+              }`}
+            >
+              <span>Gmail Khusus</span>
+              <span
+                className={`px-2 py-0.2 rounded-full text-[10px] font-black ${
+                  isKhususClosed
+                    ? 'bg-rose-100 text-rose-700'
+                    : storanType === 'khusus'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-200 text-slate-800'
+                }`}
+              >
+                {isKhususClosed ? 'TUTUP' : '3k'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isBebasClosed}
+              onClick={() => {
+                if (isBebasClosed) return;
+                setStoranType('bebas');
+                setInputError('');
+              }}
+              className={`py-2 px-3 rounded-lg sm:rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 relative cursor-pointer active:scale-98 ${
+                isBebasClosed
+                  ? 'opacity-60 cursor-not-allowed bg-slate-100 text-slate-400 select-none shadow-none border border-slate-200'
+                  : storanType === 'bebas'
+                  ? 'bg-gradient-to-r from-teal-600 via-teal-600 to-emerald-600 text-white shadow-xs shadow-teal-500/25 ring-2 ring-teal-500/20'
+                  : 'bg-slate-100/90 hover:bg-slate-200/80 text-slate-700'
+              }`}
+            >
+              <span>Gmail Bebas</span>
+              <span
+                className={`px-2 py-0.2 rounded-full text-[10px] font-black ${
+                  isBebasClosed
+                    ? 'bg-rose-100 text-rose-700'
+                    : storanType === 'bebas'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-200 text-slate-800'
+                }`}
+              >
+                {isBebasClosed ? 'TUTUP' : '2.7k'}
+              </span>
+            </button>
+          </div>
+        </div>
+
         {submissions.some((s) => s.status === 'Pending' || s.status === 'Cek Admin') && (
           <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-amber-50/90 border border-amber-200/80 text-amber-950 flex items-start gap-2.5 shadow-2xs">
             <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -557,7 +555,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 {inputData.split('\n').filter((l) => l.trim().length > 0).length}/5 Baris Terisi
               </span>
             </label>
-
             <div className="relative">
               <textarea
                 id="storan-textarea"
@@ -582,7 +579,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 style={{ minHeight: '110px' }}
               />
             </div>
-
             {inputError && (
               <p className="text-xs text-rose-600 font-bold mt-1.5 px-1 flex items-center gap-1">
                 <span>⚠️</span>
@@ -719,6 +715,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                     Daftar Akun ({validatedEmails.length} Akun):
                   </p>
                 </div>
+
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {validatedEmails.map((email, idx) => (
                     <div

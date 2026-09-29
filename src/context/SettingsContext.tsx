@@ -85,6 +85,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     );
+
     return () => unsubscribe();
   }, []);
 
@@ -95,7 +96,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setSettings(merged);
     } catch (error) {
       console.error('Error updating settings document:', error);
-      // Update local state so UI reflects the admin's changes immediately
       const merged = { ...settings, ...newSettings };
       setSettings(merged);
       throw error;

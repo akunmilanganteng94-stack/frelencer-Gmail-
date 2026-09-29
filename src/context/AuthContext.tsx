@@ -22,6 +22,7 @@ import {
   getPendingReferralCode,
   findInviterByCode,
   normalizeReferralCode,
+  syncAndRepairReferralsForInviter,
 } from '../lib/referralHelper';
 
 interface AuthContextType {
@@ -36,6 +37,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   updateProfileName: (newName: string) => Promise<void>;
   changePassword: (newPass: string) => Promise<void>;
+  refreshReferralSync: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,10 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
+
             // Ensure user has a referral code
             if (!data.referralCode) {
               const myCode = generateReferralCode(user.uid);
-              updateDoc(userDocRef, { referralCode: myCode }).catch(console.warn);
+              setDoc(userDocRef, { referralCode: myCode }, { merge: true }).catch(console.warn);
               data.referralCode = myCode;
             }
             saveReferralCodeMapping(data.referralCode, user).catch(console.warn);
@@ -88,12 +91,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             }
 
+            // Sync and auto-repair any referrals for this user as inviter
+            if (data.referralCode) {
+              syncAndRepairReferralsForInviter(
+                user.uid,
+                data.referralCode,
+                data.displayName,
+                user.email || ''
+              ).catch(console.warn);
+            }
+
             setUserProfile(data);
           } else {
             // Document doesn't exist yet (e.g. newly signed up or social login)
             const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
             const myCode = generateReferralCode(user.uid);
             const pendingCode = getPendingReferralCode();
+
             let inviterData: { uid: string; email: string; displayName: string } | null = null;
             if (pendingCode) {
               try {
@@ -127,10 +141,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 : {}),
             };
 
-            setDoc(userDocRef, newProfile).catch((e) => {
+            setDoc(userDocRef, newProfile, { merge: true }).catch((e) => {
               console.warn('Initial user profile sync notice:', e);
             });
             saveReferralCodeMapping(myCode, user).catch(console.warn);
+
             if (pendingCode) {
               recordReferralForNewUser(user, pendingCode).catch(console.warn);
             }
@@ -217,7 +232,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         : {}),
     };
 
-    await setDoc(doc(db, 'users', user.uid), profile);
+    await setDoc(doc(db, 'users', user.uid), profile, { merge: true });
     setUserProfile(profile);
 
     // Save referral code mapping so this user can invite others immediately
@@ -286,16 +301,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             : {}),
         };
 
-        await setDoc(userDocRef, profile);
+        await setDoc(userDocRef, profile, { merge: true });
         setUserProfile(profile);
-
         saveReferralCodeMapping(myCode, {
           uid: user.uid,
           email: user.email || '',
           displayName: profile.displayName,
         }).catch(console.warn);
 
-        // Automatically record referral for the inviter on first Google sign-in!
         if (effectiveRef) {
           recordReferralForNewUser(
             {
@@ -309,7 +322,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         const existing = docSnap.data() as UserProfile;
         if (!existing.referralCode) {
-          await updateDoc(userDocRef, { referralCode: myCode }).catch(console.warn);
+          await setDoc(userDocRef, { referralCode: myCode }, { merge: true }).catch(console.warn);
           existing.referralCode = myCode;
         }
         saveReferralCodeMapping(existing.referralCode || myCode, {
@@ -364,6 +377,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await updatePassword(currentUser, newPass);
   };
 
+  const refreshReferralSync = async () => {
+    if (!currentUser || !userProfile?.referralCode) return;
+    await syncAndRepairReferralsForInviter(
+      currentUser.uid,
+      userProfile.referralCode,
+      userProfile.displayName,
+      currentUser.email || ''
+    );
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -378,6 +401,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resetPassword,
         updateProfileName,
         changePassword,
+        refreshReferralSync,
       }}
     >
       {children}

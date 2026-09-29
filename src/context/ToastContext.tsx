@@ -64,7 +64,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={() => removeToast(toast.id)}
-                className="shrink-0 text-slate-400 hover:text-slate-600 p-0.5 rounded transition"
+                className="shrink-0 text-slate-400 hover:text-slate-600 p-0.5 rounded transition cursor-pointer"
                 aria-label="Tutup notifikasi"
               >
                 <X className="w-4 h-4" />

@@ -101,33 +101,33 @@ export function RiwayatView() {
   const countBebas = submissions.filter((s) => getSubmissionType(s) === 'bebas').length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-3 sm:space-y-3.5 max-w-4xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-            <FileText className="w-7 h-7 text-blue-600" />
+          <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
             <span>Riwayat Storan Akun Gmail</span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
             Pantau alur status pengecekan Gmail Anda: Pending → Cek Admin → Diterima/Ditolak
           </p>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-            <Layers className="w-4 h-4 text-blue-600" />
+      <div className="bg-white rounded-xl sm:rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 shadow-2xs space-y-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+            <Layers className="w-3.5 h-3.5 text-blue-600" />
             <span>Kategori Storan:</span>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
               onClick={() => setTypeFilter('Semua')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
                 typeFilter === 'Semua'
-                  ? 'bg-slate-900 text-white shadow-xs'
+                  ? 'bg-slate-900 text-white shadow-2xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -142,13 +142,13 @@ export function RiwayatView() {
             <button
               type="button"
               onClick={() => setTypeFilter('khusus')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
                 typeFilter === 'khusus'
-                  ? 'bg-blue-600 text-white shadow-xs'
+                  ? 'bg-blue-600 text-white shadow-2xs'
                   : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3 h-3" />
               <span>Gmail Khusus (3k)</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                 typeFilter === 'khusus' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-800'
@@ -160,13 +160,13 @@ export function RiwayatView() {
             <button
               type="button"
               onClick={() => setTypeFilter('bebas')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
                 typeFilter === 'bebas'
-                  ? 'bg-teal-600 text-white shadow-xs'
+                  ? 'bg-teal-600 text-white shadow-2xs'
                   : 'bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-100'
               }`}
             >
-              <Globe className="w-3.5 h-3.5" />
+              <Globe className="w-3 h-3" />
               <span>Gmail Bebas (2.7k)</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                 typeFilter === 'bebas' ? 'bg-white/20 text-white' : 'bg-teal-100 text-teal-800'
@@ -177,8 +177,8 @@ export function RiwayatView() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex flex-wrap gap-1.5 p-1 bg-slate-100/90 rounded-2xl">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5">
+          <div className="flex flex-wrap gap-1 p-1 bg-slate-100 rounded-xl">
             {(
               [
                 { label: 'Semua Status', value: 'Semua', count: countSemua },
@@ -194,15 +194,15 @@ export function RiwayatView() {
                   key={tab.value}
                   type="button"
                   onClick={() => setActiveFilter(tab.value)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                     isActive
-                      ? 'bg-white text-blue-700 shadow-xs'
+                      ? 'bg-white text-blue-700 shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   <span>{tab.label}</span>
                   <span
-                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                       isActive ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-600'
                     }`}
                   >
@@ -213,31 +213,31 @@ export function RiwayatView() {
             })}
           </div>
 
-          <div className="relative w-full md:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+          <div className="relative w-full md:w-64">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari email, ID, atau catatan..."
-              className="w-full pl-10 pr-3.5 py-2 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-xs outline-none transition bg-white"
+              className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-xs outline-none transition bg-white"
             />
           </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {[1, 2, 3, 4].map((n) => (
-            <div key={n} className="h-28 bg-slate-100 rounded-3xl animate-pulse" />
+            <div key={n} className="h-20 bg-slate-100 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : filteredSubmissions.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-xs space-y-3">
-          <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-            <FileText className="w-7 h-7" />
+        <div className="bg-white rounded-xl sm:rounded-2xl p-8 text-center border border-slate-200/80 shadow-2xs space-y-2">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+            <FileText className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-slate-800">Tidak ada data riwayat Gmail</h3>
+          <h3 className="text-sm font-bold text-slate-800">Tidak ada data riwayat Gmail</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
             {searchQuery || activeFilter !== 'Semua' || typeFilter !== 'Semua'
               ? 'Tidak ditemukan data yang sesuai dengan filter atau kata kunci pencarian.'
@@ -245,7 +245,7 @@ export function RiwayatView() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3.5">
+        <div className="space-y-2 sm:space-y-2.5">
           {filteredSubmissions.map((sub) => {
             const subType = getSubmissionType(sub);
             const isKhusus = subType === 'khusus';
@@ -254,15 +254,15 @@ export function RiwayatView() {
             return (
               <div
                 key={sub.id}
-                className="bg-white rounded-3xl p-5 border border-slate-200/80 hover:border-blue-200 hover:shadow-md transition space-y-3 relative overflow-hidden"
+                className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-3.5 border border-slate-200/80 hover:border-blue-200 hover:shadow-2xs transition space-y-2 relative overflow-hidden"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-slate-400 font-medium">ID:</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-1.5 border-b border-slate-100">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] text-slate-400 font-medium">ID:</span>
                     <span className="font-mono text-xs font-bold text-slate-800">{sub.id}</span>
                     <button
                       onClick={() => copyToClipboard(sub.id)}
-                      className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition cursor-pointer"
+                      className="text-slate-400 hover:text-slate-600 p-0.5 rounded hover:bg-slate-100 transition cursor-pointer"
                       title="Salin ID"
                     >
                       {copiedId === sub.id ? (
@@ -272,25 +272,25 @@ export function RiwayatView() {
                       )}
                     </button>
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${
+                      className={`px-2 py-0.2 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${
                         isKhusus
                           ? 'bg-blue-100 text-blue-800 border border-blue-200/70'
                           : 'bg-teal-100 text-teal-800 border border-teal-200/70'
                       }`}
                     >
-                      {isKhusus ? <Sparkles className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
+                      {isKhusus ? <Sparkles className="w-2.5 h-2.5" /> : <Globe className="w-2.5 h-2.5" />}
                       <span>{isKhusus ? 'Khusus (3k)' : 'Bebas (2.7k)'}</span>
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex items-center gap-1 text-[11px] text-slate-400">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-400">
+                      <Calendar className="w-3 h-3 text-slate-400" />
                       <span>{formatIndonesianDateTime(sub.createdAt)}</span>
                     </div>
 
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold flex items-center gap-1 ${
                         sub.status === 'Diterima'
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : sub.status === 'Ditolak'
@@ -300,44 +300,44 @@ export function RiwayatView() {
                           : 'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}
                     >
-                      {sub.status === 'Diterima' && <CheckCircle2 className="w-3.5 h-3.5" />}
-                      {sub.status === 'Ditolak' && <XCircle className="w-3.5 h-3.5" />}
-                      {sub.status === 'Cek Admin' && <Eye className="w-3.5 h-3.5" />}
-                      {sub.status === 'Pending' && <Clock className="w-3.5 h-3.5" />}
+                      {sub.status === 'Diterima' && <CheckCircle2 className="w-3 h-3" />}
+                      {sub.status === 'Ditolak' && <XCircle className="w-3 h-3" />}
+                      {sub.status === 'Cek Admin' && <Eye className="w-3 h-3" />}
+                      {sub.status === 'Pending' && <Clock className="w-3 h-3" />}
                       <span>{sub.status}</span>
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-blue-600 font-bold text-xs shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/80 p-2 sm:p-2.5 rounded-lg sm:rounded-xl border border-slate-100">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-blue-600 font-bold text-xs shrink-0">
                       @
                     </div>
                     <div className="min-w-0">
                       <p className="font-mono text-xs sm:text-sm font-bold text-slate-900 truncate">
                         {cleanEmail}
                       </p>
-                      <p className="text-[11px] text-slate-500">
-                        Password: <strong className="font-mono text-orange-600">{activePassword}</strong> • Imbalan: <strong className="text-blue-700">{formatRupiah(sub.rewardAmount || (isKhusus ? 3000 : 2700))}</strong>
+                      <p className="text-[10px] sm:text-[11px] text-slate-500">
+                        PW: <strong className="font-mono text-orange-600">{activePassword}</strong> • Imbalan: <strong className="text-blue-700">{formatRupiah(sub.rewardAmount || (isKhusus ? 3000 : 2700))}</strong>
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                  <div className="flex items-center gap-1.5 self-start sm:self-center shrink-0">
                     <button
                       type="button"
                       onClick={() => copyToClipboard(cleanEmail)}
-                      className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                      className="px-2 py-1 rounded-md bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer"
                     >
                       {copiedId === cleanEmail ? (
                         <>
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <Check className="w-3 h-3 text-emerald-600" />
                           <span>Disalin</span>
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3.5 h-3.5 text-slate-400" />
+                          <Copy className="w-3 h-3 text-slate-400" />
                           <span>Salin Akun</span>
                         </>
                       )}
@@ -345,24 +345,24 @@ export function RiwayatView() {
                     <button
                       type="button"
                       onClick={() => setSelectedSubForCheck(sub)}
-                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] hover:from-[#1e3a8a] hover:to-sky-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                      className="px-2.5 py-1 rounded-md bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] hover:from-[#1e3a8a] hover:to-sky-500 text-white text-[11px] font-bold flex items-center gap-1 shadow-2xs transition cursor-pointer"
                     >
-                      <Eye className="w-3.5 h-3.5" />
+                      <Eye className="w-3 h-3" />
                       <span>Cek Gmail & Status</span>
                     </button>
                   </div>
                 </div>
 
                 {sub.status === 'Pending' && (
-                  <div className="p-3 rounded-2xl bg-amber-50/90 border border-amber-200 text-xs text-amber-950 flex items-center justify-between gap-2 font-medium">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-amber-50/90 border border-amber-200 text-xs text-amber-950 flex items-center justify-between gap-2 font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                       <span><strong>Status Pending:</strong> Menunggu antrean pengecekan admin (tunggu 24-30 jam).</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setSelectedSubForCheck(sub)}
-                      className="text-amber-900 font-bold hover:underline shrink-0 text-[11px]"
+                      className="text-amber-900 font-bold hover:underline shrink-0 text-[10px] sm:text-[11px]"
                     >
                       Lihat Alur
                     </button>
@@ -370,15 +370,15 @@ export function RiwayatView() {
                 )}
 
                 {sub.status === 'Cek Admin' && (
-                  <div className="p-3 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-950 flex items-center justify-between gap-2 font-medium">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin shrink-0" />
-                      <span><strong>Sedang Dicek Admin:</strong> Akun ini sedang dalam proses pemeriksaan login dan validasi oleh administrator.</span>
+                  <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-950 flex items-center justify-between gap-2 font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                      <span><strong>Sedang Dicek Admin:</strong> Akun sedang diperiksa login dan validasinya oleh admin.</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setSelectedSubForCheck(sub)}
-                      className="text-blue-700 font-bold hover:underline shrink-0 text-[11px]"
+                      className="text-blue-700 font-bold hover:underline shrink-0 text-[10px] sm:text-[11px]"
                     >
                       Cek Detail
                     </button>
@@ -386,10 +386,10 @@ export function RiwayatView() {
                 )}
 
                 {sub.status === 'Diterima' && (
-                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex items-center justify-between gap-2 font-medium">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span><strong>Berhasil Diterima:</strong> Akun valid dan saldo <strong>+{formatRupiah(sub.rewardAmount)}</strong> telah ditambahkan ke akun Anda.</span>
+                  <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex items-center justify-between gap-2 font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span><strong>Berhasil Diterima:</strong> Akun valid, saldo <strong>+{formatRupiah(sub.rewardAmount)}</strong> telah masuk.</span>
                     </div>
                     {sub.reviewedAt && (
                       <span className="text-[10px] text-emerald-800 font-semibold shrink-0">
@@ -400,13 +400,13 @@ export function RiwayatView() {
                 )}
 
                 {sub.status === 'Ditolak' && (
-                  <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-950 space-y-1">
-                    <div className="flex items-center gap-2 font-bold text-rose-800">
-                      <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-950 space-y-0.5">
+                    <div className="flex items-center gap-1.5 font-bold text-rose-800">
+                      <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                       <span>Storan Ditolak oleh Admin</span>
                     </div>
                     {sub.rejectionReason && (
-                      <p className="text-rose-900 pl-6 text-xs leading-relaxed">
+                      <p className="text-rose-900 pl-5 text-[11px] leading-relaxed">
                         Alasan: <strong>{sub.rejectionReason}</strong>
                       </p>
                     )}
@@ -426,18 +426,18 @@ export function RiwayatView() {
               initial={{ opacity: 0, scale: 0.95, y: 16 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-5 max-h-[90vh] overflow-y-auto"
+              className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 p-4 sm:p-5 space-y-3.5 max-h-[90vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                    <Eye className="w-5 h-5" />
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <Eye className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-slate-900">
+                    <h3 className="text-sm sm:text-base font-black text-slate-900">
                       Cek Status Akun Gmail
                     </h3>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-[11px] text-slate-500">
                       Alur verifikasi: Pending → Cek Admin → Diterima/Ditolak
                     </p>
                   </div>
@@ -445,13 +445,13 @@ export function RiwayatView() {
                 <button
                   type="button"
                   onClick={() => setSelectedSubForCheck(null)}
-                  className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer"
+                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-500 font-bold uppercase tracking-wider">
                     Alamat Gmail:

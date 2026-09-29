@@ -34,8 +34,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [showFriendsList, setShowFriendsList] = useState(false);
-  const [inputCode, setInputCode] = useState('');
-  const [applyingCode, setApplyingCode] = useState(false);
 
   const referralCode = userProfile?.referralCode || 'AZGMAIL';
 
@@ -179,20 +177,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   };
 
-  const handleApplyReferral = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser || !inputCode.trim()) return;
-    setApplyingCode(true);
-    const result = await applyReferralCodeForExistingUser(currentUser.uid, inputCode.trim());
-    setApplyingCode(false);
-    if (result.success) {
-      showToast('success', 'Berhasil Digunakan!', result.message);
-      setInputCode('');
-    } else {
-      showToast('error', 'Gagal', result.message);
-    }
-  };
-
   return (
     <div
       className={`rounded-3xl bg-white border border-blue-200/80 p-5 sm:p-6 shadow-sm relative overflow-hidden space-y-4 ${className}`}
@@ -262,29 +246,14 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
         </button>
       </div>
 
-      {/* Input Kode Referral Teman (jika belum pernah terhubung) */}
-      {!userProfile?.referredBy && (
-        <form onSubmit={handleApplyReferral} className="p-3 sm:p-3.5 rounded-2xl bg-slate-50/90 border border-slate-200/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 relative z-10">
-          <div className="flex-1 min-w-0">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-              Punya Kode Referral Teman?
-            </label>
-            <input
-              type="text"
-              value={inputCode}
-              onChange={(e) => setInputCode(e.target.value.toUpperCase().trim())}
-              placeholder="Masukkan kode referral teman di sini..."
-              className="w-full mt-1 px-3 py-1.5 rounded-lg border border-slate-300 font-mono font-bold text-xs uppercase outline-none focus:border-blue-500 bg-white"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={applyingCode || !inputCode.trim()}
-            className="self-end sm:self-end px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-2xs transition disabled:opacity-50 cursor-pointer"
-          >
-            {applyingCode ? 'Memproses...' : 'Gunakan Kode'}
-          </button>
-        </form>
+      {/* Info Status Akun Referral Anda */}
+      {userProfile?.referredBy && (
+        <div className="px-3.5 py-2 rounded-xl bg-emerald-50/80 border border-emerald-200/70 text-xs text-emerald-800 flex items-center gap-2 relative z-10">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>
+            Anda terdaftar melalui referral dari: <strong>{userProfile.inviterName || userProfile.referredByCode || 'Teman'}</strong>
+          </span>
+        </div>
       )}
 
       {/* 3 Metric Cards */}
@@ -295,31 +264,31 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
             <span>Total Undangan</span>
           </div>
           <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-            {loading ? '-' : totalUndangan}
-          </div>
-          <span className="text-[10px] text-slate-400 block mt-0.5">Teman terdaftar</span>
-        </div>
-
-        <div className="p-3 sm:p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 shadow-2xs text-center sm:text-left">
-          <div className="text-[10px] sm:text-xs font-bold text-emerald-800 flex items-center justify-center sm:justify-start gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 hidden sm:inline" />
-            <span>Referral Berhasil</span>
-          </div>
-          <div className="text-xl sm:text-2xl font-black text-emerald-700 mt-1">
             {loading ? '-' : referralBerhasil}
           </div>
-          <span className="text-[10px] text-emerald-600 block mt-0.5">Stor 1 diterima</span>
+          <span className="text-[10px] text-emerald-600 font-semibold block mt-0.5">Stor diterima</span>
+        </div>
+
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 shadow-2xs text-center sm:text-left">
+          <div className="text-[10px] sm:text-xs font-bold text-amber-800 flex items-center justify-center sm:justify-start gap-1">
+            <Clock className="w-3.5 h-3.5 text-amber-600 hidden sm:inline" />
+            <span>Menunggu Stor</span>
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-amber-700 mt-1">
+            {loading ? '-' : Math.max(0, referrals.length - referralBerhasil)}
+          </div>
+          <span className="text-[10px] text-amber-700 block mt-0.5">Wajib stor & diterima</span>
         </div>
 
         <div className="p-3 sm:p-3.5 rounded-2xl bg-blue-50/60 border border-blue-200/80 shadow-2xs text-center sm:text-left">
           <div className="text-[10px] sm:text-xs font-bold text-blue-800 flex items-center justify-center sm:justify-start gap-1">
             <Sparkles className="w-3.5 h-3.5 text-blue-600 hidden sm:inline" />
-            <span>Total Bonus Diterima</span>
+            <span>Bonus Masuk</span>
           </div>
           <div className="text-base sm:text-lg font-black text-blue-700 mt-1 truncate">
             {loading ? '-' : formatRupiah(totalBonusDiterima)}
           </div>
-          <span className="text-[10px] text-blue-600 block mt-0.5">Otomatis masuk</span>
+          <span className="text-[10px] text-blue-600 block mt-0.5">Otomatis ke saldo</span>
         </div>
       </div>
 

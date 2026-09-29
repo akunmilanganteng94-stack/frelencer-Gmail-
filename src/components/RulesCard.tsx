@@ -55,7 +55,6 @@ export function RulesCard({ onNavigate, onClick }: RulesCardProps) {
             </p>
           </div>
         </div>
-
         <div className="flex items-center gap-2 shrink-0">
           <span className="hidden sm:inline text-xs font-bold text-blue-700 group-hover:underline">
             Buka Halaman Rules

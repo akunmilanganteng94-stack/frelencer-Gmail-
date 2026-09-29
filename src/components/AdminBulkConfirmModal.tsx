@@ -217,7 +217,6 @@ export function AdminBulkConfirmModal({
 
           const reward =
             typeof sub.rewardAmount === 'number' && sub.rewardAmount > 0 ? sub.rewardAmount : 3000;
-
           const userDoc = await transaction.get(userRef);
 
           transaction.update(subRef, {

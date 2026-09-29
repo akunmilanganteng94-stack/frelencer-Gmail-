@@ -162,8 +162,8 @@ export function AdminBulkCheckModal({
     if (matchResult.matchedSubs.length === 0) return;
     setProcessing(true);
     setProcessedCount(0);
-    let successCount = 0;
 
+    let successCount = 0;
     for (const sub of matchResult.matchedSubs) {
       try {
         await updateDoc(doc(db, 'submissions', sub.id), {
@@ -246,7 +246,6 @@ export function AdminBulkCheckModal({
                     Klik untuk memuat otomatis
                   </span>
                 </div>
-
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
                   <span className="text-[11px] font-bold text-slate-700 w-full sm:w-auto">
                     Kemarin:
@@ -465,7 +464,6 @@ export function AdminBulkCheckModal({
                   Sebanyak <strong>{processedCount} akun Gmail</strong> telah berhasil dipindahkan ke status <strong>Cek Admin</strong>.
                 </p>
               </div>
-
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 max-w-sm mx-auto text-xs space-y-1.5 text-slate-700">
                 <div className="flex justify-between">
                   <span>Total Akun Diproses:</span>

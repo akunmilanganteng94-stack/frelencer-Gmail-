@@ -105,14 +105,12 @@ export function AdminAllCekAdminTab({
       const userName = (sub.userName || '').toLowerCase();
       const userEmail = (sub.userEmail || '').toLowerCase();
       const q = searchQuery.toLowerCase().trim();
-
       const matchesSearch = !q || email.includes(q) || userName.includes(q) || userEmail.includes(q);
       const matchesType = typeFilter === 'All' || getSubmissionType(sub) === typeFilter;
       const matchesTiming =
         timingFilter === 'All' ||
         (timingFilter === 'kemarin' && isEarlierThanTodayWIB(sub.createdAt)) ||
         (timingFilter === 'hari_ini' && isTodayWIB(sub.createdAt));
-
       return matchesSearch && matchesType && matchesTiming;
     });
   }, [allCekAdminSubs, searchQuery, typeFilter, timingFilter]);
@@ -191,7 +189,6 @@ export function AdminAllCekAdminTab({
 
     setIsBulkConfirming(true);
     setBulkConfirmProgress({ current: 0, total: targetSubs.length });
-
     let successCount = 0;
     let totalPaid = 0;
 
@@ -205,7 +202,6 @@ export function AdminAllCekAdminTab({
         await runTransaction(db, async (transaction) => {
           const subDoc = await transaction.get(subRef);
           if (!subDoc.exists()) return;
-
           const userDoc = await transaction.get(userRef);
 
           transaction.update(subRef, {
@@ -505,6 +501,7 @@ export function AdminAllCekAdminTab({
                 {selectedIds.size} akun Gmail terpilih ({formatRupiah(selectedRewardTotal)})
               </span>
             </div>
+
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -518,6 +515,7 @@ export function AdminAllCekAdminTab({
                 <Copy className="w-3 h-3" />
                 <span>Salin Terpilih</span>
               </button>
+
               <button
                 type="button"
                 onClick={() => {
@@ -529,6 +527,7 @@ export function AdminAllCekAdminTab({
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Konfirmasi Terpilih ({selectedIds.size} Akun)</span>
               </button>
+
               <button
                 type="button"
                 onClick={() => setSelectedIds(new Set())}
@@ -714,7 +713,6 @@ export function AdminAllCekAdminTab({
                       </td>
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* TOMBOL TERIMA (KONFIRMASI) */}
                           <button
                             type="button"
                             disabled={isProcessing}
@@ -729,8 +727,6 @@ export function AdminAllCekAdminTab({
                             )}
                             <span>Terima</span>
                           </button>
-
-                          {/* TOMBOL TOLAK */}
                           <button
                             type="button"
                             disabled={isProcessing}
@@ -741,8 +737,6 @@ export function AdminAllCekAdminTab({
                             <XCircle className="w-3.5 h-3.5" />
                             <span>Tolak</span>
                           </button>
-
-                          {/* KEMBALIKAN KE PENDING */}
                           <button
                             type="button"
                             disabled={isProcessing}
@@ -763,7 +757,7 @@ export function AdminAllCekAdminTab({
         )}
       </div>
 
-      {/* MODAL KONFIRMASI BULK LANGSUNG (MODAL KONFIRMASI DI TEMPAT) */}
+      {/* MODAL KONFIRMASI BULK LANGSUNG */}
       {showConfirmDirectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-5 animate-in zoom-in-95 duration-150">

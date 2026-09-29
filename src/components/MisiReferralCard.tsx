@@ -5,7 +5,7 @@ import { ReferralItem } from '../types';
 import { collection, query, where, onSnapshot, doc, runTransaction } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { formatRupiah, formatIndonesianDateTime, maskEmail } from '../lib/utils';
-import { applyReferralCodeForExistingUser } from '../lib/referralHelper';
+import { syncAndRepairReferralsForInviter } from '../lib/referralHelper';
 import {
   Users,
   Copy,
@@ -39,6 +39,17 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
 
   useEffect(() => {
     if (!currentUser) return;
+
+    // Trigger auto-repair & sync for this inviter on mount
+    if (referralCode) {
+      syncAndRepairReferralsForInviter(
+        currentUser.uid,
+        referralCode,
+        userProfile?.displayName,
+        currentUser.email || ''
+      ).catch(console.warn);
+    }
+
     let listFromRef: ReferralItem[] = [];
     let listFromUsers: ReferralItem[] = [];
 
@@ -62,6 +73,7 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
       const completedCount = list.filter((r) => r.status === 'completed').length;
       const currentMilestones = userProfile?.referralRewardMilestones || [];
       const earnedMilestonesCount = Math.floor(completedCount / 20);
+
       let needsSync = false;
       for (let m = 1; m <= earnedMilestonesCount; m++) {
         if (!currentMilestones.includes(m * 20)) {
@@ -79,6 +91,7 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
           const milestones: number[] = Array.isArray(uData.referralRewardMilestones)
             ? uData.referralRewardMilestones
             : [];
+
           let bonus = 0;
           const updated = [...milestones];
           for (let m = 1; m <= earnedMilestonesCount; m++) {
@@ -88,6 +101,7 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
               bonus += 10000;
             }
           }
+
           if (bonus > 0) {
             transaction.update(userRef, {
               balance: (uData.balance || 0) + bonus,
@@ -147,10 +161,11 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
       unsubRef();
       unsubUsers();
     };
-  }, [currentUser, userProfile?.referralRewardMilestones]);
+  }, [currentUser, userProfile?.referralRewardMilestones, referralCode, userProfile?.displayName]);
 
   const totalUndangan = referrals.length;
   const referralBerhasil = referrals.filter((r) => r.status === 'completed').length;
+  const menungguStor = Math.max(0, totalUndangan - referralBerhasil);
   const currentProgress = referralBerhasil % 20;
   const totalBonusDiterima = (userProfile?.referralRewardMilestones?.length || 0) * 10000;
 
@@ -261,12 +276,14 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
         <div className="p-3 sm:p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs text-center sm:text-left">
           <div className="text-[10px] sm:text-xs font-bold text-slate-500 flex items-center justify-center sm:justify-start gap-1">
             <Users className="w-3.5 h-3.5 text-blue-600 hidden sm:inline" />
-            <span>Total Undangan</span>
+            <span>Total Teman</span>
           </div>
           <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-            {loading ? '-' : referralBerhasil}
+            {loading ? '-' : totalUndangan}
           </div>
-          <span className="text-[10px] text-emerald-600 font-semibold block mt-0.5">Stor diterima</span>
+          <span className="text-[10px] text-emerald-600 font-semibold block mt-0.5">
+            {referralBerhasil} stor diterima
+          </span>
         </div>
 
         <div className="p-3 sm:p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 shadow-2xs text-center sm:text-left">
@@ -275,7 +292,7 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
             <span>Menunggu Stor</span>
           </div>
           <div className="text-xl sm:text-2xl font-black text-amber-700 mt-1">
-            {loading ? '-' : Math.max(0, referrals.length - referralBerhasil)}
+            {loading ? '-' : menungguStor}
           </div>
           <span className="text-[10px] text-amber-700 block mt-0.5">Wajib stor & diterima</span>
         </div>
@@ -303,12 +320,14 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
             {currentProgress} / 20 Teman
           </span>
         </div>
+
         <div className="w-full h-3 rounded-full bg-slate-200 overflow-hidden p-0.5">
           <div
             className="h-full rounded-full bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] transition-all duration-300 shadow-xs"
             style={{ width: `${Math.min(100, (currentProgress / 20) * 100)}%` }}
           />
         </div>
+
         <div className="flex items-center justify-between text-[11px] text-slate-500">
           <span>Target: 20 teman melakukan storan pertama yang diterima</span>
           <span className="font-bold text-emerald-700">Bonus Rp 10.000</span>

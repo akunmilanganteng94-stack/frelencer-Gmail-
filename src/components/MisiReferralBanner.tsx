@@ -18,6 +18,7 @@ export function MisiReferralBanner({ onNavigate, className = '' }: MisiReferralB
 
   useEffect(() => {
     if (!currentUser) return;
+
     let listFromRef: ReferralItem[] = [];
     let listFromUsers: ReferralItem[] = [];
 

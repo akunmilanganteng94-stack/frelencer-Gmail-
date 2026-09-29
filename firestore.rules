@@ -27,7 +27,7 @@ service cloud.firestore {
     // Settings collection
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isSignedIn();
     }
 
     // Users collection
@@ -40,7 +40,7 @@ service cloud.firestore {
 
     // Submissions collection
     match /submissions/{submissionId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if isSignedIn();
       allow delete: if isAdmin();
@@ -48,7 +48,7 @@ service cloud.firestore {
 
     // Withdrawals collection
     match /withdrawals/{withdrawalId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if isAdmin();
       allow delete: if isAdmin();

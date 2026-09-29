@@ -31,15 +31,12 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   const { settings } = useSettings();
   const { openContactModal } = useContactAdmin();
   const { showToast } = useToast();
-
   const [copiedUid, setCopiedUid] = useState(false);
   const [copiedWa, setCopiedWa] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-
   const [nameInput, setNameInput] = useState(userProfile?.displayName || '');
   const [savingName, setSavingName] = useState(false);
-
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
@@ -314,12 +311,12 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                 >
                   {copiedWa ? (
                     <>
-                      <Check className="w-3 h-3 text-emerald-600" />
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
                       <span className="text-emerald-700">Tersalin</span>
                     </>
                   ) : (
                     <>
-                      <Copy className="w-3 h-3 text-slate-500" />
+                      <Copy className="w-3.5 h-3.5 text-slate-500" />
                       <span>Salin Nomor</span>
                     </>
                   )}

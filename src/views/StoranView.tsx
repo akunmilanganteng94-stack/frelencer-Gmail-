@@ -7,7 +7,6 @@ import { formatRupiah } from '../lib/utils';
 import { Submission, OperationType, NavigationTab } from '../types';
 import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { db, handleFirestoreError } from '../lib/firebase';
-import { RulesCard } from '../components/RulesCard';
 import {
   GmailGenerator,
   verifyUserGeneratedEmail,
@@ -23,6 +22,8 @@ import {
   KeyRound,
   Mail,
   Globe,
+  ClipboardList,
+  ArrowRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -35,7 +36,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const { settings } = useSettings();
   const { showToast } = useToast();
   const { openContactModal } = useContactAdmin();
-
   const activePassword = settings.gmailDefaultPassword || 'sgsg1122';
 
   const [inputData, setInputData] = useState('');
@@ -54,7 +54,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
 
   const isKhususClosed = settings.storanKhususOpen === false || !settings.storanOpen;
   const isBebasClosed = settings.storanBebasOpen === false || !settings.storanOpen;
-
   const isCurrentTypeClosed =
     !settings.storanOpen ||
     (storanType === 'khusus' && isKhususClosed) ||
@@ -112,6 +111,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       setInputError('Storan Gmail Bebas saat ini tidak dapat diakses.');
       return;
     }
+
     if (userProfile?.status === 'suspended') {
       showToast('error', 'Akun Dibatasi', 'Akun kamu sedang dibatasi. Hubungi admin untuk informasi lebih lanjut.');
       return;
@@ -215,12 +215,14 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         setSubmitting(false);
         return;
       }
+
       if (storanType === 'khusus' && isKhususClosed) {
         showToast('error', 'Akses Dibatasi', 'Storan Gmail Khusus saat ini tidak dapat diakses.');
         setShowConfirmModal(false);
         setSubmitting(false);
         return;
       }
+
       if (storanType === 'bebas' && isBebasClosed) {
         showToast('error', 'Akses Dibatasi', 'Storan Gmail Bebas saat ini tidak dapat diakses.');
         setShowConfirmModal(false);
@@ -305,6 +307,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       .split('\n')
       .map((l) => l.trim())
       .filter(Boolean);
+
     const lower = email.toLowerCase();
     if (currentLines.map((c) => c.toLowerCase()).includes(lower)) {
       showToast('info', 'Sudah Ada', `Akun ${email} sudah ada dalam daftar stor.`);
@@ -317,6 +320,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     const updated = [...currentLines, lower].join('\n');
     setInputData(updated);
     setInputError('');
+
     const formEl = document.getElementById('submission-form-card');
     if (formEl) {
       formEl.scrollIntoView({ behavior: 'smooth' });
@@ -409,38 +413,88 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         </div>
       )}
 
-      {/* RULES CARD DI ATAS */}
-      <RulesCard onNavigate={onNavigate} />
+      {/* KARTU TERPADU: RULES & KETENTUAN + GENERATOR AKUN GMAIL */}
+      <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden divide-y divide-slate-100">
+        {/* HEADER: RULES & KETENTUAN STOR */}
+        <div className="p-3 sm:p-3.5 bg-slate-50/70 hover:bg-slate-50/90 transition">
+          <div className="flex items-center justify-between gap-3">
+            <div
+              onClick={() => onNavigate && onNavigate('rules')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onNavigate && onNavigate('rules');
+                }
+              }}
+              className="flex items-center gap-2.5 sm:gap-3 min-w-0 cursor-pointer group select-none flex-1"
+            >
+              <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100/80 group-hover:bg-blue-600 group-hover:text-white transition shadow-2xs">
+                <ClipboardList className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs sm:text-sm font-black text-slate-900 tracking-tight group-hover:text-blue-700 transition">
+                    Rules & Ketentuan Storan
+                  </h3>
+                  <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 shrink-0">
+                    {settings.rules?.length || 0} Aturan
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-slate-500 truncate mt-0.5">
+                  Password wajib:{' '}
+                  <strong className="font-mono text-orange-600 font-bold">
+                    {activePassword}
+                  </strong>{' '}
+                  • Klik untuk baca aturan lengkap
+                </p>
+              </div>
+            </div>
 
-      {/* GENERATOR ATAU KETENTUAN BEBAS CARD */}
-      {storanType === 'khusus' && !isKhususClosed && (
-        <GmailGenerator
-          onOpenContactAdmin={openContactModal}
-          submittedEmails={submissions.map((s) => s.dataContent.trim().toLowerCase())}
-          onSelectEmailForStoran={handleSelectFromGenerator}
-        />
-      )}
-
-      {storanType === 'bebas' && !isBebasClosed && (
-        <div className="bg-gradient-to-r from-teal-50/90 via-emerald-50/80 to-teal-50/90 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 border border-teal-200/70 text-xs text-teal-950 flex items-start gap-2.5 shadow-2xs">
-          <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center shrink-0">
-            <Globe className="w-4 h-4" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <strong className="block text-xs sm:text-sm font-black text-teal-950 mb-0.5">
-              Ketentuan STOR Gmail Bebas (Rp 2.700 / Akun)
-            </strong>
-            <p className="text-[11px] sm:text-xs text-teal-900 leading-relaxed font-medium">
-              Bebas memakai nama Gmail apa saja kreasi Anda (tanpa perlu generate). Password WAJIB{' '}
-              <strong className="font-mono text-orange-600 font-bold bg-white px-1.5 py-0.2 rounded border border-orange-200 shadow-2xs">{activePassword}</strong>, dan pastikan tidak ada 2FA atau verifikasi nomor HP yang terkunci.
-            </p>
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate('rules')}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-700 hover:bg-blue-100 transition cursor-pointer shrink-0 shadow-2xs bg-white border border-blue-200/80"
+            >
+              <span className="hidden sm:inline">Halaman Rules</span>
+              <ArrowRight className="w-3.5 h-3.5 text-blue-600" />
+            </button>
           </div>
         </div>
-      )}
 
-      {/* FORM SETORAN CARD - JENIS STORAN SUDAH DIPINDAHKAN KE DALAM KOTAK INI */}
+        {/* KONTEN: GENERATOR AKUN GMAIL (KHUSUS) ATAU KETENTUAN (BEBAS) */}
+        {storanType === 'khusus' && !isKhususClosed && (
+          <div className="p-3.5 sm:p-4">
+            <GmailGenerator
+              onOpenContactAdmin={openContactModal}
+              submittedEmails={submissions.map((s) => s.dataContent.trim().toLowerCase())}
+              onSelectEmailForStoran={handleSelectFromGenerator}
+              embedded={true}
+            />
+          </div>
+        )}
+
+        {storanType === 'bebas' && !isBebasClosed && (
+          <div className="p-3.5 sm:p-4 bg-gradient-to-r from-teal-50/60 via-emerald-50/40 to-teal-50/60 text-xs text-teal-950 flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center shrink-0">
+              <Globe className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <strong className="block text-xs sm:text-sm font-black text-teal-950 mb-0.5">
+                Ketentuan STOR Gmail Bebas (Rp 2.700 / Akun)
+              </strong>
+              <p className="text-[11px] sm:text-xs text-teal-900 leading-relaxed font-medium">
+                Bebas memakai nama Gmail apa saja kreasi Anda (tanpa perlu generate). Password WAJIB{' '}
+                <strong className="font-mono text-orange-600 font-bold bg-white px-1.5 py-0.2 rounded border border-orange-200 shadow-2xs">{activePassword}</strong>, dan pastikan tidak ada 2FA atau verifikasi nomor HP yang terkunci.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* FORM SETORAN CARD */}
       <div id="submission-form-card" className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-4.5 border border-slate-200/80 shadow-2xs space-y-3 sm:space-y-3.5">
-        {/* PILIHAN JENIS STORAN (DIPINDAHKAN KE DALAM KOTAK FORM STORAN) */}
         <div className="space-y-1.5 pb-2 border-b border-slate-100">
           <div className="flex items-center justify-between px-0.5">
             <div className="text-xs font-black text-slate-800 tracking-tight">
@@ -585,7 +639,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 <span>{inputError}</span>
               </p>
             )}
-
             <div className="flex flex-wrap items-center justify-between gap-1.5 mt-1.5 text-[10px] sm:text-[11px] text-slate-500">
               <span className="flex items-center gap-1">
                 <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />

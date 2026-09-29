@@ -23,7 +23,6 @@ import { motion, AnimatePresence } from 'motion/react';
 export function AuthView() {
   const { loginUser, registerUser, resetPassword, loginWithGoogle } = useAuth();
   const { showToast } = useToast();
-
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -64,7 +63,6 @@ export function AuthView() {
         return;
       }
       console.error('Google Sign-In Error:', err);
-
       if (errorMessage.includes('auth/popup-blocked')) {
         setFormError('Jendela pop-up Google diblokir oleh browser. Izinkan pop-up di peramban Anda.');
         showToast('error', 'Popup Diblokir', 'Izinkan pop-up di pengaturan browser Anda.');
@@ -121,7 +119,6 @@ export function AuthView() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       let friendlyMsg = 'Terjadi kesalahan, silakan coba lagi.';
-
       if (
         errorMessage.includes('auth/invalid-credential') ||
         errorMessage.includes('auth/wrong-password') ||

@@ -69,6 +69,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#1e40af] via-[#2563eb] to-[#38bdf8] p-3.5 sm:p-4 text-white shadow-md shadow-blue-900/15 border border-blue-400/20">
         <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-sky-300/20 blur-xl pointer-events-none" />
         <div className="absolute -left-10 -bottom-10 w-32 h-32 rounded-full bg-blue-950/40 blur-lg pointer-events-none" />
+
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="space-y-0.5">
             <div className="flex items-center gap-1.5 text-white">
@@ -349,7 +350,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                       </span>
                     </div>
                   </div>
-
                   <span
                     className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       sub.status === 'Diterima'

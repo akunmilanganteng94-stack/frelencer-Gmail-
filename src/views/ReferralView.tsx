@@ -2,10 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { NavigationTab, ReferralItem } from '../types';
-import { collection, query, where, onSnapshot, doc, runTransaction } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, runTransaction, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { formatRupiah, formatIndonesianDateTime, maskEmail } from '../lib/utils';
-import { applyReferralCodeForExistingUser } from '../lib/referralHelper';
+import {
+  syncAndRepairReferralsForInviter,
+} from '../lib/referralHelper';
 import {
   ArrowLeft,
   Gift,
@@ -20,6 +22,7 @@ import {
   HelpCircle,
   Search,
   TrendingUp,
+  RefreshCw,
 } from 'lucide-react';
 
 interface ReferralViewProps {
@@ -35,11 +38,45 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'All' | 'completed' | 'pending_submission'>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   const referralCode = userProfile?.referralCode || 'AZGMAIL';
 
+  const triggerRepair = async () => {
+    if (!currentUser || !referralCode) return;
+    setRefreshing(true);
+    try {
+      const repaired = await syncAndRepairReferralsForInviter(
+        currentUser.uid,
+        referralCode,
+        userProfile?.displayName,
+        currentUser.email || ''
+      );
+      if (repaired > 0) {
+        showToast('success', 'Sinkronisasi Berhasil', `${repaired} teman referral baru berhasil ditemukan & ditambahkan.`);
+      } else {
+        showToast('info', 'Sinkronisasi Selesai', 'Data referral sudah terupdate dengan database terbaru.');
+      }
+    } catch (e) {
+      console.warn('Sync notice:', e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     if (!currentUser) return;
+
+    // Trigger repair on initial load
+    if (referralCode) {
+      syncAndRepairReferralsForInviter(
+        currentUser.uid,
+        referralCode,
+        userProfile?.displayName,
+        currentUser.email || ''
+      ).catch(console.warn);
+    }
+
     let refItemsFromReferrals: ReferralItem[] = [];
     let refItemsFromUsers: ReferralItem[] = [];
 
@@ -57,6 +94,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
           map.set(uItem.invitedUid, uItem);
         }
       }
+
       const combined = Array.from(map.values()).sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
@@ -66,6 +104,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
       const completedCount = combined.filter((r) => r.status === 'completed').length;
       const currentMilestones = userProfile?.referralRewardMilestones || [];
       const earnedMilestonesCount = Math.floor(completedCount / 20);
+
       let needsSync = false;
       for (let m = 1; m <= earnedMilestonesCount; m++) {
         if (!currentMilestones.includes(m * 20)) {
@@ -83,6 +122,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
           const milestones: number[] = Array.isArray(uData.referralRewardMilestones)
             ? uData.referralRewardMilestones
             : [];
+
           let bonus = 0;
           const updated = [...milestones];
           for (let m = 1; m <= earnedMilestonesCount; m++) {
@@ -92,6 +132,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
               bonus += 10000;
             }
           }
+
           if (bonus > 0) {
             transaction.update(userRef, {
               balance: (uData.balance || 0) + bonus,
@@ -157,11 +198,11 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
       unsubReferrals();
       unsubUsers();
     };
-  }, [currentUser, userProfile?.referralRewardMilestones, referralCode, showToast]);
+  }, [currentUser, userProfile?.referralRewardMilestones, referralCode, userProfile?.displayName, showToast]);
 
-  const totalTerdaftar = referrals.length;
+  const totalUndangan = referrals.length;
   const referralBerhasil = referrals.filter((r) => r.status === 'completed').length;
-  const totalUndangan = referralBerhasil; // Friends whose stor is accepted and counted in user A
+  const menungguStor = Math.max(0, totalUndangan - referralBerhasil);
   const currentProgress = referralBerhasil % 20;
   const sisaMenujuBonus = 20 - currentProgress;
   const totalBonusDiterima = (userProfile?.referralRewardMilestones?.length || 0) * 10000;
@@ -229,20 +270,34 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
             </h1>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={handleShareWhatsApp}
-          className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg text-xs font-bold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0 self-start sm:self-center"
-        >
-          <Share2 className="w-3.5 h-3.5" />
-          <span>Bagikan ke WhatsApp</span>
-        </button>
+
+        <div className="flex items-center gap-2 self-start sm:self-center">
+          <button
+            type="button"
+            onClick={triggerRepair}
+            disabled={refreshing}
+            className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-xs font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+            title="Sinkronkan data referral jika teman baru saja mendaftar"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-600' : 'text-slate-500'}`} />
+            <span>{refreshing ? 'Sinkron...' : 'Cek Teman Baru'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleShareWhatsApp}
+            className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg text-xs font-bold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>Bagikan ke WhatsApp</span>
+          </button>
+        </div>
       </div>
 
       {/* Hero Banner */}
       <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#1e40af] via-[#2563eb] to-[#38bdf8] p-4 sm:p-5 text-white shadow-md shadow-blue-900/20 border border-blue-400/20">
         <div className="absolute -right-8 -top-8 w-44 h-44 rounded-full bg-sky-300/20 blur-2xl pointer-events-none" />
         <div className="absolute -left-10 -bottom-10 w-36 h-36 rounded-full bg-blue-950/40 blur-xl pointer-events-none" />
+
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5 max-w-xl">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-black text-white border border-white/30">
@@ -256,6 +311,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
               Bagikan kode referral Anda ke rekan freelancer. Ketika teman melakukan storan Gmail pertama yang berstatus <strong>Diterima</strong>, referral akan terhitung berhasil. Setiap mencapai kelipatan 20 teman berhasil, bonus <strong>Rp 10.000 otomatis masuk</strong> ke saldo Anda!
             </p>
           </div>
+
           <div className="bg-white/15 backdrop-blur-md rounded-xl p-3 sm:p-3.5 border border-white/25 text-center shrink-0 self-start md:self-center shadow-inner">
             <span className="text-[10px] font-bold text-sky-100 uppercase tracking-wider block">
               Bonus Tiap 20 Teman
@@ -291,6 +347,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
               </button>
             </div>
           </div>
+
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
@@ -326,11 +383,13 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
         <div className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">Total Undangan</span>
+            <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">Total Teman</span>
             <div className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">
               {loading ? '-' : totalUndangan}
             </div>
-            <span className="text-[10px] text-emerald-600 font-semibold block mt-0.5">Stor diterima</span>
+            <span className="text-[10px] text-emerald-600 font-semibold block mt-0.5">
+              {referralBerhasil} stor diterima
+            </span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
             <Users className="w-5 h-5" />
@@ -341,7 +400,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
           <div>
             <span className="text-[10px] font-bold text-amber-800 block uppercase tracking-wider">Menunggu Stor</span>
             <div className="text-xl sm:text-2xl font-black text-amber-700 mt-0.5">
-              {loading ? '-' : Math.max(0, totalTerdaftar - referralBerhasil)}
+              {loading ? '-' : menungguStor}
             </div>
             <span className="text-[10px] text-amber-700 block mt-0.5">Wajib stor & diterima</span>
           </div>
@@ -385,12 +444,14 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
             <span className="text-xs font-bold text-slate-400 font-mono"> / 20 Teman</span>
           </div>
         </div>
+
         <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden p-0.5 border border-slate-200">
           <div
             className="h-full rounded-full bg-gradient-to-r from-[#1e40af] via-[#2563eb] to-[#38bdf8] transition-all duration-500 shadow-2xs"
             style={{ width: `${Math.min(100, (currentProgress / 20) * 100)}%` }}
           />
         </div>
+
         <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
           <span>0 Teman</span>
           <span className="font-bold text-blue-700">10 Teman (50%)</span>
@@ -472,13 +533,14 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
               Pantau status storan pertama teman yang Anda undang
             </p>
           </div>
+
           <div className="flex flex-wrap items-center gap-1 p-0.5 bg-slate-100 rounded-lg text-xs font-bold">
             <button
               type="button"
               onClick={() => setFilterStatus('All')}
               className={`px-2.5 py-1 rounded-md text-[11px] transition cursor-pointer ${
                 filterStatus === 'All'
-                  ? 'bg-white text-blue-700 shadow-2xs'
+                  ? 'bg-white text-blue-700 shadow-2xs font-black'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -489,7 +551,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
               onClick={() => setFilterStatus('completed')}
               className={`px-2.5 py-1 rounded-md text-[11px] transition cursor-pointer flex items-center gap-1 ${
                 filterStatus === 'completed'
-                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  ? 'bg-emerald-600 text-white shadow-2xs font-black'
                   : 'text-emerald-700 hover:bg-emerald-50'
               }`}
             >
@@ -501,12 +563,12 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
               onClick={() => setFilterStatus('pending_submission')}
               className={`px-2.5 py-1 rounded-md text-[11px] transition cursor-pointer flex items-center gap-1 ${
                 filterStatus === 'pending_submission'
-                  ? 'bg-amber-600 text-white shadow-2xs'
+                  ? 'bg-amber-600 text-white shadow-2xs font-black'
                   : 'text-amber-700 hover:bg-amber-50'
               }`}
             >
               <Clock className="w-3.5 h-3.5" />
-              <span>Menunggu ({totalUndangan - referralBerhasil})</span>
+              <span>Menunggu ({menungguStor})</span>
             </button>
           </div>
         </div>
@@ -539,15 +601,22 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
                 : 'Belum ada teman yang bergabung menggunakan kode referral Anda.'}
             </p>
             <p className="text-slate-500 max-w-sm mx-auto text-[11px]">
-              Bagikan kode <strong>{referralCode}</strong> ke grup WhatsApp atau media sosial Anda untuk mengumpulkan 20 teman!
+              Bagikan kode <strong>{referralCode}</strong> ke rekan atau grup Anda untuk mengumpulkan 20 teman!
             </p>
-            <div className="pt-1.5">
+            <div className="pt-1.5 flex justify-center gap-2">
+              <button
+                type="button"
+                onClick={triggerRepair}
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition cursor-pointer"
+              >
+                Cek Ulang Database
+              </button>
               <button
                 type="button"
                 onClick={handleShareWhatsApp}
                 className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-lg text-xs shadow-2xs transition cursor-pointer"
               >
-                Bagikan Sekarang ke WhatsApp
+                Bagikan ke WhatsApp
               </button>
             </div>
           </div>

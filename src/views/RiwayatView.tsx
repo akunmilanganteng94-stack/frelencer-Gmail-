@@ -140,7 +140,7 @@ export function RiwayatView() {
                   : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100'
               }`}
             >
-              <Sparkles className="w-3 h-3" />
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Gmail Khusus (3k)</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                 typeFilter === 'khusus' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-800'
@@ -157,7 +157,7 @@ export function RiwayatView() {
                   : 'bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-100'
               }`}
             >
-              <Globe className="w-3 h-3" />
+              <Globe className="w-3.5 h-3.5" />
               <span>Gmail Bebas (2.7k)</span>
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                 typeFilter === 'bebas' ? 'bg-white/20 text-white' : 'bg-teal-100 text-teal-800'
@@ -595,6 +595,7 @@ export function RiwayatView() {
                           </span>
                         )}
                       </div>
+
                       {selectedSubForCheck.status === 'Diterima' && (
                         <div className="mt-1.5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1">
                           <p className="font-bold flex items-center gap-1.5">
@@ -606,6 +607,7 @@ export function RiwayatView() {
                           </p>
                         </div>
                       )}
+
                       {selectedSubForCheck.status === 'Ditolak' && (
                         <div className="mt-1.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-1">
                           <p className="font-bold flex items-center gap-1.5 text-rose-800">
@@ -617,6 +619,7 @@ export function RiwayatView() {
                           </p>
                         </div>
                       )}
+
                       {selectedSubForCheck.status !== 'Diterima' && selectedSubForCheck.status !== 'Ditolak' && (
                         <p className="text-xs text-slate-400 mt-0.5 italic">
                           Menunggu admin menyelesaikan verifikasi untuk menentukan status akhir.

@@ -29,11 +29,9 @@ export function SaldoView() {
   const { userProfile, currentUser } = useAuth();
   const { settings } = useSettings();
   const { showToast } = useToast();
-
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-
   const [amountInput, setAmountInput] = useState<string>('');
   const [method, setMethod] = useState<WithdrawalMethod>('DANA');
   const [targetNumber, setTargetNumber] = useState('');
@@ -107,24 +105,20 @@ export function SaldoView() {
 
     const currentBalance = userProfile.balance || 0;
     const numericAmount = parseInt(amountInput.replace(/[^0-9]/g, ''), 10);
-
     if (isNaN(numericAmount) || numericAmount <= 0) {
       setFormError('Masukkan nominal penarikan yang valid.');
       return;
     }
-
     if (numericAmount % 1000 !== 0) {
       setFormError(
         'Penarikan tidak boleh ada perakan! Nominal wajib bulat kelipatan Rp 1.000 (contoh: 2.000, 5.000, 10.000, dst.).'
       );
       return;
     }
-
     if (numericAmount < minWithdrawal) {
       setFormError(`Minimal penarikan adalah ${formatRupiah(minWithdrawal)}.`);
       return;
     }
-
     if (numericAmount > currentBalance) {
       setFormError(
         `Saldo kamu tidak mencukupi untuk nominal ${formatRupiah(numericAmount)}. Saldo saat ini: ${formatRupiah(currentBalance)}.`
@@ -137,12 +131,10 @@ export function SaldoView() {
       setFormError('Nomor tujuan e-wallet tidak valid. Format: 08xxx (10-13 digit).');
       return;
     }
-
     if (!recipientName.trim()) {
       setFormError('Nama pemilik akun e-wallet wajib diisi.');
       return;
     }
-
     if (!isConfirmed) {
       setFormError('Harap centang konfirmasi bahwa data nomor dan nama penerima sudah benar.');
       return;
@@ -158,10 +150,8 @@ export function SaldoView() {
         if (!userDoc.exists()) {
           throw new Error('Data pengguna tidak ditemukan.');
         }
-
         const userData = userDoc.data();
         const availableBal = userData.balance || 0;
-
         if (availableBal < numericAmount) {
           throw new Error(`Saldo tidak mencukupi. Saldo saat ini: ${formatRupiah(availableBal)}`);
         }
@@ -485,7 +475,7 @@ export function SaldoView() {
                   </div>
                   {hasPerakan ? (
                     <p className="mt-1 text-[10px] text-rose-600 font-semibold flex items-center gap-1">
-                      <span>⚠️ Dilarang perakan (Rp {(parsedAmount % 1000).toLocaleString('id-ID')}). Wajib kelipatan 1.000.</span>
+                      <span>• Dilarang perakan (Rp {(parsedAmount % 1000).toLocaleString('id-ID')}). Wajib kelipatan 1.000.</span>
                     </p>
                   ) : (
                     <p className="mt-1 text-[10px] text-slate-400">
@@ -516,7 +506,6 @@ export function SaldoView() {
                       ))}
                     </div>
                   </div>
-
                   <div className="sm:col-span-7">
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Nomor {method}

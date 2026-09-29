@@ -221,7 +221,7 @@ export function AuthView() {
 
           {mode !== 'forgot' && (
             <div className="mb-5 space-y-3">
-              {(referralCodeInput || getPendingReferralCode()) && mode === 'register' && (
+              {(referralCodeInput || getPendingReferralCode()) && (
                 <div className="p-3 rounded-xl bg-gradient-to-r from-blue-50/90 via-sky-50/80 to-blue-50/90 border border-blue-200 text-blue-900 text-xs shadow-2xs">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -230,7 +230,7 @@ export function AuthView() {
                     <div className="min-w-0 flex-1">
                       <div className="font-bold text-blue-950">Undangan Teman Terdeteksi!</div>
                       <div className="text-[11px] text-blue-800">
-                        Kode Referral: <strong className="font-mono bg-blue-100/90 px-1.5 py-0.5 rounded text-blue-900 font-black">{referralCodeInput || getPendingReferralCode()}</strong> terpasang otomatis.
+                        Kode Referral: <strong className="font-mono bg-blue-100/90 px-1.5 py-0.5 rounded text-blue-900 font-black">{referralCodeInput || getPendingReferralCode()}</strong> terhubung otomatis saat kamu mendaftar atau login.
                       </div>
                     </div>
                   </div>

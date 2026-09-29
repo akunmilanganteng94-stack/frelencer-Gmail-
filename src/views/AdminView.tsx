@@ -9,6 +9,7 @@ import {
   Withdrawal,
   NavigationTab,
   GmailStockItem,
+  SystemSettings,
 } from '../types';
 import {
   collection,
@@ -62,6 +63,12 @@ import {
   Gift,
   FileText,
   Send,
+  Save,
+  RotateCcw,
+  Sliders,
+  Calendar,
+  DollarSign,
+  AlertCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -146,7 +153,8 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const [tempStoranClosedReason, setTempStoranClosedReason] = useState(
     settings.storanClosedReason || ''
   );
-  const [rulesList] = useState<string[]>(settings?.rules || []);
+  const [rulesList, setRulesList] = useState<string[]>(settings?.rules || []);
+  const [newRuleInput, setNewRuleInput] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
 
   const [stockFilter, setStockFilter] = useState<'All' | 'available' | 'used'>('All');
@@ -180,38 +188,58 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   useEffect(() => {
     if (!isAdmin) return;
 
-    const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
-      const uList: UserProfile[] = [];
-      snap.forEach((d) => {
-        const u = d.data() as UserProfile;
-        uList.push(u);
-        // Backfill referral codes mapping for public lookup
-        if (u.referralCode) {
-          saveReferralCodeMapping(u.referralCode, { uid: d.id, email: u.email, displayName: u.displayName }).catch(() => {});
-        }
-      });
-      setUsersList(uList);
-    });
+    const unsubUsers = onSnapshot(
+      collection(db, 'users'),
+      (snap) => {
+        const uList: UserProfile[] = [];
+        snap.forEach((d) => {
+          const u = d.data() as UserProfile;
+          uList.push(u);
+        });
+        setUsersList(uList);
+      },
+      (err) => {
+        console.warn('Admin users listener warning:', err);
+      }
+    );
 
-    const unsubSubs = onSnapshot(collection(db, 'submissions'), (snap) => {
-      const sList: Submission[] = [];
-      snap.forEach((d) => sList.push({ id: d.id, ...(d.data() as Omit<Submission, 'id'>) }));
-      sList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setSubmissionsList(sList);
-    });
+    const unsubSubs = onSnapshot(
+      collection(db, 'submissions'),
+      (snap) => {
+        const sList: Submission[] = [];
+        snap.forEach((d) => sList.push({ id: d.id, ...(d.data() as Omit<Submission, 'id'>) }));
+        sList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setSubmissionsList(sList);
+      },
+      (err) => {
+        console.warn('Admin submissions listener warning:', err);
+      }
+    );
 
-    const unsubWiths = onSnapshot(collection(db, 'withdrawals'), (snap) => {
-      const wList: Withdrawal[] = [];
-      snap.forEach((d) => wList.push({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
-      wList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setWithdrawalsList(wList);
-    });
+    const unsubWiths = onSnapshot(
+      collection(db, 'withdrawals'),
+      (snap) => {
+        const wList: Withdrawal[] = [];
+        snap.forEach((d) => wList.push({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
+        wList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setWithdrawalsList(wList);
+      },
+      (err) => {
+        console.warn('Admin withdrawals listener warning:', err);
+      }
+    );
 
-    const unsubRefs = onSnapshot(collection(db, 'referrals'), (snap) => {
-      const rList: { id: string; inviterUid: string; invitedUid: string; status: string }[] = [];
-      snap.forEach((d) => rList.push({ id: d.id, ...(d.data() as any) }));
-      setReferralsList(rList);
-    });
+    const unsubRefs = onSnapshot(
+      collection(db, 'referrals'),
+      (snap) => {
+        const rList: { id: string; inviterUid: string; invitedUid: string; status: string }[] = [];
+        snap.forEach((d) => rList.push({ id: d.id, ...(d.data() as any) }));
+        setReferralsList(rList);
+      },
+      (err) => {
+        console.warn('Admin referrals listener warning:', err);
+      }
+    );
 
     return () => {
       unsubUsers();
@@ -230,6 +258,9 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     setTempGmailPassword(settings.gmailDefaultPassword || 'sgsg1122');
     setTempWhatsApp(settings.adminWhatsApp || '6285199219856');
     setTempStoranClosedReason(settings.storanClosedReason || '');
+    if (settings.rules && Array.isArray(settings.rules) && settings.rules.length > 0) {
+      setRulesList(settings.rules);
+    }
   }, [settings]);
 
   if (!isAdmin) {
@@ -445,52 +476,102 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const handleSaveAllSettings = async () => {
     setSavingSettings(true);
     try {
+      const priceNum = Math.max(0, Number(tempPrice) || 3000);
+      const minWdNum = Math.max(0, Number(tempMinWithdrawal) || 4000);
+      const dailyLimitNum = Math.max(1, Number(tempDailyGenerateLimit) || 10);
+      const cleanedRules = rulesList.map((r) => r.trim()).filter((r) => r.length > 0);
+
       await updateSettings({
-        pricePerSubmission: Number(tempPrice),
-        minWithdrawal: Number(tempMinWithdrawal),
-        storanSchedule: tempSchedule.trim(),
+        pricePerSubmission: priceNum,
+        minWithdrawal: minWdNum,
+        storanSchedule: tempSchedule.trim() || 'Senin - Jumat, 07.00 - 17.00 WIB (Sabtu & Minggu CLOSE)',
         announcement: tempAnnouncement.trim(),
-        rules: rulesList.filter((r) => r.trim().length > 0),
+        rules: cleanedRules.length > 0 ? cleanedRules : (settings.rules || []),
         gmailDefaultPassword: tempGmailPassword.trim() || 'sgsg1122',
         adminWhatsApp: tempWhatsApp.trim() || '6285199219856',
-        dailyGenerateLimit: Math.max(1, Number(tempDailyGenerateLimit) || 10),
+        dailyGenerateLimit: dailyLimitNum,
         storanClosedReason: tempStoranClosedReason.trim(),
       });
-      showToast('success', 'Pengaturan Disimpan', 'Konfigurasi berhasil disimpan.');
+      showToast('success', 'Pengaturan Disimpan', 'Konfigurasi sistem berhasil disimpan dan aktif realtime.');
     } catch (err: unknown) {
-      showToast('error', 'Gagal', err instanceof Error ? err.message : String(err));
+      showToast('error', 'Gagal Menyimpan', err instanceof Error ? err.message : String(err));
     } finally {
       setSavingSettings(false);
     }
   };
 
+  const handleAddRule = () => {
+    if (!newRuleInput.trim()) return;
+    setRulesList((prev) => [...prev, newRuleInput.trim()]);
+    setNewRuleInput('');
+    showToast('info', 'Aturan Ditambahkan', 'Klik "Simpan Semua Pengaturan" untuk menerapkan secara permanen.');
+  };
+
+  const handleRemoveRule = (index: number) => {
+    setRulesList((prev) => prev.filter((_, i) => i !== index));
+    showToast('info', 'Aturan Dihapus', 'Klik "Simpan Semua Pengaturan" untuk menerapkan secara permanen.');
+  };
+
+  const handleUpdateRule = (index: number, val: string) => {
+    setRulesList((prev) => prev.map((r, i) => (i === index ? val : r)));
+  };
+
+  const handleResetToDefaultRules = () => {
+    const DEFAULT_RULES = [
+      'Password akun Gmail WAJIB menggunakan: sgsg1122 (atau sesuai konfigurasi aktif dari Admin).',
+      'Akun Gmail harus fresh, aktif, dan dapat login tanpa terhalang 2FA atau verifikasi nomor yang terkunci.',
+      'Dilarang mengaktifkan Verifikasi 2 Langkah (2-Step Verification) atau kunci keamanan yang menghambat verifikasi admin.',
+      'Kirimkan storan dalam sistem 1 baris untuk 1 akun Gmail (Format: email@gmail.com atau email@gmail.com|password).',
+      'Gunakan fitur "Generator Akun Gmail" untuk kombinasi nama dan alamat email yang rapi serta otomatis.',
+      'Dilarang mengirim email fiktif, akun hasil retas/curian, atau akun yang belum terdaftar di Google.',
+      'Admin berhak menolak akun yang gagal login, terkena disabled, atau tidak menggunakan password wajib.',
+    ];
+    setRulesList(DEFAULT_RULES);
+    showToast('info', 'Aturan Direset', 'Daftar aturan dikembalikan ke default standar.');
+  };
+
+  const handleToggleOperational = async (key: keyof SystemSettings, currentVal: boolean | undefined, label: string) => {
+    try {
+      const newVal = currentVal === false ? true : !currentVal;
+      await updateSettings({ [key]: newVal });
+      showToast('success', `${label} Diperbarui`, `Status ${label} kini ${newVal ? 'BUKA' : 'TUTUP'}.`);
+    } catch (err: unknown) {
+      showToast('error', 'Gagal Mengubah Saklar', err instanceof Error ? err.message : String(err));
+    }
+  };
+
   const filteredSubs = submissionsList.filter((sub) => {
+    if (!sub) return false;
     const matchesFilter = subFilter === 'All' || sub.status === subFilter;
+    const q = (subSearch || '').toLowerCase();
     const matchesSearch =
-      sub.id.toLowerCase().includes(subSearch.toLowerCase()) ||
-      sub.userName?.toLowerCase().includes(subSearch.toLowerCase()) ||
-      sub.userEmail?.toLowerCase().includes(subSearch.toLowerCase()) ||
-      sub.dataContent.toLowerCase().includes(subSearch.toLowerCase());
+      (sub.id || '').toLowerCase().includes(q) ||
+      (sub.userName || '').toLowerCase().includes(q) ||
+      (sub.userEmail || '').toLowerCase().includes(q) ||
+      (sub.dataContent || '').toLowerCase().includes(q);
     return matchesFilter && matchesSearch;
   });
 
   const filteredWiths = withdrawalsList.filter((w) => {
+    if (!w) return false;
     const matchesFilter = withFilter === 'All' || w.status === withFilter;
+    const q = (withSearch || '').toLowerCase();
     const matchesSearch =
-      w.id.toLowerCase().includes(withSearch.toLowerCase()) ||
-      w.userName?.toLowerCase().includes(withSearch.toLowerCase()) ||
-      w.userEmail?.toLowerCase().includes(withSearch.toLowerCase()) ||
-      w.targetNumber.includes(withSearch) ||
-      w.recipientName.toLowerCase().includes(withSearch.toLowerCase());
+      (w.id || '').toLowerCase().includes(q) ||
+      (w.userName || '').toLowerCase().includes(q) ||
+      (w.userEmail || '').toLowerCase().includes(q) ||
+      (w.targetNumber || '').includes(withSearch) ||
+      (w.recipientName || '').toLowerCase().includes(q);
     return matchesFilter && matchesSearch;
   });
 
   const filteredUsers = useMemo(() => {
+    const q = (userSearch || '').toLowerCase();
     let list = usersList.filter(
       (u) =>
-        u.displayName?.toLowerCase().includes(userSearch.toLowerCase()) ||
-        u.email?.toLowerCase().includes(userSearch.toLowerCase()) ||
-        u.uid.toLowerCase().includes(userSearch.toLowerCase())
+        (u.displayName || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.uid || '').toLowerCase().includes(q)
     );
     if (userSortMode === 'has_balance') {
       list = list.filter((u) => (u.balance || 0) > 0);
@@ -502,24 +583,26 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   }, [usersList, userSearch, userSortMode]);
 
   const filteredStock = gmailStockList.filter((item) => {
+    if (!item) return false;
     const matchesFilter =
       stockFilter === 'All' ||
       (stockFilter === 'available' && item.status === 'available') ||
       (stockFilter === 'used' && item.status === 'used');
+    const q = (stockSearch || '').toLowerCase();
     const matchesSearch =
-      item.email.toLowerCase().includes(stockSearch.toLowerCase()) ||
-      (item.password && item.password.toLowerCase().includes(stockSearch.toLowerCase()));
-    return matchesFilter && matchesSearch;
+      (item.email || '').toLowerCase().includes(q) ||
+      (item.password && item.password.toLowerCase().includes(q));
+    return matchesFilter && Boolean(matchesSearch);
   });
 
   // Calculate stats for the selected user detail modal
   const selectedUserStats = useMemo(() => {
     if (!selectedUser) return null;
     const uid = selectedUser.uid;
-    const userSubs = submissionsList.filter((s) => s.userId === uid);
-    const userWiths = withdrawalsList.filter((w) => w.userId === uid);
-    const userRefs = referralsList.filter((r) => r.inviterUid === uid);
-    const userRefsFromUsers = usersList.filter((u) => u.referredBy === uid);
+    const userSubs = submissionsList.filter((s) => s && s.userId === uid);
+    const userWiths = withdrawalsList.filter((w) => w && w.userId === uid);
+    const userRefs = referralsList.filter((r) => r && r.inviterUid === uid);
+    const userRefsFromUsers = usersList.filter((u) => u && u.referredBy === uid);
 
     const storDiterima = userSubs.filter((s) => s.status === 'Diterima').length;
     const storPending = userSubs.filter((s) => s.status === 'Pending' || s.status === 'Cek Admin').length;
@@ -529,11 +612,11 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     const wdSelesai = userWiths.filter((w) => w.status === 'Selesai').length;
     const totalWdAmount = userWiths.reduce((acc, w) => acc + (w.amount || 0), 0);
 
+    // Completed: friends who have submitted a stor AND that stor was accepted
     const refSuccessful = userRefs.filter((r) => r.status === 'completed').length;
     const totalInvitedFriends = Math.max(
       userRefs.length,
-      userRefsFromUsers.length,
-      selectedUser.totalInvited || 0
+      userRefsFromUsers.length
     );
 
     return {
@@ -546,7 +629,8 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       storDiterima,
       storPending,
       storDitolak,
-      totalUndangan: totalInvitedFriends,
+      totalUndangan: refSuccessful, // Friends whose STOR is accepted
+      totalTerdaftar: totalInvitedFriends,
       undanganBerhasil: refSuccessful,
     };
   }, [selectedUser, submissionsList, withdrawalsList, referralsList, usersList]);
@@ -1102,6 +1186,609 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         </div>
       )}
 
+      {/* PENGATURAN SISTEM TAB */}
+      {activeTab === 'settings' && (
+        <div className="space-y-6">
+          {/* Header Card */}
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#1e40af] via-blue-600 to-[#38bdf8] text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Settings className="w-6 h-6 animate-spin-slow" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                    Pengaturan Sistem & Layanan
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    Realtime Sync
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Atur saklar buka/tutup layanan, harga komisi per akun, batas penarikan, password default, generator, dan aturan storan.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 self-start md:self-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setTempPrice(settings.pricePerSubmission);
+                  setTempMinWithdrawal(settings.minWithdrawal);
+                  setTempSchedule(settings.storanSchedule);
+                  setTempAnnouncement(settings.announcement);
+                  setTempDailyGenerateLimit(settings.dailyGenerateLimit || 10);
+                  setTempGmailPassword(settings.gmailDefaultPassword || 'sgsg1122');
+                  setTempWhatsApp(settings.adminWhatsApp || '6285199219856');
+                  setTempStoranClosedReason(settings.storanClosedReason || '');
+                  setRulesList(settings.rules || []);
+                  showToast('info', 'Form Direset', 'Nilai form dikembalikan sesuai pengaturan saat ini.');
+                }}
+                className="px-3.5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                title="Batal perubahan & muat ulang dari server"
+              >
+                <RotateCcw className="w-4 h-4 text-slate-500" />
+                <span>Reset Form</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAllSettings}
+                disabled={savingSettings}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] hover:from-[#1e3a8a] hover:to-sky-500 text-white text-xs font-black shadow-md shadow-blue-600/20 transition flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+              >
+                {savingSettings ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Menyimpan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Simpan Pengaturan</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* 1. SAKLAR OPERASIONAL LAYANAN */}
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+                  <Power className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">
+                    Saklar Layanan & Status Operasional Realtime
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Perubahan saklar langsung berdampak ke seluruh pengguna saat itu juga
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold text-slate-400 hidden sm:inline">
+                Klik tombol untuk buka/tutup
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {/* Saklar Master Semua STOR */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-xs font-black text-slate-900 block">Semua Layanan STOR</span>
+                    <span className="text-[11px] text-slate-500 block">Master switch penerimaan akun</span>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                      settings.storanOpen
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-rose-100 text-rose-800 border border-rose-300'
+                    }`}
+                  >
+                    {settings.storanOpen ? 'BUKA' : 'TUTUP'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleOperational('storanOpen', settings.storanOpen, 'Semua Layanan STOR')}
+                  className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs ${
+                    settings.storanOpen
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
+                >
+                  <Power className="w-3.5 h-3.5" />
+                  <span>{settings.storanOpen ? 'Tutup Semua STOR' : 'Buka Semua STOR'}</span>
+                </button>
+              </div>
+
+              {/* Saklar STOR Khusus */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-xs font-black text-slate-900 block">Layanan STOR Khusus</span>
+                    <span className="text-[11px] text-slate-500 block">Akun dari stok generator</span>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                      settings.storanKhususOpen !== false
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                        : 'bg-rose-100 text-rose-800 border border-rose-300'
+                    }`}
+                  >
+                    {settings.storanKhususOpen !== false ? 'BUKA' : 'TUTUP'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleOperational('storanKhususOpen', settings.storanKhususOpen, 'STOR Khusus')}
+                  className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs ${
+                    settings.storanKhususOpen !== false
+                      ? 'bg-slate-700 hover:bg-slate-800 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>{settings.storanKhususOpen !== false ? 'Tutup STOR Khusus' : 'Buka STOR Khusus'}</span>
+                </button>
+              </div>
+
+              {/* Saklar STOR Bebas */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-xs font-black text-slate-900 block">Layanan STOR Bebas</span>
+                    <span className="text-[11px] text-slate-500 block">Akun buatan mandiri user</span>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                      settings.storanBebasOpen !== false
+                        ? 'bg-teal-100 text-teal-800 border border-teal-300'
+                        : 'bg-rose-100 text-rose-800 border border-rose-300'
+                    }`}
+                  >
+                    {settings.storanBebasOpen !== false ? 'BUKA' : 'TUTUP'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleOperational('storanBebasOpen', settings.storanBebasOpen, 'STOR Bebas')}
+                  className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs ${
+                    settings.storanBebasOpen !== false
+                      ? 'bg-slate-700 hover:bg-slate-800 text-white'
+                      : 'bg-teal-600 hover:bg-teal-700 text-white'
+                  }`}
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>{settings.storanBebasOpen !== false ? 'Tutup STOR Bebas' : 'Buka STOR Bebas'}</span>
+                </button>
+              </div>
+
+              {/* Saklar Penarikan Saldo */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-xs font-black text-slate-900 block">Penarikan Saldo (WD)</span>
+                    <span className="text-[11px] text-slate-500 block">Pencairan saldo ke e-wallet</span>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                      settings.withdrawalOpen !== false
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-rose-100 text-rose-800 border border-rose-300'
+                    }`}
+                  >
+                    {settings.withdrawalOpen !== false ? 'BUKA' : 'TUTUP'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleOperational('withdrawalOpen', settings.withdrawalOpen, 'Penarikan Saldo')}
+                  className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs ${
+                    settings.withdrawalOpen !== false
+                      ? 'bg-slate-700 hover:bg-slate-800 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
+                >
+                  <Wallet className="w-3.5 h-3.5" />
+                  <span>{settings.withdrawalOpen !== false ? 'Tutup Penarikan' : 'Buka Penarikan'}</span>
+                </button>
+              </div>
+
+              {/* Saklar Generator Gmail */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-xs font-black text-slate-900 block">Generator Akun Gmail</span>
+                    <span className="text-[11px] text-slate-500 block">Buat nama & alamat otomatis</span>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                      settings.generatorOpen !== false
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                        : 'bg-rose-100 text-rose-800 border border-rose-300'
+                    }`}
+                  >
+                    {settings.generatorOpen !== false ? 'BUKA' : 'TUTUP'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleOperational('generatorOpen', settings.generatorOpen, 'Generator Akun Gmail')}
+                  className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs ${
+                    settings.generatorOpen !== false
+                      ? 'bg-slate-700 hover:bg-slate-800 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{settings.generatorOpen !== false ? 'Tutup Generator' : 'Buka Generator'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Input Alasan Saat Storan Tutup */}
+            <div className="pt-2">
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                Pesan / Alasan Jika Storan Sedang Ditutup (Tampil ke Pengguna)
+              </label>
+              <textarea
+                rows={2}
+                value={tempStoranClosedReason}
+                onChange={(e) => setTempStoranClosedReason(e.target.value)}
+                placeholder="Contoh: Admin sedang menutup penerimaan akun baru. Storan aktif setiap Senin - Jumat..."
+                className="w-full p-3 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none leading-relaxed"
+              />
+              <span className="text-[10px] text-slate-400 block mt-1">
+                Pesan ini akan muncul di halaman storan ketika salah satu atau semua jenis storan ditutup oleh admin.
+              </span>
+            </div>
+          </div>
+
+          {/* 2. KEUANGAN & KOMISI REWARD */}
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                <Wallet className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900">
+                  Tarif Komisi Storan & Batas Penarikan Dana
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Atur reward per akun yang diterima dan batas minimal saldo pencairan user
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-emerald-950 block">
+                    Harga Komisi per Akun Diterima (Rp)
+                  </label>
+                  <span className="text-xs font-extrabold text-emerald-700 bg-white px-2 py-0.5 rounded-lg border border-emerald-300">
+                    {formatRupiah(Number(tempPrice) || 0)}
+                  </span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 text-xs font-bold text-emerald-700">Rp</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="500"
+                    value={tempPrice}
+                    onChange={(e) => setTempPrice(Number(e.target.value))}
+                    placeholder="3000"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm font-black text-slate-900 rounded-xl border border-emerald-300 bg-white focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                  />
+                </div>
+                <p className="text-[11px] text-emerald-800">
+                  Setiap setoran berstatus <strong className="font-bold">Diterima</strong> akan otomatis menambahkan nominal ini ke saldo pengguna.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-blue-950 block">
+                    Minimal Penarikan Saldo (Rp)
+                  </label>
+                  <span className="text-xs font-extrabold text-blue-700 bg-white px-2 py-0.5 rounded-lg border border-blue-300">
+                    {formatRupiah(Number(tempMinWithdrawal) || 0)}
+                  </span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 text-xs font-bold text-blue-700">Rp</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={tempMinWithdrawal}
+                    onChange={(e) => setTempMinWithdrawal(Number(e.target.value))}
+                    placeholder="4000"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm font-black text-slate-900 rounded-xl border border-blue-300 bg-white focus:ring-2 focus:ring-blue-500/20 outline-none"
+                  />
+                </div>
+                <p className="text-[11px] text-blue-800">
+                  Batas saldo terendah yang dapat diajukan oleh pengguna saat meminta pencairan dana e-wallet.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. KONFIGURASI AKUN GMAIL & GENERATOR */}
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold">
+                <KeyRound className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900">
+                  Konfigurasi Akun Gmail & Limit Generator
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Password wajib yang harus digunakan user dan batas limit generate akun harian
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl bg-orange-50/50 border border-orange-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-orange-950 block">
+                    Password Wajib Akun Gmail
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setTempGmailPassword('sgsg1122')}
+                    className="text-[10px] font-bold text-orange-700 hover:text-orange-900 underline cursor-pointer"
+                  >
+                    Gunakan sgsg1122
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={tempGmailPassword}
+                    onChange={(e) => setTempGmailPassword(e.target.value)}
+                    placeholder="sgsg1122"
+                    className="w-full px-3.5 py-2.5 font-mono text-sm font-black text-orange-900 rounded-xl border border-orange-300 bg-white focus:ring-2 focus:ring-orange-500/20 outline-none"
+                  />
+                </div>
+                <p className="text-[11px] text-orange-900">
+                  Password ini ditampilkan di Halaman Rules dan form generator. Akun dengan password berbeda berhak ditolak admin.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-purple-50/50 border border-purple-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black text-purple-950 block">
+                    Limit Harian Generate Akun per User
+                  </label>
+                  <span className="text-xs font-extrabold text-purple-700 bg-white px-2 py-0.5 rounded-lg border border-purple-300">
+                    {tempDailyGenerateLimit} Akun/Hari
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={tempDailyGenerateLimit}
+                    onChange={(e) => setTempDailyGenerateLimit(Number(e.target.value))}
+                    placeholder="10"
+                    className="w-full px-3.5 py-2.5 text-sm font-black text-slate-900 rounded-xl border border-purple-300 bg-white focus:ring-2 focus:ring-purple-500/20 outline-none"
+                  />
+                </div>
+                <p className="text-[11px] text-purple-800">
+                  Mencegah spam dan menjaga ketersediaan generator agar merata untuk seluruh anggota.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. JADWAL, PENGUMUMAN & KONTAK BANTUAN */}
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
+                <Clock className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900">
+                  Jadwal Operasional, Pengumuman & Kontak WhatsApp
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Informasi jam layanan dan nomor bantuan langsung admin
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 block">
+                  Jadwal & Jam Operasional Layanan
+                </label>
+                <input
+                  type="text"
+                  value={tempSchedule}
+                  onChange={(e) => setTempSchedule(e.target.value)}
+                  placeholder="Senin - Jumat, 07.00 - 17.00 WIB (Sabtu & Minggu CLOSE)"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                />
+                <span className="text-[10px] text-slate-400 block">
+                  Ditampilkan di footer dan header halaman Storan pengguna.
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Nomor WhatsApp Resmi Admin
+                  </label>
+                  {tempWhatsApp && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(`https://wa.me/${tempWhatsApp.replace(/[^0-9]/g, '')}`, '_blank', 'noopener,noreferrer')}
+                      className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>Tes Buka WhatsApp</span>
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={tempWhatsApp}
+                  onChange={(e) => setTempWhatsApp(e.target.value)}
+                  placeholder="6285199219856"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none font-mono"
+                />
+                <span className="text-[10px] text-slate-400 block">
+                  Format internasional dengan 62 (contoh: 6285199219856). Terhubung ke tombol "Hubungi Admin".
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 pt-1">
+              <label className="text-xs font-bold text-slate-700 block">
+                Pesan Pengumuman Beranda (Banner Beranda)
+              </label>
+              <textarea
+                rows={3}
+                value={tempAnnouncement}
+                onChange={(e) => setTempAnnouncement(e.target.value)}
+                placeholder="Storan Akun Gmail OPEN setiap Senin - Jumat! Jam operasional: 07.00 - 17.00 WIB..."
+                className="w-full p-3 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none leading-relaxed"
+              />
+              <span className="text-[10px] text-slate-400 block">
+                Pesan pengumuman penting yang muncul di bagian atas halaman Beranda seluruh pengguna.
+              </span>
+            </div>
+          </div>
+
+          {/* 5. KELOLA ATURAN & KETENTUAN STORAN (RULES) */}
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold">
+                  <ClipboardCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">
+                    Kelola Aturan & Ketentuan Storan ({rulesList.length} Butir Aktif)
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Teks aturan yang tampil di halaman "Rules" dan popup panduan pengguna
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleResetToDefaultRules}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold transition flex items-center gap-1.5 self-start sm:self-center cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                <span>Kembalikan 7 Aturan Standar</span>
+              </button>
+            </div>
+
+            {/* Input Tambah Aturan Baru */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={newRuleInput}
+                onChange={(e) => setNewRuleInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddRule();
+                  }
+                }}
+                placeholder="Tulis butir aturan baru di sini, lalu klik Tambah..."
+                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleAddRule}
+                disabled={!newRuleInput.trim()}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 shadow-2xs"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Aturan</span>
+              </button>
+            </div>
+
+            {/* Daftar Butir Aturan */}
+            <div className="space-y-2.5 pt-1">
+              {rulesList.map((rule, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-2.5 p-3 rounded-2xl bg-slate-50/80 border border-slate-200 hover:border-slate-300 transition"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <input
+                      type="text"
+                      value={rule}
+                      onChange={(e) => handleUpdateRule(idx, e.target.value)}
+                      className="w-full text-xs text-slate-800 bg-transparent border-0 focus:ring-0 focus:outline-none p-0 font-medium"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveRule(idx)}
+                    className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition cursor-pointer shrink-0"
+                    title="Hapus butir aturan ini"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom Save Action Bar */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                <Save className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold">Simpan Seluruh Perubahan Konfigurasi</h4>
+                <p className="text-xs text-slate-400">
+                  Pastikan data harga, password, jadwal, dan aturan sudah sesuai sebelum menyimpan.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSaveAllSettings}
+              disabled={savingSettings}
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-sky-400 hover:from-blue-600 hover:to-sky-500 text-slate-950 font-black text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+            >
+              {savingSettings ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                  <span>Menyimpan ke Database...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 text-slate-950" />
+                  <span>Simpan Semua Pengaturan</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* USER DETAIL MODAL WITH REQUIRED STATS: JUMLAH RIWAYAT, PENARIKAN, STOR, UNDANGAN TEMEN */}
       <AnimatePresence>
         {selectedUser && selectedUserStats && (
@@ -1211,7 +1898,10 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                       <span className="text-xs font-semibold text-amber-700 font-sans">Teman</span>
                     </div>
                     <span className="text-[10px] text-amber-800 block">
-                      {selectedUserStats.undanganBerhasil} Berhasil (Stor 1 Diterima)
+                      {selectedUserStats.undanganBerhasil} Masuk (Stor 1 Diterima)
+                      {selectedUserStats.totalTerdaftar > selectedUserStats.undanganBerhasil && (
+                        <> • {selectedUserStats.totalTerdaftar - selectedUserStats.undanganBerhasil} Menunggu Stor</>
+                      )}
                     </span>
                   </div>
                 </div>

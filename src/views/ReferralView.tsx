@@ -35,8 +35,6 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'All' | 'completed' | 'pending_submission'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [inputCode, setInputCode] = useState('');
-  const [applyingCode, setApplyingCode] = useState(false);
 
   const referralCode = userProfile?.referralCode || 'AZGMAIL';
 
@@ -161,8 +159,9 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
     };
   }, [currentUser, userProfile?.referralRewardMilestones, referralCode, showToast]);
 
-  const totalUndangan = referrals.length;
+  const totalTerdaftar = referrals.length;
   const referralBerhasil = referrals.filter((r) => r.status === 'completed').length;
+  const totalUndangan = referralBerhasil; // Friends whose stor is accepted and counted in user A
   const currentProgress = referralBerhasil % 20;
   const sisaMenujuBonus = 20 - currentProgress;
   const totalBonusDiterima = (userProfile?.referralRewardMilestones?.length || 0) * 10000;
@@ -188,20 +187,6 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
     const shareUrl = `${origin}/?ref=${referralCode}`;
     const text = `Halo! Yuk gabung freelance stor akun Gmail di AZGmail. Masukkan kode referral saya: *${referralCode}* saat daftar, atau klik link langsung: ${shareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleApplyReferral = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser || !inputCode.trim()) return;
-    setApplyingCode(true);
-    const result = await applyReferralCodeForExistingUser(currentUser.uid, inputCode.trim());
-    setApplyingCode(false);
-    if (result.success) {
-      showToast('success', 'Berhasil Digunakan!', result.message);
-      setInputCode('');
-    } else {
-      showToast('error', 'Gagal', result.message);
-    }
   };
 
   const filteredReferrals = useMemo(() => {
@@ -326,31 +311,9 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
           </div>
         </div>
 
-        {/* Input referral code for existing user who hasn't used one */}
-        {!userProfile?.referredBy ? (
-          <form onSubmit={handleApplyReferral} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <div className="flex-1 min-w-0">
-              <label className="text-[11px] font-bold text-slate-700 block">
-                Punya Kode Referral Teman?
-              </label>
-              <input
-                type="text"
-                value={inputCode}
-                onChange={(e) => setInputCode(e.target.value.toUpperCase().trim())}
-                placeholder="Masukkan kode referral teman..."
-                className="w-full mt-1 px-3 py-1.5 rounded-lg border border-slate-300 font-mono font-bold text-xs uppercase outline-none focus:border-blue-500 bg-white"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={applyingCode || !inputCode.trim()}
-              className="self-end sm:self-end px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-2xs transition disabled:opacity-50 cursor-pointer"
-            >
-              {applyingCode ? 'Memproses...' : 'Gunakan Kode'}
-            </button>
-          </form>
-        ) : (
-          <p className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1.5">
+        {/* Info Referral Anda */}
+        {userProfile?.referredBy && (
+          <p className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1.5 pt-1">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             <span>
               Anda terdaftar melalui referral dari: <strong>{userProfile.inviterName || userProfile.referredByCode || 'Teman'}</strong>
@@ -367,23 +330,23 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
             <div className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">
               {loading ? '-' : totalUndangan}
             </div>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Teman yang sudah mendaftar</span>
+            <span className="text-[10px] text-emerald-600 font-semibold block mt-0.5">Stor diterima</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
             <Users className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border border-emerald-200/80 shadow-2xs bg-emerald-50/20 flex items-center justify-between">
+        <div className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border border-amber-200/80 shadow-2xs bg-amber-50/20 flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold text-emerald-800 block uppercase tracking-wider">Referral Berhasil</span>
-            <div className="text-xl sm:text-2xl font-black text-emerald-700 mt-0.5">
-              {loading ? '-' : referralBerhasil}
+            <span className="text-[10px] font-bold text-amber-800 block uppercase tracking-wider">Menunggu Stor</span>
+            <div className="text-xl sm:text-2xl font-black text-amber-700 mt-0.5">
+              {loading ? '-' : Math.max(0, totalTerdaftar - referralBerhasil)}
             </div>
-            <span className="text-[10px] text-emerald-600 block mt-0.5">Stor pertama diterima</span>
+            <span className="text-[10px] text-amber-700 block mt-0.5">Wajib stor & diterima</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5" />
           </div>
         </div>
 

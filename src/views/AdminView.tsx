@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
-import { formatRupiah, formatIndonesianDateTime, isEarlierThanTodayWIB } from '../lib/utils';
+import { formatRupiah, formatIndonesianDateTime, formatRelativeTime, isEarlierThanTodayWIB } from '../lib/utils';
 import {
   UserProfile,
   Submission,
@@ -58,6 +58,11 @@ import {
   Save,
   RotateCcw,
   CheckCircle2,
+  Clock,
+  CreditCard,
+  ChevronDown,
+  ChevronUp,
+  ArrowUpRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -121,6 +126,9 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const [rejectModalWith, setRejectModalWith] = useState<Withdrawal | null>(null);
   const [withRejectionReason, setWithRejectionReason] = useState('');
   const [processingWithId, setProcessingWithId] = useState<string | null>(null);
+  const [confirmPayModalWith, setConfirmPayModalWith] = useState<Withdrawal | null>(null);
+  const [copiedWithNumber, setCopiedWithNumber] = useState(false);
+  const [expandedUserStorId, setExpandedUserStorId] = useState<string | null>(null);
 
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [userSearch, setUserSearch] = useState('');
@@ -328,6 +336,19 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     }
   };
 
+  const getUserStorSummary = (userId: string) => {
+    const userSubs = submissionsList.filter((s) => s && s.userId === userId);
+    const diterima = userSubs.filter((s) => s.status === 'Diterima').length;
+    const pending = userSubs.filter((s) => s.status === 'Pending' || s.status === 'Cek Admin').length;
+    const ditolak = userSubs.filter((s) => s.status === 'Ditolak').length;
+    const total = userSubs.length;
+    const recent = [...userSubs]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
+
+    return { total, diterima, pending, ditolak, recent, userSubs };
+  };
+
   const handleMarkWithdrawalPaid = async (withItem: Withdrawal) => {
     setProcessingWithId(withItem.id);
     try {
@@ -351,6 +372,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       });
 
       showToast('success', 'Selesai', `Penarikan ${formatRupiah(withItem.amount)} ditandai selesai.`);
+      setConfirmPayModalWith(null);
     } catch (err: unknown) {
       showToast('error', 'Gagal', err instanceof Error ? err.message : String(err));
     } finally {
@@ -595,18 +617,23 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     return matchesFilter && matchesSearch;
   });
 
-  const filteredWiths = withdrawalsList.filter((w) => {
-    if (!w) return false;
-    const matchesFilter = withFilter === 'All' || w.status === withFilter;
-    const q = (withSearch || '').toLowerCase();
-    const matchesSearch =
-      (w.id || '').toLowerCase().includes(q) ||
-      (w.userName || '').toLowerCase().includes(q) ||
-      (w.userEmail || '').toLowerCase().includes(q) ||
-      (w.targetNumber || '').includes(withSearch) ||
-      (w.recipientName || '').toLowerCase().includes(q);
-    return matchesFilter && matchesSearch;
-  });
+  const filteredWiths = useMemo(() => {
+    return withdrawalsList
+      .filter((w) => {
+        if (!w) return false;
+        const matchesFilter = withFilter === 'All' || w.status === withFilter;
+        const q = (withSearch || '').toLowerCase();
+        const matchesSearch =
+          !q ||
+          (w.id || '').toLowerCase().includes(q) ||
+          (w.userName || '').toLowerCase().includes(q) ||
+          (w.userEmail || '').toLowerCase().includes(q) ||
+          (w.targetNumber || '').includes(withSearch) ||
+          (w.recipientName || '').toLowerCase().includes(q);
+        return matchesFilter && matchesSearch;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [withdrawalsList, withFilter, withSearch]);
 
   const filteredUsers = useMemo(() => {
     const q = (userSearch || '').toLowerCase();
@@ -1289,58 +1316,295 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
 
       {activeTab === 'withdrawals' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs">
-            <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
-              {(['Pending', 'Selesai', 'Ditolak', 'All'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setWithFilter(f)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    withFilter === f ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600'
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* TOP FILTER & SEARCH BAR */}
+          <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-3.5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex flex-wrap gap-1.5 p-1 bg-slate-100 rounded-xl">
+                {[
+                  { id: 'Pending', label: 'Pending', count: withdrawalsList.filter((w) => w.status === 'Pending').length },
+                  { id: 'Selesai', label: 'Selesai', count: withdrawalsList.filter((w) => w.status === 'Selesai').length },
+                  { id: 'Ditolak', label: 'Ditolak', count: withdrawalsList.filter((w) => w.status === 'Ditolak').length },
+                  { id: 'All', label: 'Semua', count: withdrawalsList.length },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setWithFilter(f.id as typeof withFilter)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      withFilter === f.id ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>{f.label}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                        withFilter === f.id
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {f.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
 
-          <div className="space-y-3">
-            {filteredWiths.map((w) => (
-              <div key={w.id} className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-900">{w.userName} ({w.userEmail})</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                    {w.status}
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Cari user, email, no. e-wallet, penerima..."
+                  value={withSearch}
+                  onChange={(e) => setWithSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
+                />
+              </div>
+            </div>
+
+            {withdrawalsList.filter((w) => w.status === 'Pending').length > 0 && withFilter === 'Pending' && (
+              <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-amber-900">
+                  <Wallet className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="font-medium">
+                    Total antrean penarikan pending:{' '}
+                    <strong className="font-black text-amber-950">
+                      {formatRupiah(
+                        withdrawalsList
+                          .filter((w) => w.status === 'Pending')
+                          .reduce((acc, w) => acc + (w.amount || 0), 0)
+                      )}
+                    </strong>{' '}
+                    ({withdrawalsList.filter((w) => w.status === 'Pending').length} permintaan)
                   </span>
                 </div>
-                <div className="text-sm font-black text-blue-700">
-                  {formatRupiah(w.amount)} ke {w.method} ({w.targetNumber}) a.n. {w.recipientName}
-                </div>
-                {w.status === 'Pending' && (
-                  <div className="flex justify-end gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRejectModalWith(w);
-                        setWithRejectionReason('Nomor e-wallet tidak valid');
-                      }}
-                      className="px-3 py-1 bg-rose-50 text-rose-700 rounded-lg text-xs font-bold border border-rose-200 cursor-pointer"
-                    >
-                      Tolak
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleMarkWithdrawalPaid(w)}
-                      className="px-4 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold cursor-pointer"
-                    >
-                      Selesai
-                    </button>
-                  </div>
-                )}
               </div>
-            ))}
+            )}
           </div>
+
+          {/* LIST OF WITHDRAWALS */}
+          {filteredWiths.length === 0 ? (
+            <div className="bg-white rounded-3xl p-12 text-center text-slate-400 text-xs space-y-2 border border-slate-200/80">
+              <Wallet className="w-8 h-8 mx-auto text-slate-300" />
+              <p className="font-bold text-slate-700">Tidak ada data penarikan yang cocok</p>
+              <p className="text-[11px] text-slate-400">
+                {withSearch ? 'Coba ubah kata kunci pencarian Anda' : 'Belum ada permintaan penarikan pada filter ini'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredWiths.map((w) => {
+                const storSummary = getUserStorSummary(w.userId);
+                const isExpanded = expandedUserStorId === w.id;
+
+                return (
+                  <div
+                    key={w.id}
+                    className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs hover:shadow-xs transition space-y-3.5"
+                  >
+                    {/* TOP LINE: USER & STATUS & WAKTU */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#1e40af] via-blue-600 to-[#38bdf8] text-white flex items-center justify-center font-black text-sm shadow-xs shrink-0">
+                          {w.userName ? w.userName.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-sm text-slate-900 truncate">
+                              {w.userName || 'Freelancer'}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+                                w.status === 'Pending'
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  : w.status === 'Selesai'
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  : 'bg-rose-100 text-rose-800 border border-rose-200'
+                              }`}
+                            >
+                              {w.status}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-mono block truncate">
+                            {w.userEmail}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* WAKTU PENARIKAN (ADA WAKTUNYA) */}
+                      <div className="flex flex-wrap items-center gap-2 self-start sm:self-center text-xs">
+                        <div
+                          className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 flex items-center gap-1.5 font-medium shadow-2xs"
+                          title="Waktu pengajuan penarikan"
+                        >
+                          <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          <span className="text-[11px] font-bold text-slate-800 font-mono">
+                            {formatIndonesianDateTime(w.createdAt)}
+                          </span>
+                          <span className="text-[10px] font-semibold text-slate-400">
+                            ({formatRelativeTime(w.createdAt)})
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* MIDDLE: TRANSFER DETAILS (KEREN) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/50 via-slate-50 to-blue-50/30 border border-blue-100/80">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Nominal Penarikan
+                        </span>
+                        <div className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+                          {formatRupiah(w.amount)}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Tujuan E-Wallet / Rekening
+                        </span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="px-2 py-0.5 rounded-md text-[11px] font-black uppercase bg-blue-600 text-white shadow-2xs">
+                            {w.method}
+                          </span>
+                          <span className="font-mono text-sm sm:text-base font-bold text-blue-900 select-all tracking-wider">
+                            {w.targetNumber}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(w.targetNumber);
+                              showToast('info', 'Tersalin', `Nomor ${w.targetNumber} berhasil disalin.`);
+                            }}
+                            className="p-1 text-slate-400 hover:text-blue-600 transition cursor-pointer"
+                            title="Salin Nomor E-Wallet"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <span className="text-xs font-bold text-slate-700 block mt-0.5">
+                          a.n. {w.recipientName}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* RIWAYAT STOR-AN USER (SIMPLE) */}
+                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-black text-slate-800 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                            <Send className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Riwayat STOR User:</span>
+                          </span>
+                          <span className="px-2 py-0.2 rounded-full font-bold text-[10px] bg-white border border-slate-200 text-slate-800 shadow-2xs">
+                            Total: <strong>{storSummary.total}</strong> Akun
+                          </span>
+                          <span className="px-2 py-0.2 rounded-full font-bold text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800">
+                            ✓ {storSummary.diterima} Diterima
+                          </span>
+                          {storSummary.pending > 0 && (
+                            <span className="px-2 py-0.2 rounded-full font-bold text-[10px] bg-amber-50 border border-amber-200 text-amber-800">
+                              ⏱ {storSummary.pending} Pending
+                            </span>
+                          )}
+                          {storSummary.ditolak > 0 && (
+                            <span className="px-2 py-0.2 rounded-full font-bold text-[10px] bg-rose-50 border border-rose-200 text-rose-800">
+                              ✕ {storSummary.ditolak} Ditolak
+                            </span>
+                          )}
+                        </div>
+
+                        {storSummary.recent.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedUserStorId(isExpanded ? null : w.id)}
+                            className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer self-start sm:self-center"
+                          >
+                            <span>{isExpanded ? 'Tutup Daftar' : `Lihat ${storSummary.recent.length} STOR Terakhir`}</span>
+                            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* EXPANDABLE RECENT SUBMISSIONS LIST (SIMPLE) */}
+                      {isExpanded && storSummary.recent.length > 0 && (
+                        <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
+                          {storSummary.recent.map((s) => (
+                            <div
+                              key={s.id}
+                              className="p-2 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2 text-[11px]"
+                            >
+                              <div className="min-w-0 flex items-center gap-2">
+                                <span className="font-mono font-bold text-slate-800 truncate">
+                                  {s.dataContent.split('|')[0]}
+                                </span>
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-100 text-slate-700 uppercase">
+                                  {s.submissionType || 'khusus'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  {formatIndonesianDateTime(s.createdAt)}
+                                </span>
+                                <span
+                                  className={`px-2 py-0.2 rounded-full text-[10px] font-bold ${
+                                    s.status === 'Diterima'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : s.status === 'Ditolak'
+                                      ? 'bg-rose-100 text-rose-800'
+                                      : 'bg-amber-100 text-amber-800'
+                                  }`}
+                                >
+                                  {s.status}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* STATUS / ACTION FOOTER */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2">
+                      <div className="text-[11px] text-slate-500">
+                        {w.status === 'Selesai' && w.completedAt && (
+                          <span className="text-emerald-700 font-bold flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Ditransfer pada: {formatIndonesianDateTime(w.completedAt)}</span>
+                          </span>
+                        )}
+                        {w.status === 'Ditolak' && (
+                          <span className="text-rose-700 font-semibold">
+                            Alasan Penolakan: <strong>{w.rejectionReason || 'Alasan tidak disertakan'}</strong>
+                          </span>
+                        )}
+                      </div>
+
+                      {w.status === 'Pending' && (
+                        <div className="flex items-center gap-2 self-end sm:self-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRejectModalWith(w);
+                              setWithRejectionReason('Nomor e-wallet tidak valid');
+                            }}
+                            className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold border border-rose-200 transition cursor-pointer"
+                          >
+                            Tolak
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmPayModalWith(w)}
+                            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Konfirmasi & Selesaikan</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -2140,6 +2404,240 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                     <>
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Ya, Hapus SEMUA Stok</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL KONFIRMASI PEMBAYARAN PENARIKAN (KEREN + ADA WAKTUNYA + RIWAYAT STOR USER SIMPLE) */}
+      <AnimatePresence>
+        {confirmPayModalWith && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden space-y-0 max-h-[92vh] flex flex-col"
+            >
+              {/* MODAL HEADER */}
+              <div className="bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] p-5 text-white flex items-center justify-between shrink-0 shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black tracking-tight text-white">
+                      Konfirmasi Transfer Penarikan
+                    </h3>
+                    <p className="text-[11px] text-blue-100 font-medium">
+                      Verifikasi data e-wallet dan riwayat storan sebelum menyelesaikan
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfirmPayModalWith(null)}
+                  className="p-1 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* MODAL CONTENT */}
+              <div className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+                {/* 1. NOMINAL & REKENING TUJUAN (KEREN) */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50/90 via-sky-50/60 to-blue-50/90 border border-blue-200/90 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Nominal Yang Harus Ditransfer
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-600 text-white shadow-2xs">
+                      {confirmPayModalWith.method}
+                    </span>
+                  </div>
+
+                  <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                    {formatRupiah(confirmPayModalWith.amount)}
+                  </div>
+
+                  {/* BOX NOMOR TUJUAN & SALIN */}
+                  <div className="p-3 rounded-xl bg-white border border-blue-200/80 flex items-center justify-between gap-3 shadow-2xs">
+                    <div>
+                      <span className="text-[10px] font-semibold text-slate-400 block">
+                        Nomor Tujuan {confirmPayModalWith.method}:
+                      </span>
+                      <div className="font-mono text-base sm:text-lg font-black text-blue-900 select-all tracking-wider">
+                        {confirmPayModalWith.targetNumber}
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-700 block mt-0.5">
+                        a.n. {confirmPayModalWith.recipientName}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(confirmPayModalWith.targetNumber);
+                        setCopiedWithNumber(true);
+                        showToast('info', 'Nomor Disalin', `${confirmPayModalWith.targetNumber} tersalin ke clipboard.`);
+                        setTimeout(() => setCopiedWithNumber(false), 2000);
+                      }}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95 shrink-0 ${
+                        copiedWithNumber
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200'
+                      }`}
+                    >
+                      {copiedWithNumber ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedWithNumber ? 'Tersalin!' : 'Salin Nomor'}</span>
+                    </button>
+                  </div>
+
+                  <div className="text-[11px] text-slate-500 pt-0.5">
+                    User: <strong className="text-slate-800">{confirmPayModalWith.userName}</strong> ({confirmPayModalWith.userEmail})
+                  </div>
+                </div>
+
+                {/* 2. WAKTU PENGAJUAN (ADA WAKTUNYA) */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Waktu Pengajuan Penarikan
+                      </span>
+                      <span className="text-xs font-black text-slate-900 font-mono">
+                        {formatIndonesianDateTime(confirmPayModalWith.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold shrink-0">
+                    {formatRelativeTime(confirmPayModalWith.createdAt)}
+                  </span>
+                </div>
+
+                {/* 3. RIWAYAT STOR-AN USER (SIMPLE) */}
+                {(() => {
+                  const summary = getUserStorSummary(confirmPayModalWith.userId);
+                  return (
+                    <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2.5 shadow-2xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
+                          <Send className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Riwayat STOR-an User</span>
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-bold">
+                          Total {summary.total} Akun Disetor
+                        </span>
+                      </div>
+
+                      {/* STATS BADGES (SIMPLE) */}
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200">
+                          <span className="text-[10px] text-emerald-800 font-bold block">Diterima</span>
+                          <span className="text-base font-black text-emerald-700 font-mono mt-0.5 block">
+                            {summary.diterima}
+                          </span>
+                        </div>
+                        <div className="p-2 rounded-xl bg-amber-50 border border-amber-200">
+                          <span className="text-[10px] text-amber-800 font-bold block">Pending</span>
+                          <span className="text-base font-black text-amber-700 font-mono mt-0.5 block">
+                            {summary.pending}
+                          </span>
+                        </div>
+                        <div className="p-2 rounded-xl bg-rose-50 border border-rose-200">
+                          <span className="text-[10px] text-rose-800 font-bold block">Ditolak</span>
+                          <span className="text-base font-black text-rose-700 font-mono mt-0.5 block">
+                            {summary.ditolak}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* MINI LIST (SIMPLE) */}
+                      {summary.recent.length > 0 ? (
+                        <div className="space-y-1.5 pt-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            5 Storan Terakhir:
+                          </span>
+                          <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                            {summary.recent.map((item) => (
+                              <div
+                                key={item.id}
+                                className="p-2 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 text-[11px]"
+                              >
+                                <div className="min-w-0 flex items-center gap-1.5">
+                                  <span className="font-mono font-bold text-slate-800 truncate">
+                                    {item.dataContent.split('|')[0]}
+                                  </span>
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-white text-slate-600 border border-slate-200 uppercase">
+                                    {item.submissionType || 'khusus'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
+                                    {formatIndonesianDateTime(item.createdAt).split(' ')[0]}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${
+                                      item.status === 'Diterima'
+                                        ? 'bg-emerald-100 text-emerald-800'
+                                        : item.status === 'Ditolak'
+                                        ? 'bg-rose-100 text-rose-800'
+                                        : 'bg-amber-100 text-amber-800'
+                                    }`}
+                                  >
+                                    {item.status}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-center text-slate-400 text-[11px]">
+                          User ini belum pernah melakukan storan akun Gmail. Saldo kemungkinan berasal dari bonus referral atau penyesuaian admin.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-relaxed font-medium">
+                  Pastikan Anda telah melakukan transfer ke nomor di atas sebelum mengklik tombol di bawah.
+                </div>
+              </div>
+
+              {/* MODAL FOOTER */}
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setConfirmPayModalWith(null)}
+                  disabled={processingWithId === confirmPayModalWith.id}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-white cursor-pointer transition disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMarkWithdrawalPaid(confirmPayModalWith)}
+                  disabled={processingWithId === confirmPayModalWith.id}
+                  className="flex-2 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  {processingWithId === confirmPayModalWith.id ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Menyelesaikan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Ya, Tandai Sudah Ditransfer (Selesai)</span>
                     </>
                   )}
                 </button>

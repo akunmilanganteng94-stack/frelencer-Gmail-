@@ -42,6 +42,7 @@ export function MisiReferralBanner({ onNavigate, className = '' }: MisiReferralB
       collection(db, 'referrals'),
       where('inviterUid', '==', currentUser.uid)
     );
+
     const unsubRef = onSnapshot(
       qRef,
       (snapshot) => {
@@ -61,6 +62,7 @@ export function MisiReferralBanner({ onNavigate, className = '' }: MisiReferralB
       collection(db, 'users'),
       where('referredBy', '==', currentUser.uid)
     );
+
     const unsubUsers = onSnapshot(
       qUsers,
       (snapshot) => {
@@ -106,11 +108,8 @@ export function MisiReferralBanner({ onNavigate, className = '' }: MisiReferralB
       }}
       className={`group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-white via-blue-50/50 to-sky-50/70 border border-blue-200/80 hover:border-blue-400/80 p-3 sm:p-3.5 shadow-2xs hover:shadow-xs transition-all duration-200 cursor-pointer select-none active:scale-[0.99] ${className}`}
     >
-      {/* Decorative background glow */}
       <div className="absolute right-0 top-0 w-36 h-36 bg-gradient-to-br from-[#38bdf8]/15 via-blue-500/10 to-transparent rounded-full blur-xl pointer-events-none" />
-
       <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
-        {/* Left Side: Icon + Title + Description */}
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-[#1e40af] via-[#2563eb] to-[#38bdf8] text-white flex items-center justify-center shadow-xs shadow-blue-500/25 shrink-0 group-hover:scale-105 transition-transform">
             <Gift className="w-4 h-4 sm:w-5 sm:h-5 text-white stroke-[2.2]" />
@@ -125,12 +124,10 @@ export function MisiReferralBanner({ onNavigate, className = '' }: MisiReferralB
               </span>
             </div>
             <p className="text-[11px] sm:text-xs text-slate-500 truncate mt-0.5">
-              Undang 20 teman & dapatkan <strong className="text-blue-700 font-bold">Rp 10.000</strong> otomatis masuk ke saldo!
+              Undang 20 teman &amp; dapatkan <strong className="text-blue-700 font-bold">Rp 10.000</strong> otomatis masuk ke saldo!
             </p>
           </div>
         </div>
-
-        {/* Right Side: Mini Progress & Button */}
         <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
           <div className="flex items-center gap-2">
             <div className="text-right">
@@ -149,7 +146,6 @@ export function MisiReferralBanner({ onNavigate, className = '' }: MisiReferralB
               </div>
             </div>
           </div>
-
           <div className="flex items-center gap-1.5">
             <span className="hidden md:inline text-xs font-bold text-blue-700 group-hover:underline">
               Buka Misi

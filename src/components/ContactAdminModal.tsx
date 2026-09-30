@@ -45,7 +45,6 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
             transition={{ duration: 0.2 }}
             className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden text-slate-800"
           >
-            {/* Header Banner */}
             <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-6 text-white relative">
               <button
                 type="button"
@@ -68,10 +67,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                 Layanan bantuan & konfirmasi seputar akun Gmail & pencairan saldo
               </p>
             </div>
-
-            {/* Content Body */}
             <div className="p-6 space-y-4">
-              {/* WhatsApp Contact Card */}
               <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 space-y-3">
                 <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
                   <PhoneCall className="w-3.5 h-3.5 text-emerald-600" />
@@ -106,8 +102,6 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                   </button>
                 </div>
               </div>
-
-              {/* Service Info */}
               <div className="space-y-2 text-xs text-slate-600">
                 <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                   <Clock className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
@@ -128,8 +122,6 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                   </div>
                 </div>
               </div>
-
-              {/* CTA Buttons */}
               <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
                 <button
                   type="button"
@@ -169,7 +161,6 @@ export function ContactAdminFloatingButton({
 
   return (
     <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 flex flex-col items-end gap-2.5 pointer-events-none">
-      {/* Pop up badge / speech bubble saluran informasi */}
       <AnimatePresence>
         {showChannelBanner && (
           <motion.div
@@ -205,8 +196,6 @@ export function ContactAdminFloatingButton({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Pop-up Button Saluran Informasi */}
       <button
         type="button"
         onClick={onClickChannel}

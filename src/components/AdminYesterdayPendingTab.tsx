@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Submission, SubmissionType } from '../types';
+import { Submission } from '../types';
 import {
   formatRupiah,
   formatIndonesianDateTime,
@@ -14,8 +14,6 @@ import {
   ListX,
   History,
   CheckCircle2,
-  Sparkles,
-  Globe,
   Eye,
   ClipboardCheck,
 } from 'lucide-react';
@@ -44,19 +42,12 @@ export function AdminYesterdayPendingTab({
 }: AdminYesterdayPendingTabProps) {
   const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'All' | SubmissionType>('All');
   const [copiedStatus, setCopiedStatus] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const getCleanEmail = (content: string) => {
     if (!content) return '';
     return content.split('|')[0].trim();
-  };
-
-  const getSubmissionType = (sub: Submission): SubmissionType => {
-    if (sub.submissionType) return sub.submissionType;
-    if (sub.rewardAmount === 2700) return 'bebas';
-    return 'khusus';
   };
 
   const yesterdayPendingList = useMemo(() => {
@@ -67,20 +58,8 @@ export function AdminYesterdayPendingTab({
     );
   }, [submissions]);
 
-  const yesterdayKhususList = useMemo(
-    () => yesterdayPendingList.filter((s) => getSubmissionType(s) === 'khusus'),
-    [yesterdayPendingList]
-  );
-
-  const yesterdayBebasList = useMemo(
-    () => yesterdayPendingList.filter((s) => getSubmissionType(s) === 'bebas'),
-    [yesterdayPendingList]
-  );
-
   const filteredList = useMemo(() => {
     return yesterdayPendingList.filter((sub) => {
-      const matchesType = typeFilter === 'All' || getSubmissionType(sub) === typeFilter;
-      if (!matchesType) return false;
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       const email = getCleanEmail(sub.dataContent).toLowerCase();
@@ -93,17 +72,11 @@ export function AdminYesterdayPendingTab({
         sub.id.toLowerCase().includes(q)
       );
     });
-  }, [yesterdayPendingList, typeFilter, searchQuery]);
+  }, [yesterdayPendingList, searchQuery]);
 
-  const totalRewardKhusus = useMemo(() => {
-    return yesterdayKhususList.reduce((sum, s) => sum + (s.rewardAmount || 3000), 0);
-  }, [yesterdayKhususList]);
-
-  const totalRewardBebas = useMemo(() => {
-    return yesterdayBebasList.reduce((sum, s) => sum + (s.rewardAmount || 2700), 0);
-  }, [yesterdayBebasList]);
-
-  const totalReward = totalRewardKhusus + totalRewardBebas;
+  const totalReward = useMemo(() => {
+    return yesterdayPendingList.reduce((sum, s) => sum + (s.rewardAmount || 3000), 0);
+  }, [yesterdayPendingList]);
 
   const handleCopyList = (list: Submission[], label: string, modeKey: string) => {
     if (list.length === 0) {
@@ -158,7 +131,7 @@ export function AdminYesterdayPendingTab({
         <div className="relative z-10 space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-bold text-amber-200 border border-white/20">
             <History className="w-3.5 h-3.5 text-amber-400" />
-            <span>Dedicated Tab: Antrean Kemarin & Sebelumnya</span>
+            <span>Dedicated Tab: Antrean Kemarin &amp; Sebelumnya</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2.5">
             <span>Pendingan Kemarin</span>
@@ -167,10 +140,9 @@ export function AdminYesterdayPendingTab({
             </span>
           </h2>
           <p className="text-xs sm:text-sm text-amber-100 max-w-xl leading-relaxed">
-            Antrean kemarin telah dipisahkan secara ketat menjadi <strong>Gmail Khusus (3k)</strong> dan <strong>Gmail Bebas (2.7k)</strong> agar tidak bersatu dan mudah diperiksa secara profesional.
+            Prioritas penanganan akun yang disetor kemarin. Password wajib: <strong>sgsg1122</strong>.
           </p>
         </div>
-
         <div className="relative z-10 flex flex-wrap items-stretch sm:items-center gap-2.5 shrink-0">
           {onOpenBulkCheckModal && (
             <button
@@ -201,90 +173,8 @@ export function AdminYesterdayPendingTab({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-indigo-50/90 to-white rounded-3xl p-5 border border-indigo-200 shadow-xs flex flex-col justify-between space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="px-2.5 py-1 rounded-xl bg-indigo-600 text-white text-xs font-black flex items-center gap-1.5 shadow-2xs">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Kemarin: Gmail Khusus</span>
-            </span>
-            <span className="text-xs font-extrabold text-indigo-700">Rp 3.000 / akun</span>
-          </div>
-          <div>
-            <div className="text-3xl font-black text-indigo-900 font-mono">
-              {yesterdayKhususList.length}{' '}
-              <span className="text-xs font-semibold text-slate-500 font-sans">Akun</span>
-            </div>
-            <div className="text-xs font-bold text-indigo-700 mt-1">
-              Total Kewajiban: {formatRupiah(totalRewardKhusus)}
-            </div>
-          </div>
-          <div className="pt-2 border-t border-indigo-100 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => handleCopyList(yesterdayKhususList, 'Pendingan Kemarin Khusus (3k)', 'khusus')}
-              disabled={yesterdayKhususList.length === 0}
-              className="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-50"
-            >
-              {copiedStatus === 'khusus' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>Salin Khusus ({yesterdayKhususList.length})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter(typeFilter === 'khusus' ? 'All' : 'khusus')}
-              className={`py-2 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
-                typeFilter === 'khusus'
-                  ? 'bg-indigo-900 text-white border-indigo-900'
-                  : 'bg-white text-indigo-800 border-indigo-200 hover:bg-indigo-50'
-              }`}
-            >
-              {typeFilter === 'khusus' ? 'Tampilkan Semua' : 'Filter Khusus'}
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-teal-50/90 to-white rounded-3xl p-5 border border-teal-200 shadow-xs flex flex-col justify-between space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="px-2.5 py-1 rounded-xl bg-teal-600 text-white text-xs font-black flex items-center gap-1.5 shadow-2xs">
-              <Globe className="w-3.5 h-3.5" />
-              <span>Kemarin: Gmail Bebas</span>
-            </span>
-            <span className="text-xs font-extrabold text-teal-700">Rp 2.700 / akun</span>
-          </div>
-          <div>
-            <div className="text-3xl font-black text-teal-900 font-mono">
-              {yesterdayBebasList.length}{' '}
-              <span className="text-xs font-semibold text-slate-500 font-sans">Akun</span>
-            </div>
-            <div className="text-xs font-bold text-teal-700 mt-1">
-              Total Kewajiban: {formatRupiah(totalRewardBebas)}
-            </div>
-          </div>
-          <div className="pt-2 border-t border-teal-100 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => handleCopyList(yesterdayBebasList, 'Pendingan Kemarin Bebas (2.7k)', 'bebas')}
-              disabled={yesterdayBebasList.length === 0}
-              className="flex-1 py-2 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-50"
-            >
-              {copiedStatus === 'bebas' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>Salin Bebas ({yesterdayBebasList.length})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter(typeFilter === 'bebas' ? 'All' : 'bebas')}
-              className={`py-2 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
-                typeFilter === 'bebas'
-                  ? 'bg-teal-900 text-white border-teal-900'
-                  : 'bg-white text-teal-800 border-teal-200 hover:bg-teal-50'
-              }`}
-            >
-              {typeFilter === 'bebas' ? 'Tampilkan Semua' : 'Filter Bebas'}
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-amber-50/90 rounded-3xl p-5 border border-amber-200 shadow-xs flex flex-col justify-between space-y-3 sm:col-span-2 lg:col-span-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-amber-50/90 rounded-3xl p-5 border border-amber-200 shadow-xs flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
               <History className="w-4 h-4 text-amber-600" />
@@ -297,7 +187,7 @@ export function AdminYesterdayPendingTab({
               <span className="text-xs font-medium text-amber-700 font-sans">Total Akun</span>
             </div>
             <div className="text-xs font-bold text-amber-900 mt-1">
-              Total Keseluruhan: {formatRupiah(totalReward)}
+              Total Kewajiban: {formatRupiah(totalReward)}
             </div>
           </div>
           <div className="pt-2 border-t border-amber-200 flex items-center justify-between gap-2">
@@ -317,44 +207,6 @@ export function AdminYesterdayPendingTab({
       <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex p-1 bg-slate-100 rounded-xl text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => setTypeFilter('All')}
-                className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                  typeFilter === 'All'
-                    ? 'bg-white text-slate-900 shadow-2xs font-black'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Semua ({yesterdayPendingList.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setTypeFilter('khusus')}
-                className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 ${
-                  typeFilter === 'khusus'
-                    ? 'bg-indigo-600 text-white shadow-2xs font-black'
-                    : 'text-indigo-700 hover:bg-indigo-50'
-                }`}
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>Khusus ({yesterdayKhususList.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setTypeFilter('bebas')}
-                className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 ${
-                  typeFilter === 'bebas'
-                    ? 'bg-teal-600 text-white shadow-2xs font-black'
-                    : 'text-teal-700 hover:bg-teal-50'
-                }`}
-              >
-                <Globe className="w-3 h-3" />
-                <span>Bebas ({yesterdayBebasList.length})</span>
-              </button>
-            </div>
-
             {selectedIds.size > 0 && (
               <button
                 type="button"
@@ -366,7 +218,6 @@ export function AdminYesterdayPendingTab({
               </button>
             )}
           </div>
-
           <div className="relative w-full md:w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
             <input
@@ -393,7 +244,6 @@ export function AdminYesterdayPendingTab({
                 </th>
                 <th className="py-3 px-4">No</th>
                 <th className="py-3 px-4">Alamat Gmail Disetor</th>
-                <th className="py-3 px-4">Tipe Storan</th>
                 <th className="py-3 px-4">Pengirim / Freelancer</th>
                 <th className="py-3 px-4">Waktu Setor</th>
                 <th className="py-3 px-4">Reward</th>
@@ -403,27 +253,19 @@ export function AdminYesterdayPendingTab({
             <tbody className="divide-y divide-slate-100 bg-white">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
                     <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-400 mb-2" />
                     <p className="font-bold text-slate-700 text-sm">
-                      {searchQuery || typeFilter !== 'All'
-                        ? 'Tidak ada data pending kemarin yang sesuai filter/pencarian.'
+                      {searchQuery
+                        ? 'Tidak ada data pending kemarin yang sesuai pencarian.'
                         : 'Tidak ada antrean pendingan kemarin!'}
-                    </p>
-                    <p className="text-slate-500 text-xs mt-0.5">
-                      {searchQuery || typeFilter !== 'All'
-                        ? 'Coba ubah filter atau kata kunci pencarian.'
-                        : 'Semua storan dari kemarin telah berhasil diproses oleh admin.'}
                     </p>
                   </td>
                 </tr>
               ) : (
                 filteredList.map((sub, idx) => {
                   const cleanEmail = getCleanEmail(sub.dataContent);
-                  const subType = getSubmissionType(sub);
-                  const isKhusus = subType === 'khusus';
                   const isSelected = selectedIds.has(sub.id);
-
                   return (
                     <tr
                       key={sub.id}
@@ -460,18 +302,6 @@ export function AdminYesterdayPendingTab({
                           </button>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 ${
-                            isKhusus
-                              ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                              : 'bg-teal-100 text-teal-800 border border-teal-200'
-                          }`}
-                        >
-                          {isKhusus ? <Sparkles className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
-                          <span>{isKhusus ? 'Khusus 3k' : 'Bebas 2.7k'}</span>
-                        </span>
-                      </td>
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-slate-800">{sub.userName || 'Freelancer'}</div>
                         <div className="text-[11px] text-slate-400 font-mono">{sub.userEmail}</div>
@@ -480,20 +310,10 @@ export function AdminYesterdayPendingTab({
                         <div className="font-semibold text-amber-800">
                           {formatIndonesianDateTime(sub.createdAt)}
                         </div>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-[10px] text-amber-600 font-bold bg-amber-100 px-1.5 py-0.2 rounded">
-                            Kemarin
-                          </span>
-                          {sub.status === 'Cek Admin' && (
-                            <span className="text-[10px] text-blue-700 font-bold bg-blue-100 px-1.5 py-0.2 rounded">
-                              Sedang Dicek
-                            </span>
-                          )}
-                        </div>
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="font-black text-indigo-700">
-                          {formatRupiah(sub.rewardAmount || (isKhusus ? 3000 : 2700))}
+                          {formatRupiah(sub.rewardAmount || 3000)}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-right">
@@ -504,7 +324,7 @@ export function AdminYesterdayPendingTab({
                               onClick={() => onCheckSubmission(sub)}
                               disabled={processingSubId === sub.id}
                               className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg border border-blue-200 transition cursor-pointer flex items-center gap-1"
-                              title="Tandai akun sedang dicek agar user tahu proses sedang berlangsung"
+                              title="Tandai akun sedang dicek"
                             >
                               <Eye className="w-3 h-3" />
                               <span>Cek</span>

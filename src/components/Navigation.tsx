@@ -1,8 +1,5 @@
 import { NavigationTab } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { useSettings } from '../context/SettingsContext';
-import { formatRupiah } from '../lib/utils';
-import { AZGmailLogo } from './GmailLogo';
 import {
   Home,
   Send,
@@ -10,218 +7,246 @@ import {
   User as UserIcon,
   ShieldCheck,
   History,
+  Mail,
+  MessageCircle,
+  Monitor,
+  Smartphone,
 } from 'lucide-react';
 
 interface NavigationProps {
   currentTab: NavigationTab;
   onSelectTab: (tab: NavigationTab) => void;
+  isDesktopMode?: boolean;
+  onToggleDesktopMode?: () => void;
 }
 
-export function Navigation({ currentTab, onSelectTab }: NavigationProps) {
-  const { userProfile, isAdmin } = useAuth();
-  const { settings } = useSettings();
+export function Navigation({
+  currentTab,
+  onSelectTab,
+  isDesktopMode = false,
+  onToggleDesktopMode,
+}: NavigationProps) {
+  const { isAdmin } = useAuth();
+  const waChannelUrl = 'https://whatsapp.com/channel/0029VbCwLl7J3jv1QSig1V0C';
 
   return (
     <>
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => onSelectTab('home')}
-              className="flex items-center gap-2.5 text-left focus:outline-none cursor-pointer group"
-            >
-              <div
-                className="w-10 h-10 rounded-[25px] bg-white flex items-center justify-center shadow-xs border border-blue-100 p-0.5 overflow-hidden shrink-0"
-                style={{ borderRadius: '25px' }}
-              >
-                <AZGmailLogo className="w-full h-full" />
-              </div>
-              <span className="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-[#1e40af] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent leading-none select-none">
-                AZGmail
-              </span>
-            </button>
-
-            <div className="hidden sm:flex items-center gap-1.5 ml-3 px-2.5 py-1 rounded-full text-xs font-semibold border shadow-xs transition-colors bg-white">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  settings.storanOpen ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
-                }`}
-              />
-              <span className={settings.storanOpen ? 'text-emerald-700' : 'text-rose-700'}>
-                {settings.storanOpen ? 'Storan BUKA' : 'Storan TUTUP'}
-              </span>
+      {/* HEADER */}
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-blue-100/60 shadow-2xs">
+        <div
+          className={`mx-auto px-4 h-16 flex items-center justify-between transition-all ${
+            isDesktopMode ? 'max-w-6xl' : 'max-w-md md:max-w-3xl lg:max-w-4xl'
+          }`}
+        >
+          {/* Sebelah kiri */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('home')}
+            className="flex items-center gap-2.5 text-left focus:outline-none cursor-pointer group active:scale-98 transition"
+          >
+            <div className="w-10 h-10 rounded-full bg-[#1677E8] flex items-center justify-center text-white shadow-xs shadow-blue-500/25 shrink-0 group-hover:scale-105 transition-transform">
+              <Mail className="w-5 h-5 text-white stroke-[2.2]" />
             </div>
-          </div>
+            <div className="flex items-center text-lg sm:text-xl font-black tracking-tight select-none">
+              <span className="text-[#0D5FC7]">Azyx</span>
+              <span className="text-[#1677E8]">19</span>
+            </div>
+          </button>
 
-          <div className="flex items-center gap-2.5 sm:gap-4">
-            <button
-              onClick={() => onSelectTab('saldo')}
-              className="flex items-center gap-2 px-3 py-1.5 bg-blue-50/90 hover:bg-blue-100/80 border border-blue-200/70 rounded-xl text-blue-900 transition text-xs sm:text-sm font-semibold cursor-pointer"
-              title="Lihat Rincian Saldo"
-            >
-              <Wallet className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>{formatRupiah(userProfile?.balance || 0)}</span>
-            </button>
-
-            {isAdmin && (
+          {/* Sebelah kanan */}
+          <div className="flex items-center gap-2">
+            {/* Tombol Toggle Mode Desktop (Khusus Admin, di user dihapus) */}
+            {isAdmin && onToggleDesktopMode && (
               <button
-                onClick={() => onSelectTab('admin')}
-                className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition cursor-pointer ${
-                  currentTab === 'admin'
-                    ? 'bg-blue-700 text-white shadow-sm'
-                    : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200'
+                type="button"
+                onClick={onToggleDesktopMode}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer border shadow-2xs ${
+                  isDesktopMode
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
                 }`}
+                title={isDesktopMode ? 'Beralih ke Tampilan Mobile' : 'Aktifkan Mode Desktop'}
               >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Admin Panel</span>
+                {isDesktopMode ? (
+                  <>
+                    <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="hidden sm:inline">Mode Mobile</span>
+                  </>
+                ) : (
+                  <>
+                    <Monitor className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Mode Desktop</span>
+                  </>
+                )}
               </button>
             )}
 
-            <button
-              onClick={() => onSelectTab('akun')}
-              className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-xl hover:bg-slate-100 transition text-slate-700 cursor-pointer"
-              title="Pengaturan Akun & Profil"
+            {/* Tombol Saluran WA */}
+            <a
+              href={waChannelUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200/90 shadow-2xs px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+              title="Gabung Saluran WhatsApp Resmi"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#1e40af] via-[#2563eb] to-[#38bdf8] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                {userProfile?.displayName ? userProfile.displayName.charAt(0).toUpperCase() : 'U'}
-              </div>
-              <span className="hidden lg:inline text-xs font-semibold text-slate-800 max-w-[120px] truncate">
-                {userProfile?.displayName || 'User'}
-              </span>
-            </button>
+              <MessageCircle className="w-4 h-4 text-[#10B981] fill-[#10B981]/20 stroke-[2.2]" />
+              <span className="text-slate-800">Saluran WA</span>
+            </a>
+
+            {/* Admin Panel button if admin */}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => onSelectTab('admin')}
+                className={`p-1.5 rounded-full border transition cursor-pointer active:scale-95 ${
+                  currentTab === 'admin'
+                    ? 'bg-[#1677E8] text-white border-[#1677E8] shadow-xs'
+                    : 'bg-blue-50 text-[#1677E8] border-blue-200 hover:bg-blue-100'
+                }`}
+                title="Panel Admin"
+              >
+                <ShieldCheck className="w-4 h-4 stroke-[2.2]" />
+              </button>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Bottom Floating Feature Navigation */}
+      {/* BOTTOM NAVIGATION (FIXED DI BAGIAN BAWAH LAYAR) */}
       <nav
         aria-label="Bottom Navigation"
-        className="fixed bottom-3 sm:bottom-4 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 select-none"
+        className="fixed bottom-0 left-0 right-0 z-40 select-none pointer-events-none"
       >
-        <div className="bg-white rounded-[32px] shadow-[0_10px_35px_rgba(0,0,0,0.12)] border border-slate-100/90 px-3 py-2 flex items-end justify-between relative">
-          <button
-            type="button"
-            onClick={() => onSelectTab('home')}
-            className="flex-1 flex flex-col items-center justify-center py-1 transition-all group cursor-pointer"
-          >
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                currentTab === 'home'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-transparent text-slate-400 group-hover:text-slate-600'
-              }`}
-            >
-              <Home className="w-5 h-5" />
-            </div>
-            <span
-              className={`text-[11px] leading-none mt-1 tracking-tight ${
-                currentTab === 'home'
-                  ? 'text-blue-600 font-bold'
-                  : 'text-slate-400 font-medium'
-              }`}
-            >
-              Beranda
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectTab('riwayat')}
-            className="flex-1 flex flex-col items-center justify-center py-1 transition-all group cursor-pointer"
-          >
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                currentTab === 'riwayat'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-transparent text-slate-400 group-hover:text-slate-600'
-              }`}
-            >
-              <History className="w-5 h-5" />
-            </div>
-            <span
-              className={`text-[11px] leading-none mt-1 tracking-tight ${
-                currentTab === 'riwayat'
-                  ? 'text-blue-600 font-bold'
-                  : 'text-slate-400 font-medium'
-              }`}
-            >
-              Riwayat
-            </span>
-          </button>
-
-          {/* Center Elevated Button: Logo STOR */}
-          <div className="flex-1 flex flex-col items-center justify-center -mt-7 sm:-mt-8 relative">
-            <div className="absolute top-1 w-14 h-14 rounded-full bg-blue-500/35 blur-md -z-10 pointer-events-none" />
+        <div
+          className={`mx-auto pointer-events-auto transition-all ${
+            isDesktopMode ? 'max-w-xl' : 'max-w-[480px] sm:max-w-md md:max-w-lg'
+          }`}
+        >
+          <div className="bg-white/95 backdrop-blur-md rounded-t-[26px] shadow-[0_-4px_25px_rgba(0,0,0,0.08)] border-t border-slate-100/90 px-3 pt-2 pb-3 sm:pb-4 flex items-end justify-between relative">
+            {/* 1. Beranda */}
             <button
               type="button"
-              onClick={() => onSelectTab('storan')}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all transform active:scale-95 cursor-pointer border-4 border-white ${
-                currentTab === 'storan'
-                  ? 'bg-gradient-to-tr from-[#1e40af] via-[#2563eb] to-[#38bdf8] text-white shadow-xl shadow-blue-500/40 scale-105 ring-2 ring-blue-200'
-                  : 'bg-gradient-to-tr from-[#1e40af] via-[#2563eb] to-[#38bdf8] text-white shadow-lg shadow-blue-500/30 hover:scale-105'
-              }`}
-              title="Setor Akun Gmail"
+              onClick={() => onSelectTab('home')}
+              className="flex-1 flex flex-col items-center justify-center py-1 transition-all group cursor-pointer"
             >
-              <Send className="w-6 h-6 text-white translate-x-0.5 -translate-y-0.5 stroke-[2.3]" />
+              <div
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                  currentTab === 'home'
+                    ? 'text-[#1677E8]'
+                    : 'text-slate-400 group-hover:text-slate-600'
+                }`}
+              >
+                <Home className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <span
+                className={`text-[11px] leading-none mt-0.5 tracking-tight ${
+                  currentTab === 'home'
+                    ? 'text-[#1677E8] font-bold'
+                    : 'text-slate-400 font-medium'
+                }`}
+              >
+                Beranda
+              </span>
             </button>
-            <span
-              className={`text-[11px] leading-none mt-1.5 tracking-tight font-black ${
-                currentTab === 'storan' ? 'text-blue-700' : 'text-slate-500'
-              }`}
+
+            {/* 2. Riwayat */}
+            <button
+              type="button"
+              onClick={() => onSelectTab('riwayat')}
+              className="flex-1 flex flex-col items-center justify-center py-1 transition-all group cursor-pointer"
             >
-              STOR
-            </span>
+              <div
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                  currentTab === 'riwayat'
+                    ? 'text-[#1677E8]'
+                    : 'text-slate-400 group-hover:text-slate-600'
+                }`}
+              >
+                <History className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <span
+                className={`text-[11px] leading-none mt-0.5 tracking-tight ${
+                  currentTab === 'riwayat'
+                    ? 'text-[#1677E8] font-bold'
+                    : 'text-slate-400 font-medium'
+                }`}
+              >
+                Riwayat
+              </span>
+            </button>
+
+            {/* 3. TOMBOL STOR DI TENGAH */}
+            <div className="flex-1 flex flex-col items-center justify-center -mt-6 sm:-mt-7 relative">
+              <div className="absolute top-1 w-14 h-14 rounded-full bg-blue-500/30 blur-md -z-10 pointer-events-none" />
+              <button
+                type="button"
+                onClick={() => onSelectTab('storan')}
+                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all transform active:scale-95 cursor-pointer border-4 border-white ${
+                  currentTab === 'storan'
+                    ? 'bg-[#1677E8] text-white shadow-xl shadow-blue-500/40 ring-2 ring-blue-300'
+                    : 'bg-[#1677E8] text-white shadow-lg shadow-blue-500/30 hover:scale-105'
+                }`}
+                title="Stor Akun Gmail"
+              >
+                <Send className="w-6 h-6 text-white translate-x-0.5 -translate-y-0.5 stroke-[2.4]" />
+              </button>
+              <span className="text-[11px] leading-none mt-1 tracking-tight font-black text-[#1677E8]">
+                Stor
+              </span>
+            </div>
+
+            {/* 4. Saldo */}
+            <button
+              type="button"
+              onClick={() => onSelectTab('saldo')}
+              className="flex-1 flex flex-col items-center justify-center py-1 transition-all group cursor-pointer"
+            >
+              <div
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                  currentTab === 'saldo'
+                    ? 'text-[#1677E8]'
+                    : 'text-slate-400 group-hover:text-slate-600'
+                }`}
+              >
+                <Wallet className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <span
+                className={`text-[11px] leading-none mt-0.5 tracking-tight ${
+                  currentTab === 'saldo'
+                    ? 'text-[#1677E8] font-bold'
+                    : 'text-slate-400 font-medium'
+                }`}
+              >
+                Saldo
+              </span>
+            </button>
+
+            {/* 5. Profil */}
+            <button
+              type="button"
+              onClick={() => onSelectTab('akun')}
+              className="flex-1 flex flex-col items-center justify-center py-1 transition-all group cursor-pointer"
+            >
+              <div
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                  currentTab === 'akun'
+                    ? 'text-[#1677E8]'
+                    : 'text-slate-400 group-hover:text-slate-600'
+                }`}
+              >
+                <UserIcon className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <span
+                className={`text-[11px] leading-none mt-0.5 tracking-tight ${
+                  currentTab === 'akun'
+                    ? 'text-[#1677E8] font-bold'
+                    : 'text-slate-400 font-medium'
+                }`}
+              >
+                Profil
+              </span>
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => onSelectTab('saldo')}
-            className="flex-1 flex flex-col items-center justify-center py-1 transition-all group cursor-pointer"
-          >
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                currentTab === 'saldo'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-transparent text-slate-400 group-hover:text-slate-600'
-              }`}
-            >
-              <Wallet className="w-5 h-5" />
-            </div>
-            <span
-              className={`text-[11px] leading-none mt-1 tracking-tight ${
-                currentTab === 'saldo'
-                  ? 'text-blue-600 font-bold'
-                  : 'text-slate-400 font-medium'
-              }`}
-            >
-              Saldo
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectTab('akun')}
-            className="flex-1 flex flex-col items-center justify-center py-1 transition-all group cursor-pointer"
-          >
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                currentTab === 'akun'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-transparent text-slate-400 group-hover:text-slate-600'
-              }`}
-            >
-              <UserIcon className="w-5 h-5" />
-            </div>
-            <span
-              className={`text-[11px] leading-none mt-1 tracking-tight ${
-                currentTab === 'akun'
-                  ? 'text-blue-600 font-bold'
-                  : 'text-slate-400 font-medium'
-              }`}
-            >
-              Akun
-            </span>
-          </button>
         </div>
       </nav>
     </>

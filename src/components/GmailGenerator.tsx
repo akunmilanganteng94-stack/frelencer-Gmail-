@@ -96,12 +96,10 @@ export async function verifyUserGeneratedEmail(email: string, userId?: string): 
   const normalizedTarget = rawTarget.includes('@') ? rawTarget : `${rawTarget}@gmail.com`;
   const targetPrefix = normalizedTarget.split('@')[0];
 
-  // 1. Cek cepat dari penyimpanan lokal akun aktif ataupun riwayat generate user yang sedang login
   if (checkIsEmailGenerated(normalizedTarget, userId)) {
     return true;
   }
 
-  // 2. Cek di profil Firestore user itu sendiri (users/{userId})
   try {
     const userDocSnap = await getDoc(doc(db, 'users', userId));
     if (userDocSnap.exists()) {
@@ -128,7 +126,6 @@ export async function verifyUserGeneratedEmail(email: string, userId?: string): 
     console.warn('Gagal verifikasi dari user profile:', errUser);
   }
 
-  // 3. Cek sinkronisasi ke database Firestore gmail_stock akun yang di-claim khusus oleh user ini
   try {
     const q = query(
       collection(db, 'gmail_stock'),
@@ -205,17 +202,17 @@ export function GmailGenerator({
   const { showToast } = useToast();
   const { currentUser } = useAuth();
   const { availableStock, claimAccounts } = useGmailStock();
+
   const [count, setCount] = useState<number>(1);
   const [generating, setGenerating] = useState<boolean>(false);
   const [results, setResults] = useState<GeneratedResultItem[]>([]);
   const [copiedItem, setCopiedItem] = useState<{ id: string; type: string } | null>(null);
   const [, setCopiedAll] = useState<boolean>(false);
-
   const [todayGenerated, setTodayGenerated] = useState<number>(() =>
     getGeneratedCountToday(currentUser?.uid)
   );
 
-  const activePassword = settings.gmailDefaultPassword || 'sgsg1122';
+  const activePassword = 'sgsg1122';
   const isFeatureOpen = settings.generatorOpen !== false;
   const dailyLimit =
     typeof settings.dailyGenerateLimit === 'number' && settings.dailyGenerateLimit > 0
@@ -266,7 +263,6 @@ export function GmailGenerator({
       showToast('warning', 'Fitur Ditutup', 'Fitur generator saat ini ditutup oleh admin.');
       return;
     }
-
     if (remainingQuota <= 0) {
       showToast(
         'warning',
@@ -275,7 +271,6 @@ export function GmailGenerator({
       );
       return;
     }
-
     if (count > remainingQuota) {
       showToast(
         'warning',
@@ -393,7 +388,7 @@ export function GmailGenerator({
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
               <AZGmailLogo className="w-3.5 h-3.5" />
-              <span>Generator Akun Gmail (Dari Stok Admin)</span>
+              <span>Generator Akun Gmail</span>
             </h3>
             <span className="text-[10px] font-semibold px-2 py-0.2 rounded-md bg-rose-100 text-rose-700">
               Fitur Sedang Ditutup Admin
@@ -402,7 +397,7 @@ export function GmailGenerator({
         </div>
         <div className="text-xs text-slate-600 leading-relaxed space-y-1">
           <p>
-            Fitur generator nama Gmail khusus saat ini sedang ditutup oleh admin. Anda tetap dapat melakukan storan melalui opsi <strong>STOR Gmail Bebas</strong> (Rp 2.700 / akun).
+            Fitur generator nama Gmail saat ini sedang ditutup oleh admin.
           </p>
         </div>
         {onOpenContactAdmin && (
@@ -419,6 +414,8 @@ export function GmailGenerator({
     );
   }
 
+  const hasGeneratedBefore = todayGenerated > 0 || results.length > 0;
+
   return (
     <div className={embedded ? 'space-y-3.5' : 'bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border border-blue-100 shadow-2xs space-y-3.5'}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -428,17 +425,16 @@ export function GmailGenerator({
           </div>
           <div>
             <h2 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
-              <span>Generator Akun Gmail Khusus</span>
+              <span>Generator Akun Gmail</span>
               <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
                 Rp 3.000 / Akun
               </span>
             </h2>
             <p className="text-[11px] text-slate-500">
-              Generate nama akun otomatis untuk disetorkan pada STOR Gmail Khusus
+              Generate nama akun otomatis untuk disetorkan pada form STOR Gmail
             </p>
           </div>
         </div>
-
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
           <div
             className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold flex items-center gap-1 ${
@@ -453,15 +449,6 @@ export function GmailGenerator({
         </div>
       </div>
 
-      <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-blue-950 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
-          <span className="font-medium text-[11px] sm:text-xs leading-relaxed">
-            Generator Khusus (Rp 3.000/akun): Pilih jumlah & generate nama, buat di Google dengan password wajib <strong className="font-mono text-blue-900 bg-white px-1.5 py-0.2 rounded border border-blue-200">{activePassword}</strong>, lalu masukkan ke form storan.
-          </span>
-        </div>
-      </div>
-
       <div className="p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-slate-50 to-blue-50/40 border border-slate-200/80 space-y-2.5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
@@ -469,10 +456,9 @@ export function GmailGenerator({
               Pilih Jumlah Akun yang Ingin Digenerate:
             </label>
             <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
-              Sisa kuota Anda hari ini: <strong className={remainingQuota > 0 ? 'text-blue-600 font-bold' : 'text-rose-600 font-bold'}>{remainingQuota} akun</strong> (Batas: {dailyLimit}/hari)
+              Sisa kuota Anda hari ini: <strong className={remainingQuota > 0 ? 'text-blue-600 font-bold' : 'text-rose-600 font-bold'}>{remainingQuota} akun</strong> (Batas max: {dailyLimit}/hari)
             </p>
           </div>
-
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -516,7 +502,7 @@ export function GmailGenerator({
 
         {remainingQuota > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 mr-1">Preset cepat:</span>
+            <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 mr-1">Preset:</span>
             {[1, 5, 10, 15, 20, 25]
               .filter((num) => num <= remainingQuota)
               .map((num) => (
@@ -546,25 +532,16 @@ export function GmailGenerator({
             {generating ? (
               <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
-              <AZGmailLogo className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5" />
             )}
             <span>
               {remainingQuota <= 0
                 ? `Batas Kuota Hari Ini Tercapai (${dailyLimit}/${dailyLimit})`
-                : `Generate ${count} Akun Dari Stok`}
+                : hasGeneratedBefore
+                ? `Generate Lagi (${count} Akun)`
+                : `Generate (${count} Akun)`}
             </span>
           </button>
-
-          {availableStock.length === 0 && onOpenContactAdmin && (
-            <button
-              type="button"
-              onClick={onOpenContactAdmin}
-              className="w-full sm:w-auto py-2.5 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg sm:rounded-xl text-xs border border-emerald-200 transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
-            >
-              <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Tanya Admin</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -576,35 +553,23 @@ export function GmailGenerator({
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4 pt-2"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-blue-50/70 border border-blue-100 rounded-xl">
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-100 border border-slate-200 rounded-xl">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                 <div>
-                  <span className="text-xs font-black text-blue-950 block">
+                  <span className="text-xs font-black text-slate-900 block">
                     {results.length} Akun Belum Disetor (Tersimpan)
-                  </span>
-                  <span className="text-[10px] text-slate-500 block">
-                    Tersimpan otomatis saat keluar web, hilang otomatis jika sudah disetor
                   </span>
                 </div>
               </div>
-
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => handleCopyAll('email_only')}
-                  className="px-2 py-1 bg-white hover:bg-blue-100 text-blue-700 text-[11px] font-bold rounded-lg border border-blue-200 transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                  className="px-2 py-1 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-bold rounded-lg border border-slate-300 transition flex items-center gap-1 shadow-2xs cursor-pointer"
                 >
                   <Copy className="w-3 h-3" />
-                  <span>Salin Semua Email</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCopyAll('email_pass')}
-                  className="px-2 py-1 bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] hover:from-[#1e3a8a] hover:to-sky-500 text-white text-[11px] font-bold rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span>Salin (Email|PW)</span>
+                  <span>Salin Semua Gmail</span>
                 </button>
                 <button
                   type="button"
@@ -621,99 +586,83 @@ export function GmailGenerator({
               {results.map((item, idx) => {
                 const isEmailCopied =
                   copiedItem?.id === item.id && copiedItem?.type === 'Email';
-                const isPwCopied =
-                  copiedItem?.id === item.id && copiedItem?.type === 'Password';
                 const isStored = submittedEmails.some(
                   (submitted) => submitted.trim().toLowerCase() === item.email.trim().toLowerCase()
                 );
-
                 return (
                   <div
                     key={item.id || idx}
                     className={`p-2.5 sm:p-3 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
                       isStored
-                        ? 'bg-slate-50 border-slate-200 opacity-80'
-                        : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-2xs'
+                        ? 'bg-slate-50 border-slate-200 opacity-70'
+                        : 'bg-gray-100 border-gray-300 hover:border-gray-400 text-gray-800' // warna generate yang belum di stor nya abu"
                     }`}
                   >
                     <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black flex items-center justify-center shrink-0">
+                        <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-black flex items-center justify-center shrink-0">
                           {idx + 1}
                         </span>
                         <span
                           className={`font-mono text-xs sm:text-sm font-bold break-all flex items-center gap-1.5 ${
-                            isStored ? 'line-through text-slate-400' : 'text-slate-900'
+                            isStored ? 'line-through text-slate-400' : 'text-gray-900'
                           }`}
                         >
-                          <Mail className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <Mail className="w-3.5 h-3.5 text-gray-500 shrink-0" />
                           <span>{item.email}</span>
                         </span>
-
                         {isStored ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                             <span>di stor</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs">
-                            <Clock className="w-3 h-3 text-amber-600" />
-                            <span>belum di stor</span>
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 pl-7 text-xs">
-                        <span className="text-slate-400 font-semibold text-[11px]">PW:</span>
-                        <span className="font-mono font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200 text-xs">
-                          {item.password}
-                        </span>
-                        {isStored && (
-                          <span className="text-[11px] font-semibold text-rose-600 flex items-center gap-1 ml-2">
-                            <Ban className="w-3 h-3" />
-                            <span>Sudah disetor (tidak dapat digunakan kembali)</span>
+                          // warna generate yang belum di stor nya abu"
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-gray-200 text-gray-700 border border-gray-300 shadow-2xs">
+                            <Clock className="w-3 h-3 text-gray-500" />
+                            <span>belum di STOR</span>
                           </span>
                         )}
                       </div>
                     </div>
 
+                    {/* salin Gmail nya ada di pinggir hapus */}
                     <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
                       {!isStored && onSelectEmailForStoran && (
                         <button
                           type="button"
                           onClick={() => onSelectEmailForStoran(item.email)}
-                          className="px-2.5 py-1.5 bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] hover:from-[#1e3a8a] hover:to-sky-500 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer"
-                          title="Gunakan akun ini untuk stor ke form di bawah"
+                          className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                          title="Gunakan akun ini untuk stor"
                         >
                           <Send className="w-3 h-3" />
                           <span>Pilih Stor</span>
                         </button>
                       )}
+                      {/* Salin Gmail */}
                       <button
                         type="button"
                         onClick={() => handleCopyText(item.email, item.id, 'Email')}
-                        className="px-2.5 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-bold rounded-lg border border-slate-200 transition flex items-center gap-1 cursor-pointer"
-                        title="Salin Alamat Email"
+                        className="px-2.5 py-1.5 bg-white hover:bg-gray-50 text-gray-700 hover:text-blue-700 text-xs font-bold rounded-lg border border-gray-300 transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                        title="Salin Alamat Gmail"
                       >
                         {isEmailCopied ? (
                           <Check className="w-3.5 h-3.5 text-emerald-600" />
                         ) : (
-                          <Copy className="w-3.5 h-3.5" />
+                          <Copy className="w-3.5 h-3.5 text-gray-500" />
                         )}
-                        <span>{isEmailCopied ? 'Tersalin' : 'Email'}</span>
+                        <span>{isEmailCopied ? 'Tersalin' : 'Salin Gmail'}</span>
                       </button>
+                      {/* Hapus di pinggir salin */}
                       <button
                         type="button"
-                        onClick={() => handleCopyText(item.password, item.id, 'Password')}
-                        className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 transition flex items-center gap-1 cursor-pointer"
-                        title="Salin Password"
+                        onClick={() => {
+                          setResults((prev) => prev.filter((r) => r.id !== item.id));
+                        }}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer"
+                        title="Hapus akun dari daftar"
                       >
-                        {isPwCopied ? (
-                          <Check className="w-3.5 h-3.5 text-rose-600" />
-                        ) : (
-                          <KeyRound className="w-3.5 h-3.5" />
-                        )}
-                        <span>{isPwCopied ? 'Tersalin' : 'PW'}</span>
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

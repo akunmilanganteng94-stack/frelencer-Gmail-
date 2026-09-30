@@ -40,7 +40,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
   useEffect(() => {
     if (!currentUser) return;
 
-    // Trigger auto-repair & sync for this inviter on mount
     if (referralCode) {
       syncAndRepairReferralsForInviter(
         currentUser.uid,
@@ -69,11 +68,9 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
       setReferrals(list);
       setLoading(false);
 
-      // Auto sync bonus if user reached milestone
       const completedCount = list.filter((r) => r.status === 'completed').length;
       const currentMilestones = userProfile?.referralRewardMilestones || [];
       const earnedMilestonesCount = Math.floor(completedCount / 20);
-
       let needsSync = false;
       for (let m = 1; m <= earnedMilestonesCount; m++) {
         if (!currentMilestones.includes(m * 20)) {
@@ -91,7 +88,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
           const milestones: number[] = Array.isArray(uData.referralRewardMilestones)
             ? uData.referralRewardMilestones
             : [];
-
           let bonus = 0;
           const updated = [...milestones];
           for (let m = 1; m <= earnedMilestonesCount; m++) {
@@ -101,7 +97,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
               bonus += 10000;
             }
           }
-
           if (bonus > 0) {
             transaction.update(userRef, {
               balance: (uData.balance || 0) + bonus,
@@ -196,10 +191,7 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
     <div
       className={`rounded-3xl bg-white border border-blue-200/80 p-5 sm:p-6 shadow-sm relative overflow-hidden space-y-4 ${className}`}
     >
-      {/* Decorative gradient blur */}
       <div className="absolute top-0 right-0 w-60 h-60 bg-gradient-to-br from-blue-400/10 via-sky-400/10 to-transparent rounded-full blur-2xl pointer-events-none" />
-
-      {/* Header Banner Misi Referral */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#1e40af] via-blue-600 to-[#38bdf8] text-white flex items-center justify-center shadow-md shadow-blue-500/25 shrink-0">
@@ -219,7 +211,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
             </p>
           </div>
         </div>
-
         <button
           type="button"
           onClick={handleShareWhatsApp}
@@ -230,7 +221,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
         </button>
       </div>
 
-      {/* Kode Referral Box */}
       <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-blue-50/90 via-sky-50/60 to-blue-50/90 border border-blue-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
         <div>
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
@@ -250,7 +240,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
             </button>
           </div>
         </div>
-
         <button
           type="button"
           onClick={handleCopyShareLink}
@@ -261,7 +250,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
         </button>
       </div>
 
-      {/* Info Status Akun Referral Anda */}
       {userProfile?.referredBy && (
         <div className="px-3.5 py-2 rounded-xl bg-emerald-50/80 border border-emerald-200/70 text-xs text-emerald-800 flex items-center gap-2 relative z-10">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -271,7 +259,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
         </div>
       )}
 
-      {/* 3 Metric Cards */}
       <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 relative z-10">
         <div className="p-3 sm:p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs text-center sm:text-left">
           <div className="text-[10px] sm:text-xs font-bold text-slate-500 flex items-center justify-center sm:justify-start gap-1">
@@ -285,7 +272,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
             {referralBerhasil} stor diterima
           </span>
         </div>
-
         <div className="p-3 sm:p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 shadow-2xs text-center sm:text-left">
           <div className="text-[10px] sm:text-xs font-bold text-amber-800 flex items-center justify-center sm:justify-start gap-1">
             <Clock className="w-3.5 h-3.5 text-amber-600 hidden sm:inline" />
@@ -294,9 +280,8 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
           <div className="text-xl sm:text-2xl font-black text-amber-700 mt-1">
             {loading ? '-' : menungguStor}
           </div>
-          <span className="text-[10px] text-amber-700 block mt-0.5">Wajib stor & diterima</span>
+          <span className="text-[10px] text-amber-700 block mt-0.5">Wajib stor &amp; diterima</span>
         </div>
-
         <div className="p-3 sm:p-3.5 rounded-2xl bg-blue-50/60 border border-blue-200/80 shadow-2xs text-center sm:text-left">
           <div className="text-[10px] sm:text-xs font-bold text-blue-800 flex items-center justify-center sm:justify-start gap-1">
             <Sparkles className="w-3.5 h-3.5 text-blue-600 hidden sm:inline" />
@@ -309,7 +294,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
         </div>
       </div>
 
-      {/* Progress Bar Misi: 20 Teman */}
       <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/70 space-y-2 relative z-10">
         <div className="flex items-center justify-between text-xs font-bold">
           <span className="text-slate-800 flex items-center gap-1.5">
@@ -320,21 +304,18 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
             {currentProgress} / 20 Teman
           </span>
         </div>
-
         <div className="w-full h-3 rounded-full bg-slate-200 overflow-hidden p-0.5">
           <div
             className="h-full rounded-full bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] transition-all duration-300 shadow-xs"
             style={{ width: `${Math.min(100, (currentProgress / 20) * 100)}%` }}
           />
         </div>
-
         <div className="flex items-center justify-between text-[11px] text-slate-500">
           <span>Target: 20 teman melakukan storan pertama yang diterima</span>
           <span className="font-bold text-emerald-700">Bonus Rp 10.000</span>
         </div>
       </div>
 
-      {/* Syarat & Ketentuan Info */}
       <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 text-xs text-amber-950 flex items-start gap-2.5">
         <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
         <div className="leading-relaxed">
@@ -342,7 +323,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
         </div>
       </div>
 
-      {/* Accordion List of Invited Friends */}
       {variant === 'full' && (
         <div className="pt-1">
           <button
@@ -353,7 +333,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
             <span>Daftar Undangan ({referrals.length} Teman)</span>
             {showFriendsList ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
-
           <AnimatePresence>
             {showFriendsList && (
               <motion.div
@@ -390,7 +369,7 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
                                 : 'bg-amber-100 text-amber-800 border border-amber-300'
                             }`}
                           >
-                            {isCompleted ? '✓ Berhasil (Diterima)' : 'Menunggu Stor'}
+                            {isCompleted ? 'Berhasil (Diterima)' : 'Menunggu Stor'}
                           </span>
                         </div>
                       );

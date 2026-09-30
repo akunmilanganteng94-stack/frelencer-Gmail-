@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Submission, SubmissionType } from '../types';
+import { Submission } from '../types';
 import {
   formatRupiah,
   formatIndonesianDateTime,
@@ -20,10 +20,6 @@ import {
   Layers,
   History,
   Zap,
-  Split,
-  Table,
-  Sparkles,
-  Globe,
   Eye,
   ClipboardCheck,
   ArrowRight,
@@ -66,20 +62,11 @@ export function AdminAllStorTab({
 }: AdminAllStorTabProps) {
   const { showToast } = useToast();
   const [filterStatus, setFilterStatus] = useState<FilterStatusType>('All');
-  const [typeFilter, setTypeFilter] = useState<'All' | SubmissionType>('All');
-  const [viewMode, setViewMode] = useState<'unified' | 'split'>('unified');
   const [searchQuery, setSearchQuery] = useState('');
-  const [, setCopiedMode] = useState<string | null>(null);
 
   const getCleanEmail = (content: string) => {
     if (!content) return '';
     return content.split('|')[0].trim();
-  };
-
-  const getSubmissionType = (sub: Submission): SubmissionType => {
-    if (sub.submissionType) return sub.submissionType;
-    if (sub.rewardAmount === 2700) return 'bebas';
-    return 'khusus';
   };
 
   const pendingYesterdayList = useMemo(
@@ -96,26 +83,6 @@ export function AdminAllStorTab({
         (s) => (s.status === 'Pending' || s.status === 'Cek Admin') && isTodayWIB(s.createdAt)
       ),
     [submissions]
-  );
-
-  const pendingYesterdayKhusus = useMemo(
-    () => pendingYesterdayList.filter((s) => getSubmissionType(s) === 'khusus'),
-    [pendingYesterdayList]
-  );
-
-  const pendingYesterdayBebas = useMemo(
-    () => pendingYesterdayList.filter((s) => getSubmissionType(s) === 'bebas'),
-    [pendingYesterdayList]
-  );
-
-  const pendingTodayKhusus = useMemo(
-    () => pendingTodayList.filter((s) => getSubmissionType(s) === 'khusus'),
-    [pendingTodayList]
-  );
-
-  const pendingTodayBebas = useMemo(
-    () => pendingTodayList.filter((s) => getSubmissionType(s) === 'bebas'),
-    [pendingTodayList]
   );
 
   const pendingList = useMemo(
@@ -138,16 +105,6 @@ export function AdminAllStorTab({
     [submissions]
   );
 
-  const allKhususList = useMemo(
-    () => submissions.filter((s) => getSubmissionType(s) === 'khusus'),
-    [submissions]
-  );
-
-  const allBebasList = useMemo(
-    () => submissions.filter((s) => getSubmissionType(s) === 'bebas'),
-    [submissions]
-  );
-
   const filteredList = useMemo(() => {
     return submissions.filter((sub) => {
       let matchesStatus = true;
@@ -164,9 +121,7 @@ export function AdminAllStorTab({
         matchesStatus = sub.status === filterStatus;
       }
 
-      const matchesType = typeFilter === 'All' || getSubmissionType(sub) === typeFilter;
-      if (!matchesStatus || !matchesType) return false;
-
+      if (!matchesStatus) return false;
       const cleanEmail = getCleanEmail(sub.dataContent).toLowerCase();
       const q = searchQuery.toLowerCase();
       return (
@@ -176,21 +131,14 @@ export function AdminAllStorTab({
         sub.id.toLowerCase().includes(q)
       );
     });
-  }, [submissions, filterStatus, typeFilter, searchQuery]);
+  }, [submissions, filterStatus, searchQuery]);
 
   const handleCopyEmails = (
     mode:
       | 'pending_yesterday'
-      | 'pending_yesterday_khusus'
-      | 'pending_yesterday_bebas'
       | 'pending_today'
-      | 'pending_today_khusus'
-      | 'pending_today_bebas'
-      | 'khusus_only'
-      | 'bebas_only'
       | 'current_filter'
       | 'all_lines'
-      | 'with_details'
   ) => {
     let targetList: Submission[] = [];
     let labelNotice = 'Semua Akun';
@@ -198,36 +146,15 @@ export function AdminAllStorTab({
     if (mode === 'pending_yesterday') {
       targetList = pendingYesterdayList;
       labelNotice = 'Semua Pendingan Kemarin';
-    } else if (mode === 'pending_yesterday_khusus') {
-      targetList = pendingYesterdayKhusus;
-      labelNotice = 'Pendingan Kemarin - Khusus (3k)';
-    } else if (mode === 'pending_yesterday_bebas') {
-      targetList = pendingYesterdayBebas;
-      labelNotice = 'Pendingan Kemarin - Bebas (2.7k)';
     } else if (mode === 'pending_today') {
       targetList = pendingTodayList;
       labelNotice = 'Semua Pendingan Hari Ini';
-    } else if (mode === 'pending_today_khusus') {
-      targetList = pendingTodayKhusus;
-      labelNotice = 'Pendingan Hari Ini - Khusus (3k)';
-    } else if (mode === 'pending_today_bebas') {
-      targetList = pendingTodayBebas;
-      labelNotice = 'Pendingan Hari Ini - Bebas (2.7k)';
-    } else if (mode === 'khusus_only') {
-      targetList = allKhususList;
-      labelNotice = 'Semua Gmail Khusus (3k)';
-    } else if (mode === 'bebas_only') {
-      targetList = allBebasList;
-      labelNotice = 'Semua Gmail Bebas (2.7k)';
     } else if (mode === 'current_filter') {
       targetList = filteredList;
       labelNotice = 'Sesuai Filter';
     } else if (mode === 'all_lines') {
       targetList = submissions;
       labelNotice = 'Semua Storan';
-    } else if (mode === 'with_details') {
-      targetList = filteredList;
-      labelNotice = 'Detail Lengkap';
     }
 
     if (targetList.length === 0) {
@@ -235,26 +162,13 @@ export function AdminAllStorTab({
       return;
     }
 
-    let textToCopy = '';
-    if (mode === 'with_details') {
-      textToCopy = targetList
-        .map(
-          (s) =>
-            `${getCleanEmail(s.dataContent)} | PW: ${defaultPassword} | Jenis: ${getSubmissionType(s)} | Pengirim: ${s.userName} (${s.userEmail}) | Status: ${s.status}`
-        )
-        .join('\n');
-    } else {
-      textToCopy = targetList.map((s) => getCleanEmail(s.dataContent)).join('\n');
-    }
-
+    const textToCopy = targetList.map((s) => getCleanEmail(s.dataContent)).join('\n');
     navigator.clipboard.writeText(textToCopy);
-    setCopiedMode(mode);
     showToast(
       'success',
       `${labelNotice} Berhasil Disalin`,
       `${targetList.length} akun Gmail berhasil disalin (1 baris 1 akun).`
     );
-    setTimeout(() => setCopiedMode(null), 2500);
   };
 
   return (
@@ -264,16 +178,15 @@ export function AdminAllStorTab({
         <div className="relative z-10 space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-bold text-blue-200 border border-white/20">
             <Layers className="w-3.5 h-3.5 text-blue-400" />
-            <span>Fitur Manajemen: All STOR / Stok User</span>
+            <span>Manajemen Storan</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
             Semua Gmail STOR-an User
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-            Data antrean <strong>Gmail Khusus (3k)</strong> dan <strong>Gmail Bebas (2.7k)</strong> dipisahkan secara rapi dan profesional. Kelola antrean pending kemarin dan hari ini tanpa tercampur.
+            Data antrean storan akun Gmail freelancer. Password wajib: <strong>sgsg1122</strong>.
           </p>
         </div>
-
         <div className="relative z-10 flex flex-wrap items-stretch sm:items-center gap-2.5 shrink-0">
           {onOpenBulkCheckModal && (
             <button
@@ -307,47 +220,32 @@ export function AdminAllStorTab({
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="bg-white rounded-3xl p-4 border border-indigo-200 shadow-2xs bg-indigo-50/20">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-indigo-700 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> Total Khusus (3k)
-            </span>
-            <span className="text-[10px] font-black bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">
-              3.000 / Akun
-            </span>
-          </div>
-          <div className="text-2xl font-black text-indigo-900 mt-1">{allKhususList.length}</div>
-          <div className="text-[11px] text-indigo-700 mt-0.5 font-medium">
-            {pendingYesterdayKhusus.length} kemarin • {pendingTodayKhusus.length} hari ini
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-4 border border-teal-200 shadow-2xs bg-teal-50/20">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-teal-700 flex items-center gap-1">
-              <Globe className="w-3.5 h-3.5" /> Total Bebas (2.7k)
-            </span>
-            <span className="text-[10px] font-black bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full">
-              2.700 / Akun
-            </span>
-          </div>
-          <div className="text-2xl font-black text-teal-900 mt-1">{allBebasList.length}</div>
-          <div className="text-[11px] text-teal-700 mt-0.5 font-medium">
-            {pendingYesterdayBebas.length} kemarin • {pendingTodayBebas.length} hari ini
-          </div>
-        </div>
-
         <div className="bg-white rounded-3xl p-4 border border-blue-200 shadow-2xs bg-blue-50/20">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-blue-700 flex items-center gap-1">
-              <Eye className="w-3.5 h-3.5" /> Cek Admin
+              <Clock className="w-3.5 h-3.5" /> Pending
             </span>
             <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+              Antrean
+            </span>
+          </div>
+          <div className="text-2xl font-black text-blue-900 mt-1">{pendingList.length}</div>
+          <div className="text-[11px] text-blue-700 mt-0.5 font-medium">
+            {pendingYesterdayList.length} kemarin &bull; {pendingTodayList.length} hari ini
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-4 border border-indigo-200 shadow-2xs bg-indigo-50/20">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-indigo-700 flex items-center gap-1">
+              <Eye className="w-3.5 h-3.5" /> Cek Admin
+            </span>
+            <span className="text-[10px] font-black bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">
               Proses Cek
             </span>
           </div>
-          <div className="text-2xl font-black text-blue-800 mt-1">{cekAdminList.length}</div>
-          <div className="text-[11px] text-blue-600 mt-0.5 font-medium">Sedang diperiksa admin</div>
+          <div className="text-2xl font-black text-indigo-800 mt-1">{cekAdminList.length}</div>
+          <div className="text-[11px] text-indigo-600 mt-0.5 font-medium">Sedang diperiksa admin</div>
         </div>
 
         <div className="bg-white rounded-3xl p-4 border border-emerald-200 shadow-2xs bg-emerald-50/20">
@@ -362,6 +260,19 @@ export function AdminAllStorTab({
           <div className="text-2xl font-black text-emerald-800 mt-1">{acceptedList.length}</div>
           <div className="text-[11px] text-emerald-700 mt-0.5 font-medium">Saldo otomatis masuk</div>
         </div>
+
+        <div className="bg-white rounded-3xl p-4 border border-rose-200 shadow-2xs bg-rose-50/20">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-rose-700 flex items-center gap-1">
+              <XCircle className="w-3.5 h-3.5" /> Ditolak
+            </span>
+            <span className="text-[10px] font-black bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">
+              Gagal
+            </span>
+          </div>
+          <div className="text-2xl font-black text-rose-800 mt-1">{rejectedList.length}</div>
+          <div className="text-[11px] text-rose-700 mt-0.5 font-medium">Tidak memenuhi syarat</div>
+        </div>
       </div>
 
       <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
@@ -374,42 +285,12 @@ export function AdminAllStorTab({
               <div className="text-sm font-black text-slate-900 flex items-center gap-2">
                 <span>Pemisah Antrean: Pendingan Kemarin vs Sekarang</span>
                 {pendingYesterdayList.length > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-300 animate-pulse">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-300">
                     Perlu Prioritas ({pendingYesterdayList.length})
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500">
-                Antrean dipisahkan berdasarkan tanggal dan tipe: Khusus (3k) vs Bebas (2.7k).
-              </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl self-start sm:self-center">
-            <button
-              type="button"
-              onClick={() => setViewMode('unified')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'unified'
-                  ? 'bg-white text-indigo-700 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Table className="w-3.5 h-3.5" />
-              <span>Tabel Terpadu</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('split')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'split'
-                  ? 'bg-white text-indigo-700 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Split className="w-3.5 h-3.5" />
-              <span>Pisah 2 Kolom</span>
-            </button>
           </div>
         </div>
 
@@ -431,14 +312,6 @@ export function AdminAllStorTab({
                   {pendingYesterdayList.length}{' '}
                   <span className="text-xs font-medium text-amber-600 font-sans">Akun Gmail</span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                  <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-100 text-indigo-800">
-                    Khusus: {pendingYesterdayKhusus.length} Akun
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-teal-100 text-teal-800">
-                    Bebas: {pendingYesterdayBebas.length} Akun
-                  </span>
-                </div>
               </div>
               <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
                 <History className="w-5 h-5" />
@@ -448,27 +321,9 @@ export function AdminAllStorTab({
             <div className="mt-4 pt-4 border-t border-amber-200/70 flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => handleCopyEmails('pending_yesterday_khusus')}
-                disabled={pendingYesterdayKhusus.length === 0}
-                className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>Salin Khusus ({pendingYesterdayKhusus.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleCopyEmails('pending_yesterday_bebas')}
-                disabled={pendingYesterdayBebas.length === 0}
-                className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
-              >
-                <Globe className="w-3 h-3" />
-                <span>Salin Bebas ({pendingYesterdayBebas.length})</span>
-              </button>
-              <button
-                type="button"
                 onClick={() => handleCopyEmails('pending_yesterday')}
                 disabled={pendingYesterdayList.length === 0}
-                className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
               >
                 <Copy className="w-3 h-3" />
                 <span>Salin Semua Kemarin</span>
@@ -477,11 +332,10 @@ export function AdminAllStorTab({
                 <button
                   type="button"
                   onClick={onNavigateToYesterdayPending}
-                  className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                  title="Buka panel dedicated antrean kemarin"
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                 >
                   <History className="w-3 h-3 text-amber-400" />
-                  <span>Tab Khusus</span>
+                  <span>Buka Tab Kemarin</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
               )}
@@ -505,14 +359,6 @@ export function AdminAllStorTab({
                   {pendingTodayList.length}{' '}
                   <span className="text-xs font-medium text-blue-600 font-sans">Akun Gmail</span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                  <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-100 text-indigo-800">
-                    Khusus: {pendingTodayKhusus.length} Akun
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-teal-100 text-teal-800">
-                    Bebas: {pendingTodayBebas.length} Akun
-                  </span>
-                </div>
               </div>
               <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-700 flex items-center justify-center shrink-0">
                 <Zap className="w-5 h-5" />
@@ -522,27 +368,9 @@ export function AdminAllStorTab({
             <div className="mt-4 pt-4 border-t border-blue-200/70 flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => handleCopyEmails('pending_today_khusus')}
-                disabled={pendingTodayKhusus.length === 0}
-                className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>Salin Khusus ({pendingTodayKhusus.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleCopyEmails('pending_today_bebas')}
-                disabled={pendingTodayBebas.length === 0}
-                className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
-              >
-                <Globe className="w-3 h-3" />
-                <span>Salin Bebas ({pendingTodayBebas.length})</span>
-              </button>
-              <button
-                type="button"
                 onClick={() => handleCopyEmails('pending_today')}
                 disabled={pendingTodayList.length === 0}
-                className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-40"
               >
                 <Copy className="w-3 h-3" />
                 <span>Salin Semua Hari Ini</span>
@@ -553,65 +381,6 @@ export function AdminAllStorTab({
       </div>
 
       <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-            <Layers className="w-4 h-4 text-indigo-600" />
-            <span>Pisahkan Tipe Gmail STOR:</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setTypeFilter('All')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                typeFilter === 'All'
-                  ? 'bg-slate-900 text-white shadow-2xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              <span>Semua Tipe</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                typeFilter === 'All' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
-              }`}>
-                {submissions.length}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter('khusus')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                typeFilter === 'khusus'
-                  ? 'bg-indigo-600 text-white shadow-2xs'
-                  : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Gmail Khusus (3k)</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                typeFilter === 'khusus' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-800'
-              }`}>
-                {allKhususList.length}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter('bebas')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                typeFilter === 'bebas'
-                  ? 'bg-teal-600 text-white shadow-2xs'
-                  : 'bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-100'
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>Gmail Bebas (2.7k)</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                typeFilter === 'bebas' ? 'bg-white/20 text-white' : 'bg-teal-100 text-teal-800'
-              }`}>
-                {allBebasList.length}
-              </span>
-            </button>
-          </div>
-        </div>
-
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-1">
           <div className="flex flex-wrap gap-1.5 p-1 bg-slate-100 rounded-xl">
             {[
@@ -667,7 +436,7 @@ export function AdminAllStorTab({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari email Gmail, user, email..."
+              placeholder="Cari email Gmail, user..."
               className="w-full pl-10 pr-3.5 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-xs outline-none bg-white"
             />
           </div>
@@ -680,13 +449,11 @@ export function AdminAllStorTab({
             <Mail className="w-10 h-10 mx-auto text-slate-300" />
             <p className="font-bold text-slate-700">Tidak ada data storan akun Gmail</p>
             <p className="text-slate-500">
-              {searchQuery || typeFilter !== 'All'
-                ? `Tidak ditemukan akun yang cocok dengan filter atau kata kunci "${searchQuery}".`
+              {searchQuery
+                ? `Tidak ditemukan akun yang cocok dengan kata kunci "${searchQuery}".`
                 : filterStatus === 'Pending_Kemarin'
-                ? 'Tidak ada akun pending dari kemarin. Antrean kemarin telah tuntas!'
-                : filterStatus === 'Pending_Sekarang'
-                ? 'Belum ada akun pending yang masuk hari ini.'
-                : 'Belum ada akun Gmail yang dikirimkan oleh pengguna.'}
+                ? 'Tidak ada akun pending dari kemarin.'
+                : 'Belum ada akun Gmail dalam kategori ini.'}
             </p>
           </div>
         ) : (
@@ -696,7 +463,6 @@ export function AdminAllStorTab({
                 <tr>
                   <th className="px-5 py-3.5 w-12 text-center">#</th>
                   <th className="px-5 py-3.5">Akun Gmail Disetor</th>
-                  <th className="px-5 py-3.5">Tipe Storan</th>
                   <th className="px-5 py-3.5">User Pengirim</th>
                   <th className="px-5 py-3.5">Waktu Storan</th>
                   <th className="px-5 py-3.5">Imbalan</th>
@@ -707,8 +473,6 @@ export function AdminAllStorTab({
               <tbody className="divide-y divide-slate-100">
                 {filteredList.map((sub, idx) => {
                   const cleanEmail = getCleanEmail(sub.dataContent);
-                  const subType = getSubmissionType(sub);
-                  const isKhusus = subType === 'khusus';
                   const isPending = sub.status === 'Pending';
                   const isCekAdmin = sub.status === 'Cek Admin';
                   const isAccepted = sub.status === 'Diterima';
@@ -747,18 +511,6 @@ export function AdminAllStorTab({
                         </div>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 ${
-                            isKhusus
-                              ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                              : 'bg-teal-100 text-teal-800 border border-teal-200'
-                          }`}
-                        >
-                          {isKhusus ? <Sparkles className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
-                          <span>{isKhusus ? 'Khusus 3k' : 'Bebas 2.7k'}</span>
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
                         <div className="font-bold text-slate-800">{sub.userName || 'Freelancer'}</div>
                         <div className="text-[11px] text-slate-400">{sub.userEmail}</div>
                       </td>
@@ -776,7 +528,7 @@ export function AdminAllStorTab({
                         )}
                       </td>
                       <td className="px-5 py-3.5 font-extrabold text-blue-700">
-                        {formatRupiah(sub.rewardAmount || (isKhusus ? 3000 : 2700))}
+                        {formatRupiah(sub.rewardAmount || 3000)}
                       </td>
                       <td className="px-5 py-3.5">
                         <span
@@ -786,7 +538,7 @@ export function AdminAllStorTab({
                               : isRejected
                               ? 'bg-rose-100 text-rose-800'
                               : isCekAdmin
-                              ? 'bg-blue-100 text-blue-800 border border-blue-300 animate-pulse'
+                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
                               : isPendingYesterday
                               ? 'bg-amber-100 text-amber-900 border border-amber-300'
                               : 'bg-amber-100 text-amber-800'

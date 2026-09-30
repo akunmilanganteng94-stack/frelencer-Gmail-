@@ -40,7 +40,7 @@ export function RulesCard({ onNavigate, onClick }: RulesCardProps) {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-xs sm:text-sm font-black text-slate-900 tracking-tight group-hover:text-blue-700 transition">
-                Rules & Ketentuan
+                Rules &amp; Ketentuan
               </h3>
               <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 shrink-0">
                 {settings.rules?.length || 0} Aturan
@@ -51,7 +51,7 @@ export function RulesCard({ onNavigate, onClick }: RulesCardProps) {
               <strong className="font-mono text-orange-600 font-bold">
                 {activePassword}
               </strong>{' '}
-              • Klik untuk baca aturan lengkap
+              &bull; Klik untuk baca aturan lengkap
             </p>
           </div>
         </div>

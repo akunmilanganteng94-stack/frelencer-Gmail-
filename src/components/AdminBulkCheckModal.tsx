@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   History,
   Zap,
-  Globe,
   Loader2,
 } from 'lucide-react';
 import { Submission } from '../types';
@@ -39,12 +38,6 @@ export function AdminBulkCheckModal({
     return parts[0].trim().toLowerCase();
   };
 
-  const getSubmissionType = (sub: Submission): 'khusus' | 'bebas' => {
-    if (sub.submissionType) return sub.submissionType;
-    if (sub.rewardAmount === 2700) return 'bebas';
-    return 'khusus';
-  };
-
   const pendingYesterdaySubs = useMemo(() => {
     return submissions.filter(
       (s) => s.status === 'Pending' && isEarlierThanTodayWIB(s.createdAt)
@@ -56,34 +49,6 @@ export function AdminBulkCheckModal({
       (s) => s.status === 'Pending' && isTodayWIB(s.createdAt)
     );
   }, [submissions]);
-
-  const pendingYesterdayKhususEmails = useMemo(() => {
-    return pendingYesterdaySubs
-      .filter((s) => getSubmissionType(s) === 'khusus')
-      .map((s) => getCleanEmailFromSubmission(s.dataContent))
-      .filter(Boolean);
-  }, [pendingYesterdaySubs]);
-
-  const pendingYesterdayBebasEmails = useMemo(() => {
-    return pendingYesterdaySubs
-      .filter((s) => getSubmissionType(s) === 'bebas')
-      .map((s) => getCleanEmailFromSubmission(s.dataContent))
-      .filter(Boolean);
-  }, [pendingYesterdaySubs]);
-
-  const pendingTodayKhususEmails = useMemo(() => {
-    return pendingTodaySubs
-      .filter((s) => getSubmissionType(s) === 'khusus')
-      .map((s) => getCleanEmailFromSubmission(s.dataContent))
-      .filter(Boolean);
-  }, [pendingTodaySubs]);
-
-  const pendingTodayBebasEmails = useMemo(() => {
-    return pendingTodaySubs
-      .filter((s) => getSubmissionType(s) === 'bebas')
-      .map((s) => getCleanEmailFromSubmission(s.dataContent))
-      .filter(Boolean);
-  }, [pendingTodaySubs]);
 
   const pendingYesterdayEmails = useMemo(() => {
     return pendingYesterdaySubs
@@ -102,7 +67,6 @@ export function AdminBulkCheckModal({
     const lines = inputText.split('\n');
     const result: string[] = [];
     const seen = new Set<string>();
-
     for (const rawLine of lines) {
       const line = rawLine.trim();
       if (!line) continue;
@@ -120,7 +84,6 @@ export function AdminBulkCheckModal({
     const matchedSubs: Submission[] = [];
     const notFoundEmails: string[] = [];
     const alreadyCheckingSubs: Submission[] = [];
-
     const pendingByEmail = new Map<string, Submission>();
     const checkingByEmail = new Map<string, Submission>();
 
@@ -146,13 +109,8 @@ export function AdminBulkCheckModal({
       }
     }
 
-    const khususCount = matchedSubs.filter((s) => getSubmissionType(s) === 'khusus').length;
-    const bebasCount = matchedSubs.filter((s) => getSubmissionType(s) === 'bebas').length;
-
     return {
       matchedSubs,
-      khususCount,
-      bebasCount,
       notFoundEmails,
       alreadyCheckingSubs,
     };
@@ -162,8 +120,8 @@ export function AdminBulkCheckModal({
     if (matchResult.matchedSubs.length === 0) return;
     setProcessing(true);
     setProcessedCount(0);
-
     let successCount = 0;
+
     for (const sub of matchResult.matchedSubs) {
       try {
         await updateDoc(doc(db, 'submissions', sub.id), {
@@ -246,40 +204,11 @@ export function AdminBulkCheckModal({
                     Klik untuk memuat otomatis
                   </span>
                 </div>
+
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
                   <span className="text-[11px] font-bold text-slate-700 w-full sm:w-auto">
                     Kemarin:
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (pendingYesterdayKhususEmails.length === 0) {
-                        showToast('info', 'Tidak Ada Data', 'Tidak ada pendingan kemarin tipe Khusus');
-                        return;
-                      }
-                      setInputText(pendingYesterdayKhususEmails.join('\n'));
-                      showToast('success', 'Dimuat', `${pendingYesterdayKhususEmails.length} Gmail Khusus kemarin dimuat`);
-                    }}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1 transition cursor-pointer active:scale-95"
-                  >
-                    <Zap className="w-3 h-3 text-indigo-600" />
-                    <span>Khusus ({pendingYesterdayKhususEmails.length})</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (pendingYesterdayBebasEmails.length === 0) {
-                        showToast('info', 'Tidak Ada Data', 'Tidak ada pendingan kemarin tipe Bebas');
-                        return;
-                      }
-                      setInputText(pendingYesterdayBebasEmails.join('\n'));
-                      showToast('success', 'Dimuat', `${pendingYesterdayBebasEmails.length} Gmail Bebas kemarin dimuat`);
-                    }}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 flex items-center gap-1 transition cursor-pointer active:scale-95"
-                  >
-                    <Globe className="w-3 h-3 text-teal-600" />
-                    <span>Bebas ({pendingYesterdayBebasEmails.length})</span>
-                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -300,36 +229,6 @@ export function AdminBulkCheckModal({
                   <span className="text-[11px] font-bold text-slate-700 w-full sm:w-auto">
                     Hari Ini:
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (pendingTodayKhususEmails.length === 0) {
-                        showToast('info', 'Tidak Ada Data', 'Tidak ada pendingan hari ini tipe Khusus');
-                        return;
-                      }
-                      setInputText(pendingTodayKhususEmails.join('\n'));
-                      showToast('success', 'Dimuat', `${pendingTodayKhususEmails.length} Gmail Khusus hari ini dimuat`);
-                    }}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1 transition cursor-pointer active:scale-95"
-                  >
-                    <Zap className="w-3 h-3 text-indigo-600" />
-                    <span>Khusus ({pendingTodayKhususEmails.length})</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (pendingTodayBebasEmails.length === 0) {
-                        showToast('info', 'Tidak Ada Data', 'Tidak ada pendingan hari ini tipe Bebas');
-                        return;
-                      }
-                      setInputText(pendingTodayBebasEmails.join('\n'));
-                      showToast('success', 'Dimuat', `${pendingTodayBebasEmails.length} Gmail Bebas hari ini dimuat`);
-                    }}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 flex items-center gap-1 transition cursor-pointer active:scale-95"
-                  >
-                    <Globe className="w-3 h-3 text-teal-600" />
-                    <span>Bebas ({pendingTodayBebasEmails.length})</span>
-                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -366,7 +265,7 @@ export function AdminBulkCheckModal({
               </div>
 
               {parsedEmails.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-2xl bg-blue-50/70 border border-blue-200/80 text-xs">
+                <div className="grid grid-cols-2 gap-2.5 p-3 rounded-2xl bg-blue-50/70 border border-blue-200/80 text-xs">
                   <div className="bg-white p-2.5 rounded-xl border border-blue-100">
                     <span className="text-[10px] text-slate-500 block font-semibold">Total Input:</span>
                     <strong className="text-sm font-black text-slate-800">{parsedEmails.length} Akun</strong>
@@ -374,14 +273,6 @@ export function AdminBulkCheckModal({
                   <div className="bg-white p-2.5 rounded-xl border border-blue-100">
                     <span className="text-[10px] text-emerald-600 block font-bold">Cocok (Pending):</span>
                     <strong className="text-sm font-black text-emerald-700">{matchResult.matchedSubs.length} Akun</strong>
-                  </div>
-                  <div className="bg-white p-2.5 rounded-xl border border-blue-100">
-                    <span className="text-[10px] text-indigo-600 block font-bold">Khusus:</span>
-                    <strong className="text-sm font-black text-indigo-700">{matchResult.khususCount} Akun</strong>
-                  </div>
-                  <div className="bg-white p-2.5 rounded-xl border border-blue-100">
-                    <span className="text-[10px] text-teal-600 block font-bold">Bebas:</span>
-                    <strong className="text-sm font-black text-teal-700">{matchResult.bebasCount} Akun</strong>
                   </div>
                 </div>
               )}
@@ -420,7 +311,6 @@ export function AdminBulkCheckModal({
               <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                 {matchResult.matchedSubs.map((sub, idx) => {
                   const email = getCleanEmailFromSubmission(sub.dataContent);
-                  const type = getSubmissionType(sub);
                   return (
                     <div
                       key={sub.id}
@@ -437,15 +327,6 @@ export function AdminBulkCheckModal({
                           </span>
                         </div>
                       </div>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
-                          type === 'khusus'
-                            ? 'bg-indigo-100 text-indigo-800'
-                            : 'bg-teal-100 text-teal-800'
-                        }`}
-                      >
-                        {type === 'khusus' ? 'Khusus' : 'Bebas'}
-                      </span>
                     </div>
                   );
                 })}
@@ -463,18 +344,6 @@ export function AdminBulkCheckModal({
                 <p className="text-xs text-slate-500 mt-1">
                   Sebanyak <strong>{processedCount} akun Gmail</strong> telah berhasil dipindahkan ke status <strong>Cek Admin</strong>.
                 </p>
-              </div>
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 max-w-sm mx-auto text-xs space-y-1.5 text-slate-700">
-                <div className="flex justify-between">
-                  <span>Total Akun Diproses:</span>
-                  <strong className="text-slate-900">{processedCount} Akun</strong>
-                </div>
-                <div className="flex justify-between">
-                  <span>Status Sekarang:</span>
-                  <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[10px]">
-                    Cek Admin
-                  </span>
-                </div>
               </div>
             </div>
           )}

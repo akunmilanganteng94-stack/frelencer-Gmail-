@@ -13,7 +13,6 @@ export function ChannelPopup({ isOpen: controlledIsOpen, onClose }: ChannelPopup
   const [internalIsOpen, setInternalIsOpen] = useState(false);
 
   useEffect(() => {
-    // Only auto-show if not externally controlled
     if (controlledIsOpen === undefined) {
       const isDismissed = localStorage.getItem(STORAGE_KEY);
       if (!isDismissed) {
@@ -57,7 +56,6 @@ export function ChannelPopup({ isOpen: controlledIsOpen, onClose }: ChannelPopup
             transition={{ duration: 0.25 }}
             className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-blue-100 overflow-hidden text-slate-800"
           >
-            {/* Header banner */}
             <div className="bg-gradient-to-r from-[#1e40af] via-blue-700 to-sky-600 p-6 text-white relative">
               <button
                 type="button"
@@ -73,19 +71,14 @@ export function ChannelPopup({ isOpen: controlledIsOpen, onClose }: ChannelPopup
               <h3 className="text-xl font-bold tracking-tight">Saluran Informasi Resmi</h3>
               <p className="text-blue-100 text-sm mt-1">Komunitas Freelancer Storan WhatsApp</p>
             </div>
-
-            {/* Content body */}
             <div className="p-6 space-y-4">
               <p className="text-slate-600 text-sm leading-relaxed">
                 Jangan lewatkan informasi terbaru, update layanan, jam buka operasional, dan pengumuman penting seputar storan & penarikan saldo.
               </p>
-
               <div className="bg-blue-50/80 rounded-xl p-3 border border-blue-100 text-xs text-blue-800 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
                 <span>Update status storan realtime & info promo rate khusus anggota saluran!</span>
               </div>
-
-              {/* Action buttons */}
               <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
                 <button
                   type="button"

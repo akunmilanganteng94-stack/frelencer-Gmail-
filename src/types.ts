@@ -18,7 +18,7 @@ export interface UserProfile {
   referredByCode?: string;
   inviterName?: string;
   totalInvited?: number;
-  referralRewardMilestones?: number[]; // [20, 40, ...] milestones already awarded
+  referralRewardMilestones?: number[];
 }
 
 export type ReferralStatus = 'pending_submission' | 'completed';
@@ -31,14 +31,13 @@ export interface ReferralItem {
   invitedEmail: string;
   invitedName: string;
   referralCodeUsed?: string;
-  status: ReferralStatus; // 'pending_submission': registered, hasn't had accepted Gmail yet; 'completed': first Gmail accepted
+  status: ReferralStatus;
   createdAt: string;
   completedAt?: string;
   firstSubmissionId?: string;
 }
 
 export type SubmissionStatus = 'Pending' | 'Cek Admin' | 'Diterima' | 'Ditolak';
-export type SubmissionType = 'khusus' | 'bebas';
 
 export interface Submission {
   id: string;
@@ -48,7 +47,7 @@ export interface Submission {
   dataContent: string;
   rewardAmount: number;
   status: SubmissionStatus;
-  submissionType?: SubmissionType;
+  submissionType?: string;
   rejectionReason?: string;
   adminNotes?: string;
   createdAt: string;
@@ -91,11 +90,11 @@ export interface GmailStockItem {
 
 export interface SystemSettings {
   storanOpen: boolean;
-  storanKhususOpen?: boolean;
-  storanBebasOpen?: boolean;
   storanSchedule: string;
   pricePerSubmission: number;
   withdrawalOpen: boolean;
+  withdrawalDanaOpen?: boolean;
+  withdrawalGopayOpen?: boolean;
   minWithdrawal: number;
   rules: string[];
   announcement: string;
@@ -104,9 +103,18 @@ export interface SystemSettings {
   adminWhatsApp?: string;
   dailyGenerateLimit: number;
   storanClosedReason?: string;
+  apkDownloadUrl?: string;
 }
 
-export type NavigationTab = 'home' | 'storan' | 'riwayat' | 'saldo' | 'akun' | 'admin' | 'rules' | 'referral';
+export type NavigationTab =
+  | 'home'
+  | 'storan'
+  | 'riwayat'
+  | 'saldo'
+  | 'akun'
+  | 'admin'
+  | 'rules'
+  | 'referral';
 
 export enum OperationType {
   CREATE = 'create',

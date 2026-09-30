@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { SettingsProvider, useSettings } from './context/SettingsContext';
+import { SettingsProvider } from './context/SettingsContext';
 import { ContactAdminProvider } from './context/ContactAdminContext';
 import { NavigationTab } from './types';
 import { Navigation } from './components/Navigation';
@@ -14,34 +14,56 @@ import { RulesView } from './views/RulesView';
 import { AkunView } from './views/AkunView';
 import { AdminView } from './views/AdminView';
 import { ReferralView } from './views/ReferralView';
-import { AZGmailLogo } from './components/GmailLogo';
 import { captureReferralFromUrl } from './lib/referralHelper';
+import { FloatingRefreshButton } from './components/FloatingRefreshButton';
+import { APK_DOWNLOAD_URL } from './components/ApkDownloadCard';
+import { Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 function MainApp() {
-  const { currentUser, loading } = useAuth();
-  const { settings } = useSettings();
+  const { currentUser, loading, isAdmin } = useAuth();
   const [currentTab, setCurrentTab] = useState<NavigationTab>('home');
+  const [isDesktopMode, setIsDesktopMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('app_desktop_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const effectiveDesktopMode = isAdmin ? isDesktopMode : false;
+
+  const toggleDesktopMode = () => {
+    if (!isAdmin) return;
+    setIsDesktopMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('app_desktop_mode', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     captureReferralFromUrl();
   }, []);
 
+  // Loading apk nya namanya "azyx19"
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div
-            className="w-16 h-16 rounded-[25px] bg-white p-1 shadow-lg border border-blue-100 flex items-center justify-center overflow-hidden"
-            style={{ borderRadius: '25px' }}
-          >
-            <AZGmailLogo className="w-full h-full" />
+      <div className="min-h-screen bg-[#EEF8FF] flex flex-col items-center justify-center p-4 select-none">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="w-16 h-16 rounded-3xl bg-[#1677E8] text-white flex items-center justify-center shadow-xl shadow-blue-500/30">
+            <Mail className="w-8 h-8 text-white stroke-[2.2]" />
           </div>
           <div>
-            <h1 className="text-lg font-black tracking-tight text-slate-900">AZGmail</h1>
-            <p className="text-xs text-slate-500 mt-1">Memuat data aplikasi...</p>
+            <div className="text-2xl font-black tracking-tight select-none">
+              <span className="text-[#0D5FC7]">azyx</span>
+              <span className="text-[#1677E8]">19</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Memuat aplikasi azyx19...</p>
           </div>
-          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-[#1677E8] border-t-transparent rounded-full animate-spin mt-2" />
         </div>
       </div>
     );
@@ -52,17 +74,30 @@ function MainApp() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F7FC] text-slate-800 flex flex-col selection:bg-blue-600 selection:text-white font-sans">
-      <Navigation currentTab={currentTab} onSelectTab={setCurrentTab} />
+    <div className={`min-h-screen bg-[#EEF8FF] text-[#102033] flex flex-col selection:bg-[#1677E8] selection:text-white font-sans antialiased transition-all ${
+      effectiveDesktopMode ? 'min-w-[1024px]' : ''
+    }`}>
+      <Navigation
+        currentTab={currentTab}
+        onSelectTab={setCurrentTab}
+        isDesktopMode={effectiveDesktopMode}
+        onToggleDesktopMode={toggleDesktopMode}
+      />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28 sm:pb-32">
+      <main
+        className={`flex-1 w-full mx-auto px-3.5 sm:px-4 md:px-6 py-3 sm:py-4 pb-28 sm:pb-32 transition-all ${
+          effectiveDesktopMode
+            ? 'max-w-6xl'
+            : 'max-w-md md:max-w-3xl lg:max-w-4xl'
+        }`}
+      >
         <AnimatePresence mode="wait">
           <motion.div
             key={currentTab}
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.18 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15 }}
           >
             {currentTab === 'home' && <HomeView onNavigate={setCurrentTab} />}
             {currentTab === 'storan' && <StoranView onNavigate={setCurrentTab} />}
@@ -76,39 +111,45 @@ function MainApp() {
         </AnimatePresence>
       </main>
 
-      <footer className="hidden sm:block border-t border-slate-200/80 bg-white py-6 text-xs text-slate-500 mb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-6 h-6 rounded-[25px] bg-blue-50 flex items-center justify-center p-0.5 overflow-hidden"
-              style={{ borderRadius: '25px' }}
-            >
-              <AZGmailLogo className="w-full h-full" />
-            </div>
-            <span className="font-bold bg-gradient-to-r from-[#1e40af] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent">
-              AZGmail
-            </span>
+      <footer className="hidden sm:block border-t border-blue-100/80 bg-white/70 py-4 text-xs text-slate-500 mb-20">
+        <div
+          className={`mx-auto px-4 flex items-center justify-between gap-3 transition-all ${
+            effectiveDesktopMode ? 'max-w-6xl' : 'max-w-md md:max-w-3xl lg:max-w-4xl'
+          }`}
+        >
+          <div className="flex items-center gap-1 font-bold">
+            <span className="text-[#0D5FC7]">Azyx</span>
+            <span className="text-[#1677E8]">19</span>
           </div>
-
-          <div className="flex items-center gap-4 text-slate-500">
-            <span>Operasional: {settings.storanSchedule}</span>
-            <span>•</span>
+          <div className="flex items-center gap-3 text-[11px] text-slate-500">
             <button
               onClick={() => setCurrentTab('rules')}
-              className="hover:text-blue-600 font-semibold cursor-pointer"
+              className="hover:text-[#1677E8] cursor-pointer"
             >
-              Ketentuan Storan
+              Ketentuan
             </button>
-            <span>•</span>
+            <span>&bull;</span>
             <button
               onClick={() => setCurrentTab('akun')}
-              className="hover:text-blue-600 font-semibold cursor-pointer"
+              className="hover:text-[#1677E8] cursor-pointer"
             >
-              Profil & Chat Admin
+              Profil
             </button>
+            <span>&bull;</span>
+            <a
+              href={APK_DOWNLOAD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#1677E8] font-bold hover:underline cursor-pointer"
+            >
+              APK
+            </a>
           </div>
         </div>
       </footer>
+
+      {/* Tombol Segarkan Halaman Cepat (Floating Refresh Button) */}
+      <FloatingRefreshButton />
     </div>
   );
 }

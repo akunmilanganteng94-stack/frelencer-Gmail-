@@ -1,15 +1,15 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { SystemSettings, OperationType } from '../types';
-import { db, handleFirestoreError } from '../lib/firebase';
+import { SystemSettings } from '../types';
+import { db } from '../lib/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 const DEFAULT_GMAIL_PASSWORD = 'sgsg1122';
 
 const DEFAULT_RULES = [
-  'Password akun Gmail WAJIB menggunakan: sgsg1122 (atau sesuai konfigurasi aktif dari Admin).',
+  'Password akun Gmail WAJIB menggunakan: sgsg1122.',
   'Akun Gmail harus fresh, aktif, dan dapat login tanpa terhalang 2FA atau verifikasi nomor yang terkunci.',
   'Dilarang mengaktifkan Verifikasi 2 Langkah (2-Step Verification) atau kunci keamanan yang menghambat verifikasi admin.',
-  'Kirimkan storan dalam sistem 1 baris untuk 1 akun Gmail (Format: email@gmail.com atau email@gmail.com|password).',
+  'Kirimkan storan dalam sistem 1 baris untuk 1 akun Gmail (Format: email@gmail.com).',
   'Gunakan fitur "Generator Akun Gmail" untuk kombinasi nama dan alamat email yang rapi serta otomatis.',
   'Dilarang mengirim email fiktif, akun hasil retas/curian, atau akun yang belum terdaftar di Google.',
   'Admin berhak menolak akun yang gagal login, terkena disabled, atau tidak menggunakan password wajib.',
@@ -17,11 +17,11 @@ const DEFAULT_RULES = [
 
 const DEFAULT_SETTINGS: SystemSettings = {
   storanOpen: true,
-  storanKhususOpen: true,
-  storanBebasOpen: true,
   storanSchedule: 'Senin - Jumat, 07.00 - 17.00 WIB (Sabtu & Minggu CLOSE)',
   pricePerSubmission: 3000,
   withdrawalOpen: true,
+  withdrawalDanaOpen: true,
+  withdrawalGopayOpen: true,
   minWithdrawal: 4000,
   rules: DEFAULT_RULES,
   announcement:
@@ -32,6 +32,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   dailyGenerateLimit: 10,
   storanClosedReason:
     'Admin sedang menutup penerimaan akun baru. Storan aktif setiap Senin - Jumat. Silakan kembali pada jam operasional.',
+  apkDownloadUrl: 'https://www.mediafire.com/file/35mid43yhsc7itc/Azgmail.apk/file',
 };
 
 interface SettingsContextType {
@@ -57,10 +58,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             ...DEFAULT_SETTINGS,
             ...data,
             storanOpen: data.storanOpen !== undefined ? data.storanOpen : true,
-            storanKhususOpen: data.storanKhususOpen !== undefined ? data.storanKhususOpen : true,
-            storanBebasOpen: data.storanBebasOpen !== undefined ? data.storanBebasOpen : true,
             withdrawalOpen: data.withdrawalOpen !== undefined ? data.withdrawalOpen : true,
-            gmailDefaultPassword: data.gmailDefaultPassword || DEFAULT_GMAIL_PASSWORD,
+            withdrawalDanaOpen: data.withdrawalDanaOpen !== undefined ? data.withdrawalDanaOpen : true,
+            withdrawalGopayOpen: data.withdrawalGopayOpen !== undefined ? data.withdrawalGopayOpen : true,
+            gmailDefaultPassword: 'sgsg1122', // Password nya cuma sgsg1122 saja
             generatorOpen: data.generatorOpen !== undefined ? data.generatorOpen : true,
             adminWhatsApp: data.adminWhatsApp || '6285199219856',
             dailyGenerateLimit:
@@ -72,6 +73,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
                 ? data.storanClosedReason
                 : DEFAULT_SETTINGS.storanClosedReason,
             rules: Array.isArray(data.rules) && data.rules.length > 0 ? data.rules : DEFAULT_RULES,
+            apkDownloadUrl: data.apkDownloadUrl || DEFAULT_SETTINGS.apkDownloadUrl,
           });
         } else {
           setDoc(settingsDocRef, DEFAULT_SETTINGS).catch((err) => {
@@ -85,18 +87,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     );
-
     return () => unsubscribe();
   }, []);
 
   const updateSettings = async (newSettings: Partial<SystemSettings>) => {
     try {
-      const merged = { ...settings, ...newSettings };
+      const merged = { ...settings, ...newSettings, gmailDefaultPassword: 'sgsg1122' };
       await setDoc(doc(db, 'settings', 'general'), merged, { merge: true });
       setSettings(merged);
     } catch (error) {
       console.error('Error updating settings document:', error);
-      const merged = { ...settings, ...newSettings };
+      const merged = { ...settings, ...newSettings, gmailDefaultPassword: 'sgsg1122' };
       setSettings(merged);
       throw error;
     }

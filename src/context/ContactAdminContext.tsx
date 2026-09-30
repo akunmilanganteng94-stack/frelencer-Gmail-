@@ -17,6 +17,7 @@ export function ContactAdminProvider({ children }: { children: ReactNode }) {
 
   const openContactModal = () => setIsAdminOpen(true);
   const closeContactModal = () => setIsAdminOpen(false);
+
   const openChannelModal = () => setIsChannelOpen(true);
   const closeChannelModal = () => setIsChannelOpen(false);
 

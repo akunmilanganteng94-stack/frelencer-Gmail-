@@ -42,7 +42,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Admin emails configured in system
 const ADMIN_EMAILS = ['apriliansyahazril10@gmail.com', 'nenioke659@gmail.com'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -50,7 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Capture any incoming referral query params early on
   useEffect(() => {
     captureReferralFromUrl();
   }, []);
@@ -64,15 +62,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Listen to real-time changes on user's profile document
       const userDocRef = doc(db, 'users', user.uid);
       const unsubscribeDoc = onSnapshot(
         userDocRef,
         async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
-
-            // Ensure user has a referral code
             if (!data.referralCode) {
               const myCode = generateReferralCode(user.uid);
               setDoc(userDocRef, { referralCode: myCode }, { merge: true }).catch(console.warn);
@@ -80,7 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             saveReferralCodeMapping(data.referralCode, user).catch(console.warn);
 
-            // If user has not been referred yet and arrived via referral link/code, link automatically upon login
             if (!data.referredBy) {
               const pendingCode = getPendingReferralCode();
               if (pendingCode) {
@@ -91,7 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             }
 
-            // Sync and auto-repair any referrals for this user as inviter
             if (data.referralCode) {
               syncAndRepairReferralsForInviter(
                 user.uid,
@@ -103,11 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             setUserProfile(data);
           } else {
-            // Document doesn't exist yet (e.g. newly signed up or social login)
             const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
             const myCode = generateReferralCode(user.uid);
             const pendingCode = getPendingReferralCode();
-
             let inviterData: { uid: string; email: string; displayName: string } | null = null;
             if (pendingCode) {
               try {
@@ -145,7 +136,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.warn('Initial user profile sync notice:', e);
             });
             saveReferralCodeMapping(myCode, user).catch(console.warn);
-
             if (pendingCode) {
               recordReferralForNewUser(user, pendingCode).catch(console.warn);
             }
@@ -198,7 +188,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isDefaultAdmin = ADMIN_EMAILS.includes(email.toLowerCase().trim());
     const myReferralCode = generateReferralCode(user.uid);
     const effectiveRef = normalizeReferralCode(referralCodeInput || getPendingReferralCode());
-
     let inviterData: { uid: string; email: string; displayName: string } | null = null;
     if (effectiveRef) {
       try {
@@ -235,14 +224,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setDoc(doc(db, 'users', user.uid), profile, { merge: true });
     setUserProfile(profile);
 
-    // Save referral code mapping so this user can invite others immediately
     saveReferralCodeMapping(myReferralCode, {
       uid: user.uid,
       email: email.trim(),
       displayName: name.trim(),
     }).catch(console.warn);
 
-    // Automatically record referral for the inviter!
     if (effectiveRef) {
       recordReferralForNewUser(
         {
@@ -260,6 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     provider.setCustomParameters({ prompt: 'select_account' });
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
+
     const userDocRef = doc(db, 'users', user.uid);
     const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
     const myCode = generateReferralCode(user.uid);

@@ -13,12 +13,10 @@ export const firebaseConfig = {
   measurementId: "G-Q3VSWSCC92"
 };
 
-// Initialize Firebase
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Firestore Error handler per skill instructions
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
   const currentAuth = auth.currentUser;
   const errInfo = {
@@ -36,7 +34,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(error instanceof Error ? error.message : JSON.stringify(errInfo));
 }
 
-// Validate Firestore connection on boot
 export async function validateFirestoreConnection(): Promise<boolean> {
   try {
     await getDocFromServer(doc(db, 'settings', 'general'));

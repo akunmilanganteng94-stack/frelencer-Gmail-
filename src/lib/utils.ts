@@ -1,7 +1,3 @@
-/**
- * Utility functions for Freelancer Storan AZGmail
- */
-
 export function formatRupiah(number: number): string {
   if (isNaN(number) || number === null || number === undefined) {
     return 'Rp0';

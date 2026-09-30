@@ -11,7 +11,7 @@ import {
   Shield,
   Gift,
 } from 'lucide-react';
-import { AZGmailLogo } from '../components/GmailLogo';
+import { ApkDownloadCard } from '../components/ApkDownloadCard';
 import {
   captureReferralFromUrl,
   getPendingReferralCode,
@@ -34,7 +34,6 @@ export function AuthView() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [formError, setFormError] = useState('');
 
-  // Check URL search params and storage for referral code
   useEffect(() => {
     const raw = captureReferralFromUrl() || getPendingReferralCode();
     if (raw) {
@@ -58,20 +57,12 @@ export function AuthView() {
         errorMessage.includes('auth/popup-closed-by-user') ||
         errorMessage.includes('auth/cancelled-popup-request')
       ) {
-        console.info('Google sign-in popup dismissed by user.');
         setFormError('Jendela masuk Google ditutup sebelum selesai.');
         return;
       }
-      console.error('Google Sign-In Error:', err);
       if (errorMessage.includes('auth/popup-blocked')) {
         setFormError('Jendela pop-up Google diblokir oleh browser. Izinkan pop-up di peramban Anda.');
         showToast('error', 'Popup Diblokir', 'Izinkan pop-up di pengaturan browser Anda.');
-      } else if (
-        errorMessage.includes('auth/network-request-failed') ||
-        errorMessage.includes('network error')
-      ) {
-        setFormError('Gagal terhubung ke server Google. Periksa koneksi internet Anda.');
-        showToast('error', 'Koneksi Terputus', 'Periksa koneksi internet Anda.');
       } else {
         setFormError('Gagal masuk dengan Google. Anda juga dapat mendaftar/masuk dengan email & kata sandi.');
         showToast('error', 'Login Google', 'Gagal masuk dengan Google. Silakan coba lagi atau gunakan email.');
@@ -106,7 +97,7 @@ export function AuthView() {
     try {
       if (mode === 'login') {
         await loginUser(cleanEmail, password);
-        showToast('success', 'Login Berhasil', 'Selamat datang kembali di AZGmail.');
+        showToast('success', 'Login Berhasil', 'Selamat datang kembali.');
       } else if (mode === 'register') {
         const effectiveRef = normalizeReferralCode(referralCodeInput || getPendingReferralCode());
         await registerUser(name.trim(), cleanEmail, password, effectiveRef);
@@ -125,17 +116,14 @@ export function AuthView() {
         errorMessage.includes('auth/user-not-found')
       ) {
         friendlyMsg =
-          'Email atau kata sandi yang Anda masukkan salah. Jika belum memiliki akun, silakan klik menu "Daftar Akun" di atas, atau klik "Lupa sandi?" jika lupa kata sandi.';
+          'Email atau kata sandi yang Anda masukkan salah. Jika belum memiliki akun, silakan klik menu "Daftar Akun" di atas.';
       } else if (errorMessage.includes('auth/email-already-in-use')) {
         friendlyMsg = 'Email sudah terdaftar. Silakan gunakan menu "Masuk (Login)".';
       } else if (errorMessage.includes('auth/weak-password')) {
         friendlyMsg = 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.';
       } else if (errorMessage.includes('auth/invalid-email')) {
         friendlyMsg = 'Format email tidak valid. Pastikan tidak ada spasi di awal atau akhir email.';
-      } else if (errorMessage.includes('auth/too-many-requests')) {
-        friendlyMsg = 'Terlalu banyak percobaan login yang gagal. Akun sementara dibatasi demi keamanan. Silakan tunggu beberapa saat atau gunakan "Lupa sandi?".';
       } else {
-        console.error('Auth error:', errorMessage);
         friendlyMsg = errorMessage;
       }
       setFormError(friendlyMsg);
@@ -146,19 +134,20 @@ export function AuthView() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen bg-[#EEF8FF] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-sky-400/20 rounded-full blur-3xl pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md px-4 relative z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-[25px] bg-white shadow-lg shadow-blue-500/15 border border-blue-100 mb-3 p-1 overflow-hidden" style={{ borderRadius: '25px' }}>
-            <AZGmailLogo className="w-full h-full" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#1677E8] shadow-lg shadow-blue-500/25 mb-3 text-white">
+            <Mail className="w-8 h-8 text-white stroke-[2.2]" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-[#1e40af] via-[#2563eb] to-[#38bdf8] bg-clip-text text-transparent">
-            AZGmail
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight select-none">
+            <span className="text-[#0D5FC7]">AZ</span>
+            <span className="text-[#1677E8]">Gmail</span>
           </h1>
-          <p className="mt-1.5 text-sm text-slate-500 font-medium">
+          <p className="mt-1.5 text-xs sm:text-sm text-slate-500 font-medium">
             Platform storan data aman, profesional, dan realtime
           </p>
         </div>
@@ -207,7 +196,7 @@ export function AuthView() {
                 }}
                 className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 mb-2 cursor-pointer"
               >
-                ← Kembali ke Login
+                Kembali ke Login
               </button>
               <h2 className="text-lg font-bold text-slate-900">Lupa Kata Sandi</h2>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -227,7 +216,7 @@ export function AuthView() {
                     <div className="min-w-0 flex-1">
                       <div className="font-bold text-blue-950">Undangan Teman Terdeteksi!</div>
                       <div className="text-[11px] text-blue-800">
-                        Kode Referral: <strong className="font-mono bg-blue-100/90 px-1.5 py-0.5 rounded text-blue-900 font-black">{referralCodeInput || getPendingReferralCode()}</strong> terhubung otomatis saat kamu mendaftar atau login.
+                        Kode Referral: <strong className="font-mono bg-blue-100/90 px-1.5 py-0.5 rounded text-blue-900 font-black">{referralCodeInput || getPendingReferralCode()}</strong> terhubung otomatis saat kamu mendaftar.
                       </div>
                     </div>
                   </div>
@@ -302,7 +291,7 @@ export function AuthView() {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Contoh: Azril Pratama"
+                      placeholder="Nama lengkap Anda"
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm outline-none transition bg-white"
                     />
                   </div>
@@ -393,7 +382,6 @@ export function AuthView() {
                     </div>
                   </motion.div>
 
-                  {/* Kode Referral Field */}
                   <motion.div
                     key="referral-code-field"
                     initial={{ opacity: 0, height: 0 }}
@@ -452,7 +440,11 @@ export function AuthView() {
             </div>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-center gap-2 text-xs text-slate-500">
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <ApkDownloadCard variant="compact" />
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-center gap-2 text-xs text-slate-500">
             <Shield className="w-3.5 h-3.5 text-blue-600" />
             <span>Data terlindungi dengan Firebase Authentication &amp; Firestore</span>
           </div>

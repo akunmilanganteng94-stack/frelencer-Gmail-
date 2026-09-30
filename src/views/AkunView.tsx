@@ -1,38 +1,36 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent, ChangeEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { useContactAdmin } from '../context/ContactAdminContext';
 import { useToast } from '../context/ToastContext';
-import { formatRupiah, formatIndonesianDateTime } from '../lib/utils';
-import { NavigationTab } from '../types';
-import { MisiReferralBanner } from '../components/MisiReferralBanner';
+import { formatIndonesianDateTime } from '../lib/utils';
+import { NavigationTab, Submission } from '../types';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import {
   User,
+  Camera,
+  Copy,
+  Check,
+  Trophy,
+  KeyRound,
+  ChevronRight,
+  LogOut,
+  Edit2,
+  ShieldCheck,
+  X,
   Mail,
   Fingerprint,
-  Wallet,
   Calendar,
-  Edit2,
   Lock,
-  LogOut,
-  ShieldCheck,
-  Check,
-  Copy,
-  MessageCircle,
-  PhoneCall,
-  ExternalLink,
-  Clock,
-  HelpCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => void }) {
   const { userProfile, currentUser, isAdmin, logoutUser, updateProfileName, changePassword } = useAuth();
   const { settings } = useSettings();
-  const { openContactModal } = useContactAdmin();
   const { showToast } = useToast();
+
   const [copiedUid, setCopiedUid] = useState(false);
-  const [copiedWa, setCopiedWa] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [nameInput, setNameInput] = useState(userProfile?.displayName || '');
@@ -42,14 +40,55 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   const [savingPassword, setSavingPassword] = useState(false);
   const [passError, setPassError] = useState('');
 
-  const rawNumber = settings.adminWhatsApp || '6285199219856';
-  const formattedNumber = rawNumber.startsWith('62')
-    ? `+62 ${rawNumber.substring(2, 5)}-${rawNumber.substring(5, 9)}-${rawNumber.substring(9)}`
-    : rawNumber;
+  // Submissions state for Statistik Total
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
 
-  const waUrl = `https://wa.me/${rawNumber}?text=${encodeURIComponent(
-    'Halo Admin AZGmail, saya ingin bertanya terkait storan akun Gmail & saldo saya.'
-  )}`;
+  // Avatar state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Load avatar from localStorage
+  useEffect(() => {
+    if (currentUser?.uid) {
+      const savedAvatar = localStorage.getItem(`user_avatar_${currentUser.uid}`);
+      if (savedAvatar) {
+        setAvatarUrl(savedAvatar);
+      } else if (currentUser.photoURL) {
+        setAvatarUrl(currentUser.photoURL);
+      }
+    }
+  }, [currentUser]);
+
+  // Load Submissions realtime for authentic user stats
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const qSubs = query(
+      collection(db, 'submissions'),
+      where('userId', '==', currentUser.uid)
+    );
+    const unsubSubs = onSnapshot(
+      qSubs,
+      (snapshot) => {
+        const list: Submission[] = [];
+        snapshot.forEach((d) => {
+          list.push({ id: d.id, ...(d.data() as Omit<Submission, 'id'>) });
+        });
+        setSubmissions(list);
+      },
+      (err) => console.warn('Submissions load in profile notice:', err)
+    );
+
+    return () => {
+      unsubSubs();
+    };
+  }, [currentUser]);
+
+  // Statistik Realtime
+  const totalStoran = submissions.length;
+  const totalDiterima = submissions.filter((s) => s.status === 'Diterima').length;
+  const totalDitolak = submissions.filter((s) => s.status === 'Ditolak').length;
+  const totalPending = submissions.filter((s) => s.status === 'Pending' || s.status === 'Cek Admin').length;
 
   const copyUid = () => {
     if (currentUser?.uid) {
@@ -60,15 +99,42 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
     }
   };
 
-  const copyWaNumber = () => {
-    navigator.clipboard.writeText(rawNumber);
-    setCopiedWa(true);
-    setTimeout(() => setCopiedWa(false), 2000);
-    showToast('info', 'Nomor Disalin', `Nomor WhatsApp ${rawNumber} berhasil disalin.`);
+  const handlePhotoSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('error', 'Ukuran Terlalu Besar', 'Maksimal ukuran foto adalah 2 MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setAvatarUrl(result);
+        if (currentUser?.uid) {
+          try {
+            localStorage.setItem(`user_avatar_${currentUser.uid}`, result);
+          } catch {
+            console.warn('Storage limit reached for avatar');
+          }
+        }
+        showToast('success', 'Foto Diperbarui', 'Foto profil berhasil diubah.');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleOpenWhatsApp = () => {
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  const handleDeletePhoto = () => {
+    setAvatarUrl(null);
+    if (currentUser?.uid) {
+      localStorage.removeItem(`user_avatar_${currentUser.uid}`);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    showToast('info', 'Foto Dihapus', 'Foto profil telah dihapus.');
   };
 
   const handleSaveName = async (e: FormEvent) => {
@@ -113,277 +179,359 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
     }
   };
 
+  const displayName = userProfile?.displayName || 'User';
+  const email = userProfile?.email || '';
+  const initial = displayName ? displayName.charAt(0).toUpperCase() : 'U';
+
   return (
-    <div className="max-w-4xl mx-auto space-y-3 sm:space-y-3.5">
-      <div>
-        <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-          <User className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-          <span>Profil Pengguna</span>
-        </h1>
-        <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
-          Informasi identitas akun freelancer, misi referral, bantuan admin, saldo, dan keamanan login
-        </p>
-      </div>
+    <div className="max-w-[480px] sm:max-w-md md:max-w-lg mx-auto space-y-4 select-none pb-12">
+      {/* Hidden file input for photo upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handlePhotoSelect}
+        accept="image/*"
+        className="hidden"
+      />
 
-      {/* Profile Card Header */}
-      <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-tr from-[#1e40af] via-[#2563eb] to-[#38bdf8] text-white flex items-center justify-center font-black text-xl sm:text-2xl shadow-md shadow-blue-500/25 shrink-0">
-              {userProfile?.displayName ? userProfile.displayName.charAt(0).toUpperCase() : 'U'}
+      {/* ==================================================
+          2. CARD PROFILE UTAMA
+          ================================================== */}
+      <div className="bg-white rounded-[28px] sm:rounded-[32px] overflow-hidden shadow-sm border border-blue-100/60">
+        {/* Header Card: Gradient Biru + Tulisan "Profil Saya" + Icon User */}
+        <div className="bg-gradient-to-r from-[#1677E8] via-[#126fe3] to-[#0D5FC7] px-6 pt-5 pb-14 text-white relative">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-white">
+              <User className="w-4 h-4 text-white stroke-[2.2]" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-slate-900">
-                  {userProfile?.displayName || 'Freelancer'}
-                </h2>
-                {isAdmin ? (
-                  <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-bold">
-                    Admin
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
-                    Freelancer
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">{userProfile?.email}</p>
-              <div className="mt-1 flex items-center gap-1.5">
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    userProfile?.status === 'active'
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : 'bg-rose-50 text-rose-700 border border-rose-200'
-                  }`}
-                >
-                  Akun {userProfile?.status === 'active' ? 'Aktif' : 'Dibatasi'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => {
-                setNameInput(userProfile?.displayName || '');
-                setShowEditModal(true);
-              }}
-              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              <span>Edit Profil</span>
-            </button>
-            <button
-              onClick={() => {
-                setNewPassword('');
-                setConfirmPassword('');
-                setPassError('');
-                setShowPasswordModal(true);
-              }}
-              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Ubah Password</span>
-            </button>
+            <h1 className="text-base sm:text-lg font-black tracking-tight text-white">
+              Profil Saya
+            </h1>
           </div>
         </div>
 
-        {/* 4 Kotak Detail Identitas Ringkas */}
-        <div className="mt-4 pt-3.5 grid grid-cols-1 sm:grid-cols-2 gap-2.5 border-t border-slate-100">
-          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white text-blue-600 flex items-center justify-center shadow-2xs shrink-0">
-              <Mail className="w-4 h-4" />
+        {/* Profile Avatar & Details Section */}
+        <div className="px-6 pb-6 pt-0 flex flex-col items-center text-center relative">
+          {/* Avatar Menumpuk Antara Header Biru dan Bagian Putih */}
+          <div className="-mt-12 relative mb-3">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-md bg-gradient-to-tr from-[#1677E8] to-[#38bdf8] text-white flex items-center justify-center font-black text-3xl sm:text-4xl overflow-hidden">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{initial}</span>
+              )}
             </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Email Terdaftar</span>
-              <span className="text-xs sm:text-sm font-bold text-slate-800 truncate block">
-                {userProfile?.email}
-              </span>
-            </div>
-          </div>
 
-          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-white text-blue-600 flex items-center justify-center shadow-2xs shrink-0">
-                <Fingerprint className="w-4 h-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">User ID (UID)</span>
-                <span className="text-xs font-mono font-bold text-slate-800 truncate block">
-                  {currentUser?.uid}
-                </span>
-              </div>
-            </div>
+            {/* Tombol Kecil Icon Kamera di Kanan Bawah Avatar */}
             <button
-              onClick={copyUid}
-              className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500 transition cursor-pointer shrink-0"
-              title="Salin UID"
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-1 right-1 w-8 h-8 rounded-full bg-[#1677E8] hover:bg-[#0D5FC7] text-white flex items-center justify-center shadow-md border-2 border-white transition cursor-pointer active:scale-90"
+              title="Ganti Foto Profil"
+              aria-label="Ganti Foto"
             >
-              {copiedUid ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              <Camera className="w-4 h-4 stroke-[2.2]" />
             </button>
           </div>
 
-          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white text-emerald-600 flex items-center justify-center shadow-2xs shrink-0">
-              <Wallet className="w-4 h-4" />
+          {/* Nama User & Email User */}
+          <div className="space-y-0.5 max-w-xs">
+            <div className="flex items-center justify-center gap-1.5">
+              <h2 className="text-lg sm:text-xl font-extrabold text-[#102033] tracking-tight truncate">
+                {displayName}
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setNameInput(displayName);
+                  setShowEditModal(true);
+                }}
+                className="p-1 rounded-md text-slate-400 hover:text-[#1677E8] hover:bg-blue-50 transition cursor-pointer"
+                title="Edit Nama Tampilan"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <div>
-              <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Saldo Saat Ini</span>
-              <span className="text-xs sm:text-sm font-black text-blue-700">
-                {formatRupiah(userProfile?.balance || 0)}
+            <p className="text-xs sm:text-sm text-slate-500 font-medium truncate">
+              {email}
+            </p>
+          </div>
+
+          {/* Dua Tombol: "Ganti Foto" & "Hapus" */}
+          <div className="pt-4 flex items-center justify-center gap-2.5 w-full max-w-xs">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 py-2 px-3.5 rounded-xl bg-[#1677E8] hover:bg-[#0D5FC7] active:scale-95 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Camera className="w-3.5 h-3.5 stroke-[2.2]" />
+              <span>Ganti Foto</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleDeletePhoto}
+              className="flex-1 py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200"
+            >
+              <span>Hapus</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ==================================================
+          3. DATA USER (Card / Field Rounded)
+          ================================================== */}
+      <div className="bg-white rounded-[26px] p-4 sm:p-5 shadow-sm border border-blue-100/60 space-y-3">
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider px-1">
+          Informasi Akun
+        </h3>
+
+        <div className="space-y-2">
+          {/* UID */}
+          <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100 flex items-center justify-between gap-2.5">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                UID
+              </span>
+              <span className="font-mono text-xs font-bold text-[#102033] truncate block mt-0.5">
+                {currentUser?.uid || '-'}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={copyUid}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-[#1677E8] hover:bg-blue-50 transition cursor-pointer shrink-0"
+              title="Salin UID"
+            >
+              {copiedUid ? (
+                <Check className="w-4 h-4 text-emerald-600" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+
+          {/* EMAIL */}
+          <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100 flex items-center justify-between gap-2.5">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                EMAIL
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-[#102033] truncate block mt-0.5">
+                {email || '-'}
               </span>
             </div>
           </div>
 
-          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white text-amber-600 flex items-center justify-center shadow-2xs shrink-0">
-              <Calendar className="w-4 h-4" />
+          {/* ROLE */}
+          <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100 flex items-center justify-between gap-2.5">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                ROLE
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-[#102033] block mt-0.5 capitalize">
+                {userProfile?.role === 'admin' ? 'Admin' : 'User'}
+              </span>
             </div>
-            <div>
-              <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Tanggal Bergabung</span>
-              <span className="text-xs sm:text-sm font-bold text-slate-800">
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                isAdmin
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'bg-slate-100 text-slate-700'
+              }`}
+            >
+              {isAdmin ? 'Administrator' : 'Freelancer'}
+            </span>
+          </div>
+
+          {/* TANGGAL GABUNG */}
+          <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100 flex items-center justify-between gap-2.5">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                TANGGAL GABUNG
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-[#102033] block mt-0.5">
                 {userProfile?.createdAt ? formatIndonesianDateTime(userProfile.createdAt) : '-'}
               </span>
             </div>
           </div>
-        </div>
 
-        {/* BANNER MISI REFERRAL SIMPLE & SLEEK */}
-        <div className="mt-3.5 pt-3.5 border-t border-slate-100">
-          <MisiReferralBanner onNavigate={onNavigate} />
-        </div>
-
-        {/* WhatsApp Contact Box Ringkas */}
-        <div className="mt-3.5 pt-3.5 border-t border-slate-100">
-          <div className="rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50/40 to-white border border-emerald-200/80 p-3.5 sm:p-4 space-y-2.5 shadow-2xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-sm shadow-emerald-500/25 shrink-0">
-                  <MessageCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
-                      Chat Admin WhatsApp
-                    </h3>
-                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      Resmi
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Hubungi admin resmi untuk kendala akun, storan Gmail, atau penarikan saldo
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleOpenWhatsApp}
-                  className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-lg text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span>Chat Sekarang</span>
-                  <ExternalLink className="w-3 h-3" />
-                </button>
-                <button
-                  type="button"
-                  onClick={openContactModal}
-                  className="px-2.5 py-1.5 bg-white hover:bg-emerald-50 text-emerald-800 font-bold rounded-lg text-xs border border-emerald-200 shadow-2xs transition flex items-center gap-1 cursor-pointer"
-                >
-                  <HelpCircle className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Detail Info</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-emerald-100 shadow-2xs">
-              <div className="flex items-center gap-2 text-xs text-slate-700">
-                <PhoneCall className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="text-slate-500 font-semibold text-[11px]">Nomor Admin:</span>
-                <span className="font-mono font-black text-slate-900 text-xs sm:text-sm">{formattedNumber}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={copyWaNumber}
-                  className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-md text-[11px] font-bold border border-slate-200 transition flex items-center gap-1 cursor-pointer"
-                >
-                  {copiedWa ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-emerald-700">Tersalin</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Salin Nomor</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
-              <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>
-                Jam Operasional: <strong>{settings.storanSchedule}</strong>
+          {/* KATA SANDI DIUBAH */}
+          <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100 flex items-center justify-between gap-2.5">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                KATA SANDI DIUBAH
+              </span>
+              <span className="text-xs font-bold text-emerald-700 block mt-0.5">
+                Sudah Diatur
               </span>
             </div>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
           </div>
-        </div>
-
-        {isAdmin && (
-          <div className="mt-3.5 p-3 rounded-xl bg-blue-50 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2.5">
-              <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0" />
-              <div>
-                <h4 className="text-xs sm:text-sm font-bold text-blue-950">Akses Administrator Terdeteksi</h4>
-                <p className="text-[11px] text-blue-800">
-                  Kamu memiliki hak akses untuk mengelola submission, penarikan, pengguna, dan pengaturan sistem.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => onNavigate('admin')}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-2xs transition cursor-pointer self-start sm:self-auto"
-            >
-              Buka Admin Panel
-            </button>
-          </div>
-        )}
-
-        <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between">
-          <span className="text-[11px] text-slate-400">AZGmail Freelancer • Session Aman</span>
-          <button
-            onClick={() => logoutUser()}
-            className="px-3 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Keluar dari Akun</span>
-          </button>
         </div>
       </div>
 
+      {/* ==================================================
+          4. STATISTIK TOTAL (Grid 2 x 2)
+          ================================================== */}
+      <div className="bg-white rounded-[26px] p-4 sm:p-5 shadow-sm border border-blue-100/60 space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-amber-50 text-[#F59E0B] flex items-center justify-center shrink-0">
+            <Trophy className="w-4 h-4 stroke-[2.2]" />
+          </div>
+          <h3 className="text-sm sm:text-base font-black text-[#102033] tracking-tight">
+            Statistik Total
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+          {/* Total Storan: Biru */}
+          <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              Total Storan
+            </span>
+            <div className="text-2xl sm:text-3xl font-black text-[#1677E8] mt-1 font-mono">
+              {totalStoran}
+            </div>
+          </div>
+
+          {/* Diterima: Hijau */}
+          <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              Diterima
+            </span>
+            <div className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 font-mono">
+              {totalDiterima}
+            </div>
+          </div>
+
+          {/* Ditolak: Merah */}
+          <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              Ditolak
+            </span>
+            <div className="text-2xl sm:text-3xl font-black text-rose-600 mt-1 font-mono">
+              {totalDitolak}
+            </div>
+          </div>
+
+          {/* Pending: Orange */}
+          <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100">
+            <span className="text-[11px] font-bold text-slate-500 block">
+              Pending
+            </span>
+            <div className="text-2xl sm:text-3xl font-black text-[#F59E0B] mt-1 font-mono">
+              {totalPending}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ==================================================
+          5. KEAMANAN AKUN
+          ================================================== */}
+      <div className="bg-white rounded-[26px] p-4 sm:p-5 shadow-sm border border-blue-100/60 space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#1677E8] flex items-center justify-center shrink-0">
+            <KeyRound className="w-4 h-4 stroke-[2.2]" />
+          </div>
+          <h3 className="text-sm sm:text-base font-black text-[#102033] tracking-tight">
+            Keamanan Akun
+          </h3>
+        </div>
+
+        {/* Tombol: Icon Key + "Ganti Kata Sandi" + chevron > */}
+        <button
+          type="button"
+          onClick={() => {
+            setNewPassword('');
+            setConfirmPassword('');
+            setPassError('');
+            setShowPasswordModal(true);
+          }}
+          className="w-full p-3.5 rounded-2xl bg-[#F8FAFC] hover:bg-slate-100 border border-slate-100 active:scale-98 transition flex items-center justify-between cursor-pointer group text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white text-[#1677E8] flex items-center justify-center shadow-2xs border border-slate-200/60">
+              <KeyRound className="w-4 h-4 stroke-[2.2]" />
+            </div>
+            <div>
+              <span className="text-xs sm:text-sm font-bold text-[#102033] group-hover:text-[#1677E8] transition">
+                Ganti Kata Sandi
+              </span>
+              <p className="text-[11px] text-slate-400">
+                Perbarui kata sandi login akun Anda
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-[#1677E8] group-hover:translate-x-0.5 transition-transform" />
+        </button>
+      </div>
+
+      {/* ==================================================
+          6. KELUAR AKUN (Tombol Besar Warna Merah)
+          ================================================== */}
+      <button
+        type="button"
+        onClick={() => logoutUser()}
+        className="w-full py-3.5 sm:py-4 px-5 rounded-[22px] bg-[#EF4444] hover:bg-[#DC2626] active:scale-98 text-white font-extrabold text-sm sm:text-base shadow-sm shadow-red-500/25 transition flex items-center justify-center gap-2.5 cursor-pointer"
+      >
+        <LogOut className="w-5 h-5 stroke-[2.2]" />
+        <span>Keluar dari Akun</span>
+      </button>
+
+      {/* Admin Panel Link if Admin */}
+      {isAdmin && (
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => onNavigate('admin')}
+            className="w-full py-3 px-4 rounded-2xl bg-blue-50 hover:bg-blue-100 text-[#1677E8] font-bold text-xs border border-blue-200 transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Buka Admin Control Panel</span>
+          </button>
+        </div>
+      )}
+
+      {/* Edit Name Modal */}
       <AnimatePresence>
         {showEditModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-sm bg-white rounded-xl sm:rounded-2xl shadow-xl border border-slate-200 p-4 sm:p-5 space-y-3"
+              className="w-full max-w-sm bg-white rounded-3xl shadow-xl border border-slate-100 p-5 space-y-4"
             >
-              <h3 className="text-sm sm:text-base font-bold text-slate-900">Ubah Nama Lengkap</h3>
-              <form onSubmit={handleSaveName} className="space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 className="text-base font-black text-[#102033]">
+                  Ubah Nama Lengkap
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveName} className="space-y-3.5">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Nama Lengkap</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Nama Lengkap
+                  </label>
                   <input
                     type="text"
                     required
                     value={nameInput}
                     onChange={(e) => setNameInput(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-[#1677E8] focus:ring-2 focus:ring-[#1677E8]/20 text-sm outline-none"
                   />
                 </div>
                 <div className="flex items-center gap-2 pt-1">
@@ -391,14 +539,14 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                     type="button"
                     onClick={() => setShowEditModal(false)}
                     disabled={savingName}
-                    className="flex-1 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-50"
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-50"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={savingName}
-                    className="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer"
+                    className="flex-1 py-2.5 rounded-xl bg-[#1677E8] hover:bg-[#0D5FC7] text-white text-xs font-bold transition cursor-pointer shadow-xs"
                   >
                     {savingName ? 'Menyimpan...' : 'Simpan'}
                   </button>
@@ -409,24 +557,38 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         )}
       </AnimatePresence>
 
+      {/* Change Password Modal */}
       <AnimatePresence>
         {showPasswordModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-sm bg-white rounded-xl sm:rounded-2xl shadow-xl border border-slate-200 p-4 sm:p-5 space-y-3"
+              className="w-full max-w-sm bg-white rounded-3xl shadow-xl border border-slate-100 p-5 space-y-4"
             >
-              <h3 className="text-sm sm:text-base font-bold text-slate-900">Ubah Kata Sandi</h3>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <h3 className="text-base font-black text-[#102033]">
+                  Ganti Kata Sandi
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
               {passError && (
-                <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-[11px] rounded-lg font-medium">
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium">
                   {passError}
                 </div>
               )}
-              <form onSubmit={handleChangePassword} className="space-y-2.5">
+
+              <form onSubmit={handleChangePassword} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
                     Kata Sandi Baru
                   </label>
                   <input
@@ -435,11 +597,11 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                     placeholder="Minimal 6 karakter"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-[#1677E8] focus:ring-2 focus:ring-[#1677E8]/20 text-sm outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
                     Konfirmasi Kata Sandi Baru
                   </label>
                   <input
@@ -448,7 +610,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                     placeholder="Ketik ulang kata sandi"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-[#1677E8] focus:ring-2 focus:ring-[#1677E8]/20 text-sm outline-none"
                   />
                 </div>
                 <div className="flex items-center gap-2 pt-1">
@@ -456,14 +618,14 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                     type="button"
                     onClick={() => setShowPasswordModal(false)}
                     disabled={savingPassword}
-                    className="flex-1 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-50"
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 cursor-pointer hover:bg-slate-50"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={savingPassword}
-                    className="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer"
+                    className="flex-1 py-2.5 rounded-xl bg-[#1677E8] hover:bg-[#0D5FC7] text-white text-xs font-bold transition cursor-pointer shadow-xs"
                   >
                     {savingPassword ? 'Menyimpan...' : 'Perbarui Sandi'}
                   </button>

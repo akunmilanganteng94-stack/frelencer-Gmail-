@@ -23,8 +23,7 @@ export function RulesView({ onNavigate }: RulesViewProps) {
   const { settings } = useSettings();
   const { openContactModal } = useContactAdmin();
   const [copied, setCopied] = useState(false);
-
-  const activePassword = settings.gmailDefaultPassword || 'sgsg1122';
+  const activePassword = 'sgsg1122';
 
   const handleCopyPassword = () => {
     navigator.clipboard.writeText(activePassword);
@@ -51,17 +50,16 @@ export function RulesView({ onNavigate }: RulesViewProps) {
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
                 Panduan Resmi
               </span>
-              <span className="text-xs text-slate-400">•</span>
+              <span className="text-xs text-slate-400">&bull;</span>
               <span className="text-xs text-slate-500 font-medium">
                 {settings.rules?.length || 0} Aturan Wajib
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
-              Rules & Ketentuan Storan
+              Rules &amp; Ketentuan Storan
             </h1>
           </div>
         </div>
-
         <div className="flex items-center gap-2 self-start sm:self-center">
           {onNavigate && (
             <button
@@ -110,7 +108,6 @@ export function RulesView({ onNavigate }: RulesViewProps) {
               </div>
             </div>
           </div>
-
           <div className="text-xs text-orange-950 font-medium sm:text-right max-w-sm">
             Semua akun Gmail yang dibuat dan disetor <strong className="font-bold">WAJIB</strong> menggunakan password di atas. Jika password berbeda, akun akan otomatis ditolak saat pengecekan.
           </div>
@@ -124,14 +121,13 @@ export function RulesView({ onNavigate }: RulesViewProps) {
           </div>
           <div>
             <h2 className="text-base sm:text-lg font-black text-slate-900">
-              Daftar Ketentuan & Syarat Validasi Akun
+              Daftar Ketentuan &amp; Syarat Validasi Akun
             </h2>
             <p className="text-xs text-slate-500">
               Pastikan Anda membaca dan mematuhi setiap butir aturan berikut
             </p>
           </div>
         </div>
-
         <div className="space-y-3 pt-1">
           {settings.rules?.map((rule, idx) => (
             <div
@@ -180,7 +176,6 @@ export function RulesView({ onNavigate }: RulesViewProps) {
             </p>
           </div>
         </div>
-
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
             <ShieldCheck className="w-5 h-5" />

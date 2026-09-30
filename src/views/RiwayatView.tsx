@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Submission, SubmissionStatus, SubmissionType } from '../types';
+import { Submission, SubmissionStatus } from '../types';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { formatRupiah, formatIndonesianDateTime } from '../lib/utils';
-import { useSettings } from '../context/SettingsContext';
 import {
   FileText,
   Search,
@@ -14,23 +13,17 @@ import {
   Copy,
   Check,
   Calendar,
-  Sparkles,
-  Globe,
   Eye,
   X,
-  Layers,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function RiwayatView() {
   const { currentUser } = useAuth();
-  const { settings } = useSettings();
-  const activePassword = settings.gmailDefaultPassword || 'sgsg1122';
-
+  const activePassword = 'sgsg1122';
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'Semua' | SubmissionStatus>('Semua');
-  const [typeFilter, setTypeFilter] = useState<'Semua' | SubmissionType>('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedSubForCheck, setSelectedSubForCheck] = useState<Submission | null>(null);
@@ -66,16 +59,8 @@ export function RiwayatView() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const getSubmissionType = (sub: Submission): SubmissionType => {
-    if (sub.submissionType) return sub.submissionType;
-    if (sub.rewardAmount === 2700) return 'bebas';
-    return 'khusus';
-  };
-
   const filteredSubmissions = submissions.filter((sub) => {
     const matchesFilter = activeFilter === 'Semua' || sub.status === activeFilter;
-    const subType = getSubmissionType(sub);
-    const matchesType = typeFilter === 'Semua' || subType === typeFilter;
     const cleanEmail = sub.dataContent.split('|')[0].trim().toLowerCase();
     const q = searchQuery.toLowerCase();
     const matchesSearch =
@@ -83,7 +68,7 @@ export function RiwayatView() {
       cleanEmail.includes(q) ||
       (sub.rejectionReason && sub.rejectionReason.toLowerCase().includes(q)) ||
       (sub.adminNotes && sub.adminNotes.toLowerCase().includes(q));
-    return matchesFilter && matchesType && matchesSearch;
+    return matchesFilter && matchesSearch;
   });
 
   const countSemua = submissions.length;
@@ -91,8 +76,6 @@ export function RiwayatView() {
   const countCekAdmin = submissions.filter((s) => s.status === 'Cek Admin').length;
   const countDiterima = submissions.filter((s) => s.status === 'Diterima').length;
   const countDitolak = submissions.filter((s) => s.status === 'Ditolak').length;
-  const countKhusus = submissions.filter((s) => getSubmissionType(s) === 'khusus').length;
-  const countBebas = submissions.filter((s) => getSubmissionType(s) === 'bebas').length;
 
   return (
     <div className="space-y-3 sm:space-y-3.5 max-w-4xl mx-auto">
@@ -103,71 +86,12 @@ export function RiwayatView() {
             <span>Riwayat Storan Akun Gmail</span>
           </h1>
           <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
-            Pantau alur status pengecekan Gmail Anda: Pending • Cek Admin • Diterima/Ditolak
+            Pantau alur status pengecekan Gmail Anda: Pending &bull; Cek Admin &bull; Diterima / Ditolak
           </p>
         </div>
       </div>
 
       <div className="bg-white rounded-xl sm:rounded-2xl p-2.5 sm:p-3 border border-slate-200/80 shadow-2xs space-y-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
-            <Layers className="w-3.5 h-3.5 text-blue-600" />
-            <span>Kategori Storan:</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              onClick={() => setTypeFilter('Semua')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                typeFilter === 'Semua'
-                  ? 'bg-slate-900 text-white shadow-2xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              <span>Semua Jenis</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                typeFilter === 'Semua' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
-              }`}>
-                {countSemua}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter('khusus')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                typeFilter === 'khusus'
-                  ? 'bg-blue-600 text-white shadow-2xs'
-                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Gmail Khusus (3k)</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                typeFilter === 'khusus' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-800'
-              }`}>
-                {countKhusus}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTypeFilter('bebas')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                typeFilter === 'bebas'
-                  ? 'bg-teal-600 text-white shadow-2xs'
-                  : 'bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-100'
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>Gmail Bebas (2.7k)</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                typeFilter === 'bebas' ? 'bg-white/20 text-white' : 'bg-teal-100 text-teal-800'
-              }`}>
-                {countBebas}
-              </span>
-            </button>
-          </div>
-        </div>
-
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5">
           <div className="flex flex-wrap gap-1 p-1 bg-slate-100 rounded-xl">
             {(
@@ -203,7 +127,6 @@ export function RiwayatView() {
               );
             })}
           </div>
-
           <div className="relative w-full md:w-64">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
             <input
@@ -230,7 +153,7 @@ export function RiwayatView() {
           </div>
           <h3 className="text-sm font-bold text-slate-800">Tidak ada data riwayat Gmail</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            {searchQuery || activeFilter !== 'Semua' || typeFilter !== 'Semua'
+            {searchQuery || activeFilter !== 'Semua'
               ? 'Tidak ditemukan data yang sesuai dengan filter atau kata kunci pencarian.'
               : 'Kamu belum memiliki riwayat storan akun Gmail. Mulai kirim di menu Storan.'}
           </p>
@@ -238,10 +161,7 @@ export function RiwayatView() {
       ) : (
         <div className="space-y-2 sm:space-y-2.5">
           {filteredSubmissions.map((sub) => {
-            const subType = getSubmissionType(sub);
-            const isKhusus = subType === 'khusus';
             const cleanEmail = sub.dataContent.split('|')[0].trim();
-
             return (
               <div
                 key={sub.id}
@@ -262,18 +182,7 @@ export function RiwayatView() {
                         <Copy className="w-3.5 h-3.5" />
                       )}
                     </button>
-                    <span
-                      className={`px-2 py-0.2 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${
-                        isKhusus
-                          ? 'bg-blue-100 text-blue-800 border border-blue-200/70'
-                          : 'bg-teal-100 text-teal-800 border border-teal-200/70'
-                      }`}
-                    >
-                      {isKhusus ? <Sparkles className="w-2.5 h-2.5" /> : <Globe className="w-2.5 h-2.5" />}
-                      <span>{isKhusus ? 'Khusus (3k)' : 'Bebas (2.7k)'}</span>
-                    </span>
                   </div>
-
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-400">
                       <Calendar className="w-3 h-3 text-slate-400" />
@@ -309,11 +218,10 @@ export function RiwayatView() {
                         {cleanEmail}
                       </p>
                       <p className="text-[10px] sm:text-[11px] text-slate-500">
-                        PW: <strong className="font-mono text-orange-600">{activePassword}</strong> • Imbalan: <strong className="text-blue-700">{formatRupiah(sub.rewardAmount || (isKhusus ? 3000 : 2700))}</strong>
+                        PW: <strong className="font-mono text-orange-600">{activePassword}</strong> &bull; Imbalan: <strong className="text-blue-700">{formatRupiah(sub.rewardAmount || 3000)}</strong>
                       </p>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
                     <button
                       type="button"
@@ -338,7 +246,7 @@ export function RiwayatView() {
                       className="px-2.5 py-1 rounded-md bg-gradient-to-r from-[#1e40af] via-blue-600 to-[#38bdf8] hover:from-[#1e3a8a] hover:to-sky-500 text-white text-[11px] font-bold flex items-center gap-1 shadow-2xs transition cursor-pointer"
                     >
                       <Eye className="w-3 h-3" />
-                      <span>Cek Gmail & Status</span>
+                      <span>Cek Status</span>
                     </button>
                   </div>
                 </div>
@@ -381,11 +289,6 @@ export function RiwayatView() {
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       <span><strong>Berhasil Diterima:</strong> Akun valid, saldo <strong>+{formatRupiah(sub.rewardAmount)}</strong> telah masuk.</span>
                     </div>
-                    {sub.reviewedAt && (
-                      <span className="text-[10px] text-emerald-800 font-semibold shrink-0">
-                        {formatIndonesianDateTime(sub.reviewedAt)}
-                      </span>
-                    )}
                   </div>
                 )}
 
@@ -408,7 +311,7 @@ export function RiwayatView() {
         </div>
       )}
 
-      {/* MODAL CEK GMAIL & DETAIL ALUR PROSES */}
+      {/* MODAL CEK GMAIL */}
       <AnimatePresence>
         {selectedSubForCheck && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -428,7 +331,7 @@ export function RiwayatView() {
                       Cek Status Akun Gmail
                     </h3>
                     <p className="text-[11px] text-slate-500">
-                      Alur verifikasi: Pending • Cek Admin • Diterima/Ditolak
+                      Alur verifikasi: Pending &bull; Cek Admin &bull; Diterima / Ditolak
                     </p>
                   </div>
                 </div>
@@ -442,22 +345,9 @@ export function RiwayatView() {
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500 font-bold uppercase tracking-wider">
-                    Alamat Gmail:
-                  </span>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      getSubmissionType(selectedSubForCheck) === 'khusus'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-teal-100 text-teal-800'
-                    }`}
-                  >
-                    {getSubmissionType(selectedSubForCheck) === 'khusus'
-                      ? 'Gmail Khusus (Rp 3.000)'
-                      : 'Gmail Bebas (Rp 2.700)'}
-                  </span>
-                </div>
+                <span className="text-slate-500 font-bold uppercase tracking-wider text-xs block">
+                  Alamat Gmail:
+                </span>
                 <div className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2">
                   <span className="font-mono text-sm font-bold text-slate-900 break-all">
                     {selectedSubForCheck.dataContent.split('|')[0].trim()}
@@ -488,154 +378,6 @@ export function RiwayatView() {
                   </div>
                 </div>
               </div>
-
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  <span>Tahapan Verifikasi Akun:</span>
-                </h4>
-
-                <div className="relative pl-6 space-y-5 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                  <div className="relative">
-                    <div className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                      <Check className="w-3 h-3" />
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-900">1. Storan Diterima (Pending)</span>
-                        <span className="text-[10px] text-slate-400">
-                          {formatIndonesianDateTime(selectedSubForCheck.createdAt)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Akun Gmail berhasil disetorkan dan masuk ke antrean verifikasi server.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <div
-                      className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center shadow-xs ${
-                        selectedSubForCheck.status === 'Cek Admin'
-                          ? 'bg-blue-600 text-white animate-pulse'
-                          : selectedSubForCheck.status === 'Diterima' || selectedSubForCheck.status === 'Ditolak'
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-amber-100 text-amber-700 border border-amber-300'
-                      }`}
-                    >
-                      {selectedSubForCheck.status === 'Cek Admin' ? (
-                        <div className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
-                      ) : selectedSubForCheck.status === 'Diterima' || selectedSubForCheck.status === 'Ditolak' ? (
-                        <Check className="w-3 h-3" />
-                      ) : (
-                        <Clock className="w-3 h-3" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-xs font-bold ${
-                          selectedSubForCheck.status === 'Cek Admin'
-                            ? 'text-blue-700 font-extrabold'
-                            : 'text-slate-900'
-                        }`}>
-                          2. Pengecekan Admin
-                        </span>
-                        <span className="text-[10px] font-semibold text-slate-400">
-                          {selectedSubForCheck.status === 'Cek Admin'
-                            ? 'Sedang Berlangsung'
-                            : selectedSubForCheck.checkedAt
-                            ? formatIndonesianDateTime(selectedSubForCheck.checkedAt)
-                            : selectedSubForCheck.status === 'Pending'
-                            ? 'Menunggu Giliran (24-30 Jam)'
-                            : 'Selesai Diperiksa'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {selectedSubForCheck.status === 'Cek Admin'
-                          ? 'Admin sedang login & memeriksa kesesuaian sandi serta fresh akun Anda.'
-                          : selectedSubForCheck.status === 'Pending'
-                          ? 'Akun berada dalam antrean pengecekan. Mohon tunggu proses pemeriksaan admin.'
-                          : 'Pemeriksaan kualitas akun Gmail oleh tim admin telah selesai.'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <div
-                      className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center shadow-xs ${
-                        selectedSubForCheck.status === 'Diterima'
-                          ? 'bg-emerald-600 text-white'
-                          : selectedSubForCheck.status === 'Ditolak'
-                          ? 'bg-rose-600 text-white'
-                          : 'bg-slate-200 text-slate-400'
-                      }`}
-                    >
-                      {selectedSubForCheck.status === 'Diterima' ? (
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      ) : selectedSubForCheck.status === 'Ditolak' ? (
-                        <XCircle className="w-3.5 h-3.5" />
-                      ) : (
-                        <span className="text-[10px] font-bold">3</span>
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-xs font-bold ${
-                          selectedSubForCheck.status === 'Diterima'
-                            ? 'text-emerald-700'
-                            : selectedSubForCheck.status === 'Ditolak'
-                            ? 'text-rose-700'
-                            : 'text-slate-400'
-                        }`}>
-                          3. Keputusan Akhir ({selectedSubForCheck.status})
-                        </span>
-                        {selectedSubForCheck.reviewedAt && (
-                          <span className="text-[10px] text-slate-400">
-                            {formatIndonesianDateTime(selectedSubForCheck.reviewedAt)}
-                          </span>
-                        )}
-                      </div>
-
-                      {selectedSubForCheck.status === 'Diterima' && (
-                        <div className="mt-1.5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1">
-                          <p className="font-bold flex items-center gap-1.5">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                            <span>Akun Berhasil Diterima & Saldo Telah Masuk!</span>
-                          </p>
-                          <p className="text-emerald-800">
-                            Imbalan sebesar <strong>{formatRupiah(selectedSubForCheck.rewardAmount)}</strong> telah otomatis ditambahkan ke saldo dompet Anda.
-                          </p>
-                        </div>
-                      )}
-
-                      {selectedSubForCheck.status === 'Ditolak' && (
-                        <div className="mt-1.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-1">
-                          <p className="font-bold flex items-center gap-1.5 text-rose-800">
-                            <XCircle className="w-4 h-4 text-rose-600" />
-                            <span>Akun Tidak Lolos Verifikasi</span>
-                          </p>
-                          <p className="text-rose-900">
-                            Alasan Penolakan: <strong>{selectedSubForCheck.rejectionReason || 'Tidak memenuhi ketentuan sistem'}</strong>
-                          </p>
-                        </div>
-                      )}
-
-                      {selectedSubForCheck.status !== 'Diterima' && selectedSubForCheck.status !== 'Ditolak' && (
-                        <p className="text-xs text-slate-400 mt-0.5 italic">
-                          Menunggu admin menyelesaikan verifikasi untuk menentukan status akhir.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {selectedSubForCheck.adminNotes && (
-                <div className="p-3.5 rounded-2xl bg-blue-50/80 border border-blue-100 text-xs text-blue-950 space-y-1">
-                  <div className="font-bold text-blue-900">Catatan dari Admin:</div>
-                  <p className="text-blue-800 leading-relaxed">{selectedSubForCheck.adminNotes}</p>
-                </div>
-              )}
 
               <div className="pt-2">
                 <button

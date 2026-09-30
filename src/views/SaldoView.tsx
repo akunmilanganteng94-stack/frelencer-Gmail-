@@ -11,6 +11,7 @@ import {
   onSnapshot,
   runTransaction,
   doc,
+  getDoc,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import {
@@ -22,6 +23,9 @@ import {
   XCircle,
   AlertCircle,
   AlertTriangle,
+  Download,
+  History,
+  RefreshCw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -39,10 +43,39 @@ export function SaldoView() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [refreshingBalance, setRefreshingBalance] = useState(false);
 
-  const minWithdrawal = settings.minWithdrawal || 2000;
+  const handleRefreshBalance = async () => {
+    setRefreshingBalance(true);
+    try {
+      if (currentUser) {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          showToast(
+            'success',
+            'Saldo Diperbarui',
+            `Saldo saat ini: ${formatRupiah(data.balance || 0)}`
+          );
+        } else {
+          showToast('info', 'Saldo Disinkronkan', 'Data saldo Anda sudah dalam kondisi terbaru.');
+        }
+      }
+    } catch (err) {
+      console.warn('Refresh balance err:', err);
+      showToast('info', 'Saldo Disinkronkan', 'Data saldo Anda sudah dalam kondisi terbaru.');
+    } finally {
+      setTimeout(() => setRefreshingBalance(false), 450);
+    }
+  };
+
+  const minWithdrawal = settings.minWithdrawal || 4000;
   const parsedAmount = parseInt(amountInput.replace(/[^0-9]/g, ''), 10) || 0;
   const hasPerakan = parsedAmount > 0 && parsedAmount % 1000 !== 0;
+
+  const isDanaOpen = settings.withdrawalDanaOpen !== false;
+  const isGopayOpen = settings.withdrawalGopayOpen !== false;
+  const isAnyWithdrawalOpen = settings.withdrawalOpen !== false && (isDanaOpen || isGopayOpen);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -70,8 +103,8 @@ export function SaldoView() {
   }, [currentUser]);
 
   const handleOpenWithdrawModal = () => {
-    if (!settings.withdrawalOpen) {
-      showToast('error', 'Penarikan Ditutup', 'Fitur penarikan saldo saat ini sedang ditutup sementara oleh admin.');
+    if (!isAnyWithdrawalOpen) {
+      showToast('error', 'Penarikan Ditutup', 'Fitur penarikan saldo e-wallet saat ini sedang ditutup sementara oleh admin.');
       return;
     }
     if (userProfile?.status === 'suspended') {
@@ -87,6 +120,14 @@ export function SaldoView() {
       );
       return;
     }
+
+    // Set default available method
+    if (isDanaOpen) {
+      setMethod('DANA');
+    } else if (isGopayOpen) {
+      setMethod('GoPay');
+    }
+
     setAmountInput('');
     setFormError('');
     setIsConfirmed(false);
@@ -98,27 +139,41 @@ export function SaldoView() {
     setFormError('');
     if (!currentUser || !userProfile) return;
 
-    if (!settings.withdrawalOpen) {
+    if (!isAnyWithdrawalOpen) {
       setFormError('Layanan penarikan sedang ditutup oleh admin.');
+      return;
+    }
+
+    if (method === 'DANA' && !isDanaOpen) {
+      setFormError('Penarikan melalui DANA sedang ditutup oleh admin. Silakan gunakan metode lain.');
+      return;
+    }
+
+    if (method === 'GoPay' && !isGopayOpen) {
+      setFormError('Penarikan melalui GoPay sedang ditutup oleh admin. Silakan gunakan metode lain.');
       return;
     }
 
     const currentBalance = userProfile.balance || 0;
     const numericAmount = parseInt(amountInput.replace(/[^0-9]/g, ''), 10);
+
     if (isNaN(numericAmount) || numericAmount <= 0) {
       setFormError('Masukkan nominal penarikan yang valid.');
       return;
     }
+
     if (numericAmount % 1000 !== 0) {
       setFormError(
-        'Penarikan tidak boleh ada perakan! Nominal wajib bulat kelipatan Rp 1.000 (contoh: 2.000, 5.000, 10.000, dst.).'
+        'Penarikan tidak boleh ada perakan! Nominal wajib bulat kelipatan Rp 1.000 (contoh: 5.000, 10.000, dst.).'
       );
       return;
     }
+
     if (numericAmount < minWithdrawal) {
       setFormError(`Minimal penarikan adalah ${formatRupiah(minWithdrawal)}.`);
       return;
     }
+
     if (numericAmount > currentBalance) {
       setFormError(
         `Saldo kamu tidak mencukupi untuk nominal ${formatRupiah(numericAmount)}. Saldo saat ini: ${formatRupiah(currentBalance)}.`
@@ -131,10 +186,12 @@ export function SaldoView() {
       setFormError('Nomor tujuan e-wallet tidak valid. Format: 08xxx (10-13 digit).');
       return;
     }
+
     if (!recipientName.trim()) {
       setFormError('Nama pemilik akun e-wallet wajib diisi.');
       return;
     }
+
     if (!isConfirmed) {
       setFormError('Harap centang konfirmasi bahwa data nomor dan nama penerima sudah benar.');
       return;
@@ -152,6 +209,7 @@ export function SaldoView() {
         }
         const userData = userDoc.data();
         const availableBal = userData.balance || 0;
+
         if (availableBal < numericAmount) {
           throw new Error(`Saldo tidak mencukupi. Saldo saat ini: ${formatRupiah(availableBal)}`);
         }
@@ -204,7 +262,7 @@ export function SaldoView() {
       <div>
         <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
           <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-          <span>Saldo & Penarikan</span>
+          <span>Saldo &amp; Penarikan</span>
         </h1>
         <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
           Kelola saldo dompet freelancer kamu dan lakukan pencairan ke DANA atau GoPay
@@ -223,41 +281,69 @@ export function SaldoView() {
         </div>
       )}
 
-      {/* Grid Kartu Ringkas & Tidak Memakan Tempat */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-        {/* Kartu Saldo Tersedia - Warna Biru Tua dengan Gradient Biru Muda */}
-        <div className="rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#1e40af] via-[#2563eb] to-[#38bdf8] p-3.5 sm:p-4 text-white shadow-md shadow-blue-900/20 border border-blue-400/20 relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-sky-300/20 blur-xl pointer-events-none" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-lg bg-white/15 backdrop-blur-xs flex items-center justify-center border border-white/20">
-                  <Wallet className="w-3 h-3 text-sky-200" />
-                </div>
-                <span className="text-[11px] font-bold text-white tracking-wide uppercase">SALDO ANDA</span>
+      {/* Card Saldo Utama */}
+      <div className="rounded-[28px] sm:rounded-[30px] bg-gradient-to-r from-[#1677E8] via-[#126fe3] to-[#0D5FC7] p-5 sm:p-6 text-white shadow-xl shadow-blue-600/20 relative overflow-hidden transition-all">
+        <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-white/10 blur-xl pointer-events-none" />
+        <div className="absolute -left-10 -bottom-10 w-32 h-32 rounded-full bg-blue-950/25 blur-lg pointer-events-none" />
+        <div className="relative z-10 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-white/15 backdrop-blur-xs flex items-center justify-center">
+                <Wallet className="w-3.5 h-3.5 text-blue-100" />
               </div>
+              <span className="text-xs font-bold tracking-wider text-blue-100 uppercase">
+                SALDO ANDA
+              </span>
             </div>
-            <div className="text-2xl sm:text-[26px] font-black tracking-tight drop-shadow-xs">
+            <button
+              type="button"
+              onClick={handleRefreshBalance}
+              disabled={refreshingBalance}
+              className="p-1 rounded-full text-blue-100/80 hover:text-white hover:bg-white/10 transition active:scale-95 cursor-pointer disabled:opacity-50"
+              title="Perbarui Saldo Realtime"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${refreshingBalance ? 'animate-spin text-white' : ''}`}
+              />
+            </button>
+          </div>
+
+          <div>
+            <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-xs">
               {formatRupiah(userBalance)}
             </div>
-            <div className="mt-1.5 text-[11px] text-sky-100 flex items-center justify-between">
-              <span>Min. Tarik:</span>
-              <strong className="text-white font-bold">{formatRupiah(minWithdrawal)} (Bulat)</strong>
+            <div className="text-xs font-medium text-blue-100/90 mt-1">
+              Harga / Gmail: {formatRupiah(settings.pricePerSubmission || 3000)} &bull; Min. Tarik: {formatRupiah(minWithdrawal)}
             </div>
           </div>
-          <div className="mt-3 pt-2.5 border-t border-white/20 relative z-10">
+
+          <div className="pt-2 flex items-center gap-2.5">
             <button
               type="button"
               onClick={handleOpenWithdrawModal}
-              disabled={!settings.withdrawalOpen || userBalance < minWithdrawal}
-              className="w-full py-2 px-3 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs border border-white/30 shadow-2xs transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+              disabled={!isAnyWithdrawalOpen || userBalance < minWithdrawal}
+              className="flex-1 py-2 px-4 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 backdrop-blur-xs border border-white/20 shadow-xs text-xs font-bold text-white flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-50"
             >
-              <ArrowDownLeft className="w-3.5 h-3.5 text-sky-200" />
+              <Download className="w-3.5 h-3.5 text-white stroke-[2.2]" />
               <span>Tarik Saldo</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById('withdrawal-history-table');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="flex-1 py-2 px-4 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 backdrop-blur-xs border border-white/20 shadow-xs text-xs font-bold text-white flex items-center justify-center gap-1.5 transition cursor-pointer"
+            >
+              <History className="w-3.5 h-3.5 text-white stroke-[2.2]" />
+              <span>Riwayat</span>
             </button>
           </div>
         </div>
+      </div>
 
+      {/* Grid 3 Kartu Ringkasan */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
         <div className="rounded-xl sm:rounded-2xl bg-white p-3 sm:p-3.5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Total Penghasilan</span>
@@ -304,8 +390,8 @@ export function SaldoView() {
         </div>
       </div>
 
-      {/* Kotak Riwayat Penarikan Saldo Ringkas */}
-      <div className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 shadow-2xs">
+      {/* Kotak Riwayat Penarikan Saldo */}
+      <div id="withdrawal-history-table" className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-4 border border-slate-200/80 shadow-2xs">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-sm sm:text-base font-bold text-slate-900">Riwayat Penarikan Saldo</h2>
@@ -352,7 +438,6 @@ export function SaldoView() {
                       </div>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     <span className="text-[10px] text-slate-400">
                       {formatIndonesianDateTime(w.createdAt)}
@@ -373,7 +458,6 @@ export function SaldoView() {
                     </span>
                   </div>
                 </div>
-
                 {w.status === 'Ditolak' && w.rejectionReason && (
                   <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-[11px] text-rose-800 flex items-start gap-1.5">
                     <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
@@ -416,7 +500,7 @@ export function SaldoView() {
                   onClick={() => setShowWithdrawModal(false)}
                   className="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center text-xs cursor-pointer transition"
                 >
-                  ✕
+                  &times;
                 </button>
               </div>
 
@@ -475,7 +559,7 @@ export function SaldoView() {
                   </div>
                   {hasPerakan ? (
                     <p className="mt-1 text-[10px] text-rose-600 font-semibold flex items-center gap-1">
-                      <span>• Dilarang perakan (Rp {(parsedAmount % 1000).toLocaleString('id-ID')}). Wajib kelipatan 1.000.</span>
+                      <span>Dilarang perakan (Rp {(parsedAmount % 1000).toLocaleString('id-ID')}). Wajib kelipatan 1.000.</span>
                     </p>
                   ) : (
                     <p className="mt-1 text-[10px] text-slate-400">
@@ -490,20 +574,39 @@ export function SaldoView() {
                       Metode
                     </label>
                     <div className="grid grid-cols-2 gap-1">
-                      {(['DANA', 'GoPay'] as const).map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setMethod(m)}
-                          className={`py-1.5 px-1.5 rounded-lg border text-[11px] font-extrabold transition text-center cursor-pointer ${
-                            method === m
-                              ? 'bg-blue-600 border-blue-600 text-white shadow-2xs'
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          {m}
-                        </button>
-                      ))}
+                      {(['DANA', 'GoPay'] as const).map((m) => {
+                        const isOpen = m === 'DANA' ? isDanaOpen : isGopayOpen;
+                        if (!isOpen) {
+                          return (
+                            <button
+                              key={m}
+                              type="button"
+                              disabled
+                              title={`Penarikan via ${m} sedang ditutup sementara oleh admin`}
+                              className="py-1 px-1 rounded-lg border text-[11px] font-bold text-center bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed flex flex-col items-center justify-center gap-0.5 opacity-70"
+                            >
+                              <span>{m}</span>
+                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 font-extrabold">
+                                Tutup
+                              </span>
+                            </button>
+                          );
+                        }
+                        return (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setMethod(m)}
+                            className={`py-1.5 px-1.5 rounded-lg border text-[11px] font-extrabold transition text-center cursor-pointer ${
+                              method === m
+                                ? 'bg-blue-600 border-blue-600 text-white shadow-2xs'
+                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                   <div className="sm:col-span-7">

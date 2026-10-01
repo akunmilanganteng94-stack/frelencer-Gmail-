@@ -80,6 +80,7 @@ export function AdminBulkRejectModal({
     const lines = inputText.split('\n');
     const result: string[] = [];
     const seen = new Set<string>();
+
     for (const rawLine of lines) {
       const line = rawLine.trim();
       if (!line) continue;
@@ -172,6 +173,7 @@ export function AdminBulkRejectModal({
 
     for (const item of matchAnalysis.readyToReject) {
       const sub = item.submission;
+      if (sub.status === 'Diterima' || sub.status === 'Ditolak') continue;
       const subRef = doc(db, 'submissions', sub.id);
 
       try {
@@ -361,7 +363,6 @@ export function AdminBulkRejectModal({
                     className="w-full p-3 text-xs rounded-xl border border-slate-300 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20 outline-none bg-white shadow-2xs"
                   />
                 </div>
-
                 <div>
                   <span className="text-[11px] font-bold text-slate-500 block mb-1.5">
                     Pilih Template Alasan Cepat:
@@ -400,6 +401,7 @@ export function AdminBulkRejectModal({
                   </div>
                   <div className="text-[10px] text-rose-600 mt-0.5">Status Pending</div>
                 </div>
+
                 <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
                   <div className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
                     <Check className="w-3.5 h-3.5 text-slate-500" />
@@ -410,6 +412,7 @@ export function AdminBulkRejectModal({
                   </div>
                   <div className="text-[10px] text-slate-500 mt-0.5">Tidak diubah</div>
                 </div>
+
                 <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
                   <div className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -420,6 +423,7 @@ export function AdminBulkRejectModal({
                   </div>
                   <div className="text-[10px] text-emerald-600 mt-0.5">Dilewati</div>
                 </div>
+
                 <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200">
                   <div className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
@@ -507,6 +511,7 @@ export function AdminBulkRejectModal({
                   <span className="font-bold text-slate-800">{rejectionReason}</span>
                 </div>
               </div>
+
               <div className="pt-3 flex justify-center gap-2">
                 <button
                   type="button"

@@ -18,7 +18,6 @@ import { db } from '../lib/firebase';
 import {
   Copy,
   Check,
-  KeyRound,
   Mail,
   Lock,
   MessageCircle,
@@ -26,7 +25,6 @@ import {
   Minus,
   CheckCircle2,
   Clock,
-  Ban,
   Trash2,
   Send,
   Sparkles,
@@ -202,7 +200,6 @@ export function GmailGenerator({
   const { showToast } = useToast();
   const { currentUser } = useAuth();
   const { availableStock, claimAccounts } = useGmailStock();
-
   const [count, setCount] = useState<number>(1);
   const [generating, setGenerating] = useState<boolean>(false);
   const [results, setResults] = useState<GeneratedResultItem[]>([]);
@@ -263,6 +260,7 @@ export function GmailGenerator({
       showToast('warning', 'Fitur Ditutup', 'Fitur generator saat ini ditutup oleh admin.');
       return;
     }
+
     if (remainingQuota <= 0) {
       showToast(
         'warning',
@@ -271,6 +269,7 @@ export function GmailGenerator({
       );
       return;
     }
+
     if (count > remainingQuota) {
       showToast(
         'warning',
@@ -589,6 +588,7 @@ export function GmailGenerator({
                 const isStored = submittedEmails.some(
                   (submitted) => submitted.trim().toLowerCase() === item.email.trim().toLowerCase()
                 );
+
                 return (
                   <div
                     key={item.id || idx}
@@ -639,6 +639,7 @@ export function GmailGenerator({
                           <span>Pilih Stor</span>
                         </button>
                       )}
+
                       {/* Salin Gmail */}
                       <button
                         type="button"
@@ -653,6 +654,7 @@ export function GmailGenerator({
                         )}
                         <span>{isEmailCopied ? 'Tersalin' : 'Salin Gmail'}</span>
                       </button>
+
                       {/* Hapus di pinggir salin */}
                       <button
                         type="button"

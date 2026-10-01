@@ -143,6 +143,7 @@ export function AdminYesterdayPendingTab({
             Prioritas penanganan akun yang disetor kemarin. Password wajib: <strong>sgsg1122</strong>.
           </p>
         </div>
+
         <div className="relative z-10 flex flex-wrap items-stretch sm:items-center gap-2.5 shrink-0">
           {onOpenBulkCheckModal && (
             <button
@@ -317,37 +318,43 @@ export function AdminYesterdayPendingTab({
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {onCheckSubmission && sub.status !== 'Cek Admin' && (
+                        {(sub.status === 'Diterima' || sub.status === 'Ditolak') ? (
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">
+                            Riwayat {sub.status}
+                          </span>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1.5">
+                            {onCheckSubmission && sub.status !== 'Cek Admin' && (
+                              <button
+                                type="button"
+                                onClick={() => onCheckSubmission(sub)}
+                                disabled={processingSubId === sub.id}
+                                className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg border border-blue-200 transition cursor-pointer flex items-center gap-1"
+                                title="Tandai akun sedang dicek"
+                              >
+                                <Eye className="w-3 h-3" />
+                                <span>Cek</span>
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() => onCheckSubmission(sub)}
+                              onClick={() => onRejectSubmission(sub)}
                               disabled={processingSubId === sub.id}
-                              className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg border border-blue-200 transition cursor-pointer flex items-center gap-1"
-                              title="Tandai akun sedang dicek"
+                              className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 transition cursor-pointer disabled:opacity-50"
                             >
-                              <Eye className="w-3 h-3" />
-                              <span>Cek</span>
+                              Tolak
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => onRejectSubmission(sub)}
-                            disabled={processingSubId === sub.id}
-                            className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 transition cursor-pointer disabled:opacity-50"
-                          >
-                            Tolak
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onAcceptSubmission(sub)}
-                            disabled={processingSubId === sub.id}
-                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-2xs transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Terima</span>
-                          </button>
-                        </div>
+                            <button
+                              type="button"
+                              onClick={() => onAcceptSubmission(sub)}
+                              disabled={processingSubId === sub.id}
+                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-2xs transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Terima</span>
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );

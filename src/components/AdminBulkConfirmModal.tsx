@@ -79,6 +79,7 @@ export function AdminBulkConfirmModal({
     const lines = inputText.split('\n');
     const result: string[] = [];
     const seen = new Set<string>();
+
     for (const rawLine of lines) {
       const line = rawLine.trim();
       if (!line) continue;
@@ -163,7 +164,7 @@ export function AdminBulkConfirmModal({
         await runTransaction(db, async (transaction) => {
           const subDoc = await transaction.get(subRef);
           if (!subDoc.exists()) return;
-          if (subDoc.data().status === 'Diterima') return;
+          if (subDoc.data().status === 'Diterima' || subDoc.data().status === 'Ditolak') return;
 
           const reward =
             typeof sub.rewardAmount === 'number' && sub.rewardAmount > 0 ? sub.rewardAmount : 3000;
@@ -402,6 +403,7 @@ export function AdminBulkConfirmModal({
                     Saldo: {formatRupiah(matchAnalysis.totalRewardToPay)}
                   </div>
                 </div>
+
                 <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200">
                   <div className="text-[11px] font-bold text-blue-800 flex items-center gap-1">
                     <Check className="w-3.5 h-3.5 text-blue-600" />
@@ -414,6 +416,7 @@ export function AdminBulkConfirmModal({
                     Tidak diduplikasi
                   </div>
                 </div>
+
                 <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200">
                   <div className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
@@ -489,6 +492,7 @@ export function AdminBulkConfirmModal({
                   Sebanyak <strong>{processedCount} akun Gmail</strong> telah disetujui. Total saldo sebesar <strong>{formatRupiah(processedTotalReward)}</strong> telah langsung ditambahkan ke masing-masing akun pengguna.
                 </p>
               </div>
+
               <div className="pt-3 flex justify-center gap-2">
                 <button
                   type="button"

@@ -46,8 +46,6 @@ export function AdminAllCekAdminTab({
   onAcceptSubmission,
   onRejectSubmission,
   processingSubId,
-  onNavigateToYesterdayPending,
-  onNavigateToAllStor,
 }: AdminAllCekAdminTabProps) {
   const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,7 +53,7 @@ export function AdminAllCekAdminTab({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isBulkConfirming, setIsBulkConfirming] = useState(false);
-  const [bulkConfirmProgress, setBulkConfirmProgress] = useState({ current: 0, total: 0 });
+  const [, setBulkConfirmProgress] = useState({ current: 0, total: 0 });
   const [showConfirmDirectModal, setShowConfirmDirectModal] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<'selected' | 'all'>('selected');
 
@@ -176,8 +174,10 @@ export function AdminAllCekAdminTab({
         await runTransaction(db, async (transaction) => {
           const subDoc = await transaction.get(subRef);
           if (!subDoc.exists()) return;
+          if (subDoc.data().status === 'Diterima' || subDoc.data().status === 'Ditolak') return;
 
           const userDoc = await transaction.get(userRef);
+
           transaction.update(subRef, {
             status: 'Diterima',
             reviewedAt: new Date().toISOString(),
@@ -257,7 +257,6 @@ export function AdminAllCekAdminTab({
               </p>
             </div>
           </div>
-
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -342,7 +341,6 @@ export function AdminAllCekAdminTab({
             <span>Semua Gmail ({allCekAdminSubs.length})</span>
           </button>
         </div>
-
         <div className="flex items-center gap-2 shrink-0">
           {allCekAdminSubs.length > 0 && (
             <button
@@ -373,7 +371,6 @@ export function AdminAllCekAdminTab({
               className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
             />
           </div>
-
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-1 p-1 bg-slate-100 rounded-xl text-xs font-bold">
               {[
@@ -409,7 +406,6 @@ export function AdminAllCekAdminTab({
                 {selectedIds.size} akun Gmail terpilih ({formatRupiah(selectedRewardTotal)})
               </span>
             </div>
-
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -567,41 +563,47 @@ export function AdminAllCekAdminTab({
                         <div>{formatIndonesianDateTime(sub.checkedAt || sub.createdAt)}</div>
                       </td>
                       <td className="px-4 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            disabled={isProcessing}
-                            onClick={() => onAcceptSubmission(sub)}
-                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-50"
-                            title="Terima akun dan cairkan saldo ke user"
-                          >
-                            {isProcessing ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                            )}
-                            <span>Terima</span>
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isProcessing}
-                            onClick={() => onRejectSubmission(sub)}
-                            className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-50"
-                            title="Tolak akun dengan alasan"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>Tolak</span>
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isProcessing}
-                            onClick={() => handleResetToPending(sub)}
-                            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-                            title="Kembalikan status akun ke Pending"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {(sub.status === 'Diterima' || sub.status === 'Ditolak') ? (
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">
+                            Riwayat {sub.status}
+                          </span>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              disabled={isProcessing}
+                              onClick={() => onAcceptSubmission(sub)}
+                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-50"
+                              title="Terima akun dan cairkan saldo ke user"
+                            >
+                              {isProcessing ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              )}
+                              <span>Terima</span>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isProcessing}
+                              onClick={() => onRejectSubmission(sub)}
+                              className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-50"
+                              title="Tolak akun dengan alasan"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              <span>Tolak</span>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isProcessing}
+                              onClick={() => handleResetToPending(sub)}
+                              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                              title="Kembalikan status akun ke Pending"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );

@@ -34,11 +34,13 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
+
     const q = query(
       collection(db, 'users'),
       orderBy('totalEarned', 'desc'),
       limit(10)
     );
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -62,6 +64,7 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
         setLoading(false);
       }
     );
+
     return () => unsubscribe();
   }, [isOpen]);
 

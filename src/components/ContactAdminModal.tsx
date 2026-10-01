@@ -67,6 +67,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                 Layanan bantuan & konfirmasi seputar akun Gmail & pencairan saldo
               </p>
             </div>
+
             <div className="p-6 space-y-4">
               <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 space-y-3">
                 <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -102,6 +103,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                   </button>
                 </div>
               </div>
+
               <div className="space-y-2 text-xs text-slate-600">
                 <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                   <Clock className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
@@ -122,6 +124,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                   </div>
                 </div>
               </div>
+
               <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
                 <button
                   type="button"
@@ -196,6 +199,7 @@ export function ContactAdminFloatingButton({
           </motion.div>
         )}
       </AnimatePresence>
+
       <button
         type="button"
         onClick={onClickChannel}

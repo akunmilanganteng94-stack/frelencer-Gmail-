@@ -67,6 +67,7 @@ export function AdminBulkCheckModal({
     const lines = inputText.split('\n');
     const result: string[] = [];
     const seen = new Set<string>();
+
     for (const rawLine of lines) {
       const line = rawLine.trim();
       if (!line) continue;
@@ -204,7 +205,7 @@ export function AdminBulkCheckModal({
                     Klik untuk memuat otomatis
                   </span>
                 </div>
-
+                
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
                   <span className="text-[11px] font-bold text-slate-700 w-full sm:w-auto">
                     Kemarin:

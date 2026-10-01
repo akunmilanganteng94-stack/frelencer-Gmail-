@@ -122,6 +122,7 @@ export function AdminAllStorTab({
       }
 
       if (!matchesStatus) return false;
+
       const cleanEmail = getCleanEmail(sub.dataContent).toLowerCase();
       const q = searchQuery.toLowerCase();
       return (
@@ -187,6 +188,7 @@ export function AdminAllStorTab({
             Data antrean storan akun Gmail freelancer. Password wajib: <strong>sgsg1122</strong>.
           </p>
         </div>
+
         <div className="relative z-10 flex flex-wrap items-stretch sm:items-center gap-2.5 shrink-0">
           {onOpenBulkCheckModal && (
             <button
@@ -317,7 +319,6 @@ export function AdminAllStorTab({
                 <History className="w-5 h-5" />
               </div>
             </div>
-
             <div className="mt-4 pt-4 border-t border-amber-200/70 flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -364,7 +365,6 @@ export function AdminAllStorTab({
                 <Zap className="w-5 h-5" />
               </div>
             </div>
-
             <div className="mt-4 pt-4 border-t border-blue-200/70 flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -553,7 +553,7 @@ export function AdminAllStorTab({
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {(isPending || isCekAdmin) && (
+                          {(isPending || isCekAdmin) ? (
                             <>
                               {onCheckSubmission && isPending && (
                                 <button
@@ -585,6 +585,10 @@ export function AdminAllStorTab({
                                 <span>Terima</span>
                               </button>
                             </>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                              Riwayat {sub.status}
+                            </span>
                           )}
                           <button
                             type="button"

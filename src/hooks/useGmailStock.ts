@@ -103,6 +103,7 @@ export function useGmailStock() {
         setLoading(false);
       }
     );
+
     return () => unsubscribe();
   }, []);
 
@@ -111,6 +112,7 @@ export function useGmailStock() {
       const freshAccounts = generateFreshStockAccounts(count, defaultPassword);
       const batch = writeBatch(db);
       const timestamp = new Date().toISOString();
+
       freshAccounts.forEach(({ email, password }) => {
         const newDocRef = doc(collection(db, 'gmail_stock'));
         batch.set(newDocRef, {
@@ -120,6 +122,7 @@ export function useGmailStock() {
           addedAt: timestamp,
         });
       });
+
       await batch.commit();
       return freshAccounts.length;
     } catch (e) {
@@ -133,6 +136,7 @@ export function useGmailStock() {
     const freshAccounts = generateFreshStockAccounts(count, defaultPassword);
     const existingEmails = new Set(stock.map((s) => s.email.toLowerCase()));
     const toAdd = freshAccounts.filter((a) => !existingEmails.has(a.email.toLowerCase()));
+
     if (toAdd.length === 0) return 0;
 
     const timestamp = new Date().toISOString();
@@ -185,6 +189,7 @@ export function useGmailStock() {
     if (!cleanEmail.includes('@gmail.com') && !cleanEmail.includes('@googlemail.com')) {
       throw new Error('Alamat harus berupa akun Gmail (@gmail.com).');
     }
+
     const exists = stock.some((s) => s.email.toLowerCase() === cleanEmail.toLowerCase());
     if (exists) {
       throw new Error(`Email ${cleanEmail} sudah ada di dalam stok.`);
@@ -212,6 +217,7 @@ export function useGmailStock() {
       const parts = line.split('|');
       const email = parts[0].trim();
       const customPass = parts[1] ? parts[1].trim() : defaultPassword;
+
       if (
         (email.includes('@gmail.com') || email.includes('@googlemail.com')) &&
         !existingEmails.has(email.toLowerCase())
@@ -287,6 +293,7 @@ export function useGmailStock() {
         const timestamp = new Date().toISOString();
         const batch = writeBatch(db);
         const newCreatedItems: GmailStockItem[] = [];
+
         fresh.forEach(({ email, password }) => {
           const newDocRef = doc(collection(db, 'gmail_stock'));
           const itemData: GmailStockItem = {
@@ -299,6 +306,7 @@ export function useGmailStock() {
           batch.set(newDocRef, itemData);
           newCreatedItems.push(itemData);
         });
+
         await batch.commit();
         currentAvailable = [...currentAvailable, ...newCreatedItems];
       }

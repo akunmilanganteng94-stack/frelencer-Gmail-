@@ -89,7 +89,6 @@ export function setPendingReferralCode(code: string): void {
 export function normalizeReferralCode(raw: string): string {
   if (!raw) return '';
   let str = raw.trim();
-
   if (str.includes('?') || str.includes('ref=') || str.startsWith('http://') || str.startsWith('https://')) {
     try {
       const match = str.match(/[?&#]ref=([a-zA-Z0-9_-]+)/i);
@@ -105,7 +104,6 @@ export function normalizeReferralCode(raw: string): string {
       if (match && match[1]) str = match[1];
     }
   }
-
   const clean = str.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   return clean;
 }
@@ -125,14 +123,11 @@ export async function saveReferralCodeMapping(
       inviterName: user.displayName || user.email?.split('@')[0] || 'Member AZGmail',
       updatedAt: new Date().toISOString(),
     };
-
     await setDoc(doc(db, 'referral_codes', cleanCode), payload, { merge: true });
-
     if (cleanCode.startsWith('AZG') && cleanCode.length > 3) {
       const stripped = cleanCode.slice(3);
       await setDoc(doc(db, 'referral_codes', stripped), payload, { merge: true });
     }
-
     await setDoc(doc(db, 'referral_codes', user.uid), payload, { merge: true });
   } catch (err) {
     console.warn('Could not save referral code mapping:', err);
@@ -145,7 +140,6 @@ export async function findInviterByCode(
   if (!referralCode) return null;
   const cleanCode = normalizeReferralCode(referralCode);
   if (!cleanCode) return null;
-
   const variants = new Set<string>();
   variants.add(cleanCode);
   if (cleanCode.startsWith('AZG')) {
@@ -154,7 +148,6 @@ export async function findInviterByCode(
   } else {
     variants.add(`AZG${cleanCode}`);
   }
-
   for (const v of variants) {
     try {
       const codeDocSnap = await getDoc(doc(db, 'referral_codes', v));
@@ -171,7 +164,6 @@ export async function findInviterByCode(
       }
     } catch {}
   }
-
   try {
     const usersRef = collection(db, 'users');
     for (const v of variants) {
@@ -187,7 +179,6 @@ export async function findInviterByCode(
             email: uData?.email,
             displayName: uData?.displayName,
           }).catch(console.warn);
-
           return {
             uid: uDoc.id,
             email: uData?.email || '',
@@ -197,7 +188,6 @@ export async function findInviterByCode(
         }
       } catch {}
     }
-
     try {
       const directUserSnap = await getDoc(doc(db, 'users', cleanCode));
       if (directUserSnap.exists()) {
@@ -211,7 +201,6 @@ export async function findInviterByCode(
         };
       }
     } catch {}
-
     const allUsersSnap = await getDocs(usersRef);
     for (const uDoc of allUsersSnap.docs) {
       const uData = uDoc.data();
@@ -230,7 +219,6 @@ export async function findInviterByCode(
             email: uData?.email,
             displayName: uData?.displayName,
           }).catch(console.warn);
-
           return {
             uid: uDoc.id,
             email: uData?.email || '',
@@ -243,7 +231,6 @@ export async function findInviterByCode(
   } catch (err) {
     console.warn('Notice querying users for referral code:', err);
   }
-
   return null;
 }
 
@@ -255,11 +242,9 @@ export async function recordReferralForNewUser(
   const rawCode = explicitCode || getPendingReferralCode();
   const targetCode = normalizeReferralCode(rawCode);
   if (!targetCode) return false;
-
   try {
     const referralsRef = collection(db, 'referrals');
     const inviter = await findInviterByCode(targetCode);
-
     if (inviter && inviter.uid !== newUser.uid) {
       const referralDocRef = doc(referralsRef, `${inviter.uid}_${newUser.uid}`);
       await setDoc(
@@ -277,7 +262,6 @@ export async function recordReferralForNewUser(
         },
         { merge: true }
       );
-
       const userDocRef = doc(db, 'users', newUser.uid);
       await setDoc(
         userDocRef,
@@ -320,23 +304,18 @@ export async function syncAndRepairReferralsForInviter(
   const cleanCode = normalizeReferralCode(inviterCode);
   const strippedCode = cleanCode.startsWith('AZG') ? cleanCode.slice(3) : cleanCode;
   let repairedCount = 0;
-
   try {
     const usersRef = collection(db, 'users');
     const referralsRef = collection(db, 'referrals');
-
     const codesToMatch = [cleanCode, strippedCode, `AZG${strippedCode}`, inviterUid];
     const usersSnap = await getDocs(usersRef);
-
     for (const uDoc of usersSnap.docs) {
       if (uDoc.id === inviterUid) continue;
       const uData = uDoc.data();
       const userReferredBy = uData.referredBy;
       const userReferredByCode = normalizeReferralCode(uData.referredByCode || '');
-
       const isMatchByUid = userReferredBy === inviterUid;
       const isMatchByCode = userReferredByCode && codesToMatch.includes(userReferredByCode);
-
       if (isMatchByUid || isMatchByCode) {
         if (userReferredBy !== inviterUid) {
           await setDoc(
@@ -349,7 +328,6 @@ export async function syncAndRepairReferralsForInviter(
             { merge: true }
           );
         }
-
         const refDocRef = doc(referralsRef, `${inviterUid}_${uDoc.id}`);
         const refDocSnap = await getDoc(refDocRef);
         if (!refDocSnap.exists()) {
@@ -365,7 +343,6 @@ export async function syncAndRepairReferralsForInviter(
               initialStatus = 'completed';
             }
           } catch {}
-
           await setDoc(
             refDocRef,
             {
@@ -388,7 +365,6 @@ export async function syncAndRepairReferralsForInviter(
   } catch (err) {
     console.warn('Notice syncing/repairing referrals for inviter:', err);
   }
-
   return repairedCount;
 }
 
@@ -405,7 +381,6 @@ export async function processReferralOnSubmissionAccepted(
     );
     const refSnap = await getDocs(q);
     let inviterUid = '';
-
     if (!refSnap.empty) {
       for (const refDoc of refSnap.docs) {
         const referralData = refDoc.data();
@@ -445,9 +420,7 @@ export async function processReferralOnSubmissionAccepted(
         }
       }
     }
-
     if (!inviterUid) return;
-
     const qCompleted = query(
       referralsRef,
       where('inviterUid', '==', inviterUid),
@@ -455,7 +428,6 @@ export async function processReferralOnSubmissionAccepted(
     );
     const completedSnap = await getDocs(qCompleted);
     const totalCompleted = completedSnap.size;
-
     const inviterUserRef = doc(db, 'users', inviterUid);
     await runTransaction(db, async (transaction) => {
       const inviterDoc = await transaction.get(inviterUserRef);
@@ -464,11 +436,9 @@ export async function processReferralOnSubmissionAccepted(
       const currentMilestones: number[] = Array.isArray(inviterData.referralRewardMilestones)
         ? inviterData.referralRewardMilestones
         : [];
-
       const earnedMilestonesCount = Math.floor(totalCompleted / 20);
       let bonusToAdd = 0;
       const updatedMilestones = [...currentMilestones];
-
       for (let m = 1; m <= earnedMilestonesCount; m++) {
         const milestoneThreshold = m * 20;
         if (!updatedMilestones.includes(milestoneThreshold)) {
@@ -476,17 +446,14 @@ export async function processReferralOnSubmissionAccepted(
           bonusToAdd += 10000;
         }
       }
-
       const updateData: Record<string, any> = {
         totalInvited: totalCompleted,
       };
-
       if (bonusToAdd > 0) {
         updateData.balance = (inviterData.balance || 0) + bonusToAdd;
         updateData.totalEarned = (inviterData.totalEarned || 0) + bonusToAdd;
         updateData.referralRewardMilestones = updatedMilestones;
       }
-
       transaction.update(inviterUserRef, updateData);
     });
   } catch (err) {

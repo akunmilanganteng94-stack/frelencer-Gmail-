@@ -3,23 +3,12 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { formatRupiah, formatIndonesianDateTime, formatRelativeTime, isEarlierThanTodayWIB } from '../lib/utils';
-import {
-  UserProfile,
-  Submission,
-  Withdrawal,
-  NavigationTab,
-  SystemSettings,
-} from '../types';
-import {
-  collection,
-  onSnapshot,
-  doc,
-  updateDoc,
-  runTransaction,
-} from 'firebase/firestore';
+import { UserProfile, Submission, Withdrawal, NavigationTab } from '../types';
+import { collection, onSnapshot, doc, updateDoc, runTransaction } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useGmailStock } from '../hooks/useGmailStock';
 import { processReferralOnSubmissionAccepted } from '../lib/referralHelper';
+import { subscribeDataChange } from '../lib/syncHelper';
 import { AdminAllStorTab } from '../components/AdminAllStorTab';
 import { AdminYesterdayPendingTab } from '../components/AdminYesterdayPendingTab';
 import { AdminAllCekAdminTab } from '../components/AdminAllCekAdminTab';
@@ -54,6 +43,7 @@ import {
   Send,
   Save,
   CheckCircle2,
+  XCircle,
   Clock,
   ChevronDown,
   ChevronUp,
@@ -121,8 +111,8 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const [processingWithId, setProcessingWithId] = useState<string | null>(null);
   const [confirmPayModalWith, setConfirmPayModalWith] = useState<Withdrawal | null>(null);
   const [copiedWithNumber, setCopiedWithNumber] = useState(false);
-  const [expandedUserStorId, setExpandedUserStorId] = useState<string | null>(null);
 
+  const [expandedUserStorId, setExpandedUserStorId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [userSearch, setUserSearch] = useState('');
   const [userSortMode, setUserSortMode] = useState<'all' | 'highest_balance' | 'has_balance'>('all');
@@ -131,7 +121,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const [tempMinWithdrawal, setTempMinWithdrawal] = useState(settings.minWithdrawal);
   const [tempSchedule, setTempSchedule] = useState(settings.storanSchedule);
   const [tempAnnouncement, setTempAnnouncement] = useState(settings.announcement);
-  const [tempGmailPassword, setTempGmailPassword] = useState('sgsg1122');
   const [tempWhatsApp, setTempWhatsApp] = useState(settings.adminWhatsApp || '6285199219856');
   const [tempDailyGenerateLimit, setTempDailyGenerateLimit] = useState(settings.dailyGenerateLimit || 10);
   const [tempStoranClosedReason, setTempStoranClosedReason] = useState(settings.storanClosedReason || '');
@@ -141,7 +130,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const [rulesList, setRulesList] = useState<string[]>(settings?.rules || []);
   const [savingSettings, setSavingSettings] = useState(false);
 
-  // Stock Generator management state
   const [stockFilter, setStockFilter] = useState<'All' | 'available' | 'used'>('All');
   const [stockSearch, setStockSearch] = useState('');
   const [showAddSingleModal, setShowAddSingleModal] = useState(false);
@@ -159,7 +147,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const [includeTotalEarned, setIncludeTotalEarned] = useState<boolean>(true);
   const [savingBalance, setSavingBalance] = useState<boolean>(false);
 
-  // Mode Desktop Keren untuk admin
   const [isDesktopMode, setIsDesktopMode] = useState<boolean>(() => {
     try {
       return localStorage.getItem('admin_desktop_mode') === 'true';
@@ -174,26 +161,19 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       try {
         localStorage.setItem('admin_desktop_mode', String(next));
       } catch {}
-      showToast(
-        'info',
-        next ? 'Mode Desktop Diaktifkan' : 'Mode Mobile Diaktifkan',
-        next
-          ? 'Tampilan disetel ke mode desktop yang luas.'
-          : 'Tampilan kembali ke mode responsif.'
-      );
       return next;
     });
   };
 
   useEffect(() => {
     if (!isAdmin) return;
+
+    // Realtime listeners with includeMetadataChanges for instant arrival
     const unsubUsers = onSnapshot(
       collection(db, 'users'),
       (snap) => {
         const uList: UserProfile[] = [];
-        snap.forEach((d) => {
-          uList.push(d.data() as UserProfile);
-        });
+        snap.forEach((d) => uList.push(d.data() as UserProfile));
         setUsersList(uList);
       },
       (err) => console.warn('Admin users listener warning:', err)
@@ -201,6 +181,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
 
     const unsubSubs = onSnapshot(
       collection(db, 'submissions'),
+      { includeMetadataChanges: true },
       (snap) => {
         const sList: Submission[] = [];
         snap.forEach((d) => sList.push({ id: d.id, ...(d.data() as Omit<Submission, 'id'>) }));
@@ -212,6 +193,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
 
     const unsubWiths = onSnapshot(
       collection(db, 'withdrawals'),
+      { includeMetadataChanges: true },
       (snap) => {
         const wList: Withdrawal[] = [];
         snap.forEach((d) => wList.push({ id: d.id, ...(d.data() as Omit<Withdrawal, 'id'>) }));
@@ -231,11 +213,17 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       (err) => console.warn('Admin referrals listener warning:', err)
     );
 
+    // Cross-tab sync listener
+    const unsubSync = subscribeDataChange(() => {
+      // Data updated in another tab/device, Firestore onSnapshot also handles this
+    });
+
     return () => {
       unsubUsers();
       unsubSubs();
       unsubWiths();
       unsubRefs();
+      unsubSync();
     };
   }, [isAdmin]);
 
@@ -245,7 +233,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     setTempSchedule(settings.storanSchedule);
     setTempAnnouncement(settings.announcement);
     setTempDailyGenerateLimit(settings.dailyGenerateLimit || 10);
-    setTempGmailPassword('sgsg1122');
     setTempWhatsApp(settings.adminWhatsApp || '6285199219856');
     setTempStoranClosedReason(settings.storanClosedReason || '');
     setTempApkUrl(settings.apkDownloadUrl || 'https://www.mediafire.com/file/35mid43yhsc7itc/Azgmail.apk/file');
@@ -277,6 +264,10 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   }
 
   const handleAcceptSubmission = async (sub: Submission) => {
+    if (sub.status === 'Diterima' || sub.status === 'Ditolak') {
+      showToast('info', 'Sudah Diproses', 'Akun ini sudah memiliki riwayat dan tidak dapat diubah lagi.');
+      return;
+    }
     setProcessingSubId(sub.id);
     try {
       const subRef = doc(db, 'submissions', sub.id);
@@ -286,7 +277,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
       await runTransaction(db, async (transaction) => {
         const subDoc = await transaction.get(subRef);
         if (!subDoc.exists()) throw new Error('Submission tidak ditemukan.');
-        if (subDoc.data().status === 'Diterima') return;
+        if (subDoc.data().status === 'Diterima' || subDoc.data().status === 'Ditolak') return;
 
         const userDoc = await transaction.get(userRef);
         transaction.update(subRef, {
@@ -327,6 +318,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   };
 
   const handleCheckSubmission = async (sub: Submission) => {
+    if (sub.status === 'Diterima' || sub.status === 'Ditolak') return;
     setProcessingSubId(sub.id);
     try {
       await updateDoc(doc(db, 'submissions', sub.id), {
@@ -343,6 +335,10 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
 
   const handleConfirmRejectSubmission = async () => {
     if (!rejectModalSub || !rejectionReason.trim()) return;
+    if (rejectModalSub.status === 'Diterima' || rejectModalSub.status === 'Ditolak') {
+      setRejectModalSub(null);
+      return;
+    }
     setProcessingSubId(rejectModalSub.id);
     try {
       await updateDoc(doc(db, 'submissions', rejectModalSub.id), {
@@ -373,6 +369,11 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   };
 
   const handleMarkWithdrawalPaid = async (withItem: Withdrawal) => {
+    if (withItem.status !== 'Pending') {
+      showToast('info', 'Sudah Diproses', 'Penarikan ini sudah selesai/ditolak.');
+      setConfirmPayModalWith(null);
+      return;
+    }
     setProcessingWithId(withItem.id);
     try {
       const withRef = doc(db, 'withdrawals', withItem.id);
@@ -405,6 +406,10 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
 
   const handleConfirmRejectWithdrawal = async () => {
     if (!rejectModalWith || !withRejectionReason.trim()) return;
+    if (rejectModalWith.status !== 'Pending') {
+      setRejectModalWith(null);
+      return;
+    }
     setProcessingWithId(rejectModalWith.id);
     try {
       const withRef = doc(db, 'withdrawals', rejectModalWith.id);
@@ -497,7 +502,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
         storanSchedule: tempSchedule.trim() || 'Senin - Jumat, 07.00 - 17.00 WIB (Sabtu & Minggu CLOSE)',
         announcement: tempAnnouncement.trim(),
         rules: cleanedRules.length > 0 ? cleanedRules : (settings.rules || []),
-        gmailDefaultPassword: 'sgsg1122', // Password cuma sgsg1122 saja
+        gmailDefaultPassword: 'sgsg1122',
         adminWhatsApp: tempWhatsApp.trim() || '6285199219856',
         dailyGenerateLimit: dailyLimitNum,
         storanClosedReason: tempStoranClosedReason.trim(),
@@ -706,9 +711,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               Kelola verifikasi akun Gmail, All Stok Generator, konfirmasi terima bulk, tolak bulk, dan saldo
             </p>
           </div>
-
           <div className="flex flex-wrap items-center gap-2">
-            {/* Tombol Toggle Mode Desktop Keren */}
             <button
               type="button"
               onClick={toggleDesktopMode}
@@ -749,28 +752,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           </div>
         </div>
 
-        {/* NOTIFIKASI MODE DESKTOP AKTIF */}
-        {isDesktopMode && (
-          <div className="p-3 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white text-xs flex items-center justify-between gap-3 shadow-md border border-slate-700/80">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                <Monitor className="w-4 h-4" />
-              </div>
-              <span className="text-[11px] sm:text-xs">
-                <strong>Mode Desktop Aktif:</strong> Tampilan panel admin disetel dalam format desktop luas (1140px).
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={toggleDesktopMode}
-              className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs shrink-0 cursor-pointer transition active:scale-95"
-            >
-              Kembali ke Mobile
-            </button>
-          </div>
-        )}
-
-        {/* SAKLAR OPERASIONAL LAYANAN (Hapus Gmail Bebas) */}
+        {/* SAKLAR OPERASIONAL LAYANAN */}
         <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/90 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
@@ -786,7 +768,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {/* Saklar Penarikan DANA */}
             <button
               type="button"
               onClick={() => updateSettings({ withdrawalDanaOpen: settings.withdrawalDanaOpen === false })}
@@ -795,13 +776,10 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                   ? 'bg-sky-50 text-sky-800 border-sky-300 hover:bg-sky-100'
                   : 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
               }`}
-              title="Klik untuk Buka atau Tutup penarikan saldo via DANA"
             >
               <Wallet className="w-3.5 h-3.5" />
               <span>WD DANA: {settings.withdrawalDanaOpen !== false ? 'BUKA' : 'TUTUP'}</span>
             </button>
-
-            {/* Saklar Penarikan GoPay */}
             <button
               type="button"
               onClick={() => updateSettings({ withdrawalGopayOpen: settings.withdrawalGopayOpen === false })}
@@ -810,12 +788,10 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
                   : 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
               }`}
-              title="Klik untuk Buka atau Tutup penarikan saldo via GoPay"
             >
               <Wallet className="w-3.5 h-3.5" />
               <span>WD GoPay: {settings.withdrawalGopayOpen !== false ? 'BUKA' : 'TUTUP'}</span>
             </button>
-
             <button
               type="button"
               onClick={() => updateSettings({ generatorOpen: settings.generatorOpen === false })}
@@ -848,7 +824,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
             { id: 'all_stor', label: `All STOR (${submissionsList.length})`, icon: Layers },
             {
               id: 'yesterday_pending',
-              label: `Pendingan Kemarin (${submissionsList.filter((s) => s.status === 'Pending' && isEarlierThanTodayWIB(s.createdAt)).length})`,
+              label: `Pendingan Kemarin (${submissionsList.filter((s) => (s.status === 'Pending' || s.status === 'Cek Admin') && isEarlierThanTodayWIB(s.createdAt)).length})`,
               icon: History,
             },
             {
@@ -961,7 +937,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                   </p>
                 </div>
               </div>
-
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
@@ -1163,6 +1138,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           </div>
         )}
 
+        {/* STATS TAB */}
         {activeTab === 'stats' && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1196,6 +1172,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           </div>
         )}
 
+        {/* SUBMISSIONS TAB: Antrean Pending */}
         {activeTab === 'submissions' && (
           <div className="space-y-4">
             <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-4">
@@ -1229,41 +1206,106 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 </div>
               </div>
             </div>
+
             <div className="space-y-3">
-              {filteredSubs.map((sub) => (
-                <div key={sub.id} className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-3">
-                  <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
-                    <span className="font-bold text-slate-900">{sub.userName || sub.userEmail}</span>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                      {sub.status}
-                    </span>
-                  </div>
-                  <div className="font-mono text-xs text-slate-800 font-bold">{sub.dataContent}</div>
-                  <div className="flex items-center justify-end gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRejectModalSub(sub);
-                        setRejectionReason(PRESET_REASONS[0]);
-                      }}
-                      className="px-3 py-1 bg-rose-50 text-rose-700 rounded-lg text-xs font-bold border border-rose-200 cursor-pointer"
-                    >
-                      Tolak
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAcceptSubmission(sub)}
-                      className="px-4 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold cursor-pointer"
-                    >
-                      Terima
-                    </button>
-                  </div>
+              {filteredSubs.length === 0 ? (
+                <div className="bg-white rounded-2xl p-8 text-center text-slate-400 text-xs border border-slate-200/80">
+                  Tidak ada data storan dalam filter ini.
                 </div>
-              ))}
+              ) : (
+                filteredSubs.map((sub) => {
+                  const isFinished = sub.status === 'Diterima' || sub.status === 'Ditolak';
+
+                  return (
+                    <div key={sub.id} className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+                      <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
+                        <span className="font-bold text-slate-900">{sub.userName || sub.userEmail}</span>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            sub.status === 'Diterima'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : sub.status === 'Ditolak'
+                              ? 'bg-rose-100 text-rose-800'
+                              : sub.status === 'Cek Admin'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {sub.status}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-xs text-slate-800 font-bold break-all">
+                          {sub.dataContent}
+                        </span>
+                        <span className="text-xs font-black text-blue-700 shrink-0">
+                          {formatRupiah(sub.rewardAmount || 3000)}
+                        </span>
+                      </div>
+
+                      {/* Jika sudah Diterima / Ditolak, tidak bisa di terima/di tolak lagi, cukup tampilkan riwayatnya saja */}
+                      {isFinished ? (
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5">
+                            {sub.status === 'Diterima' ? (
+                              <span className="text-emerald-700 font-bold flex items-center gap-1">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Riwayat: Sudah Diterima (+{formatRupiah(sub.rewardAmount || 3000)})</span>
+                              </span>
+                            ) : (
+                              <span className="text-rose-700 font-bold flex items-center gap-1">
+                                <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                                <span>Riwayat: Sudah Ditolak {sub.rejectionReason ? `(${sub.rejectionReason})` : ''}</span>
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-semibold bg-slate-100 px-2 py-0.5 rounded-md">
+                            Riwayat Selesai
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                          {sub.status === 'Pending' && (
+                            <button
+                              type="button"
+                              onClick={() => handleCheckSubmission(sub)}
+                              disabled={processingSubId === sub.id}
+                              className="px-3 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold border border-blue-200 cursor-pointer"
+                            >
+                              Cek
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRejectModalSub(sub);
+                              setRejectionReason(PRESET_REASONS[0]);
+                            }}
+                            disabled={processingSubId === sub.id}
+                            className="px-3 py-1 bg-rose-50 text-rose-700 rounded-lg text-xs font-bold border border-rose-200 cursor-pointer"
+                          >
+                            Tolak
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAcceptSubmission(sub)}
+                            disabled={processingSubId === sub.id}
+                            className="px-4 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold cursor-pointer"
+                          >
+                            Terima
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         )}
 
+        {/* WITHDRAWALS TAB: Penarikan Uang */}
         {activeTab === 'withdrawals' && (
           <div className="space-y-4">
             <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-3.5">
@@ -1318,6 +1360,8 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 {filteredWiths.map((w) => {
                   const storSummary = getUserStorSummary(w.userId);
                   const isExpanded = expandedUserStorId === w.id;
+                  const isWithFinished = w.status === 'Selesai' || w.status === 'Ditolak';
+
                   return (
                     <div
                       key={w.id}
@@ -1352,10 +1396,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 self-start sm:self-center text-xs">
-                          <div
-                            className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 flex items-center gap-1.5 font-medium shadow-2xs"
-                            title="Waktu pengajuan penarikan"
-                          >
+                          <div className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 flex items-center gap-1.5 font-medium shadow-2xs">
                             <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                             <span className="text-[11px] font-bold text-slate-800 font-mono">
                               {formatIndonesianDateTime(w.createdAt)}
@@ -1459,21 +1500,29 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                         )}
                       </div>
 
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2">
+                      {/* Tombol aksi atau Riwayat Selesai */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100">
                         <div className="text-[11px] text-slate-500">
-                          {w.status === 'Selesai' && w.completedAt && (
+                          {w.status === 'Selesai' && (
                             <span className="text-emerald-700 font-bold flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Ditransfer pada: {formatIndonesianDateTime(w.completedAt)}</span>
+                              <span>Riwayat: Uang Sudah Diterima / Ditransfer ({w.completedAt ? formatIndonesianDateTime(w.completedAt) : 'Selesai'})</span>
                             </span>
                           )}
                           {w.status === 'Ditolak' && (
-                            <span className="text-rose-700 font-semibold">
-                              Alasan Penolakan: <strong>{w.rejectionReason || 'Alasan tidak disertakan'}</strong>
+                            <span className="text-rose-700 font-bold flex items-center gap-1">
+                              <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                              <span>Riwayat: Uang Ditolak {w.rejectionReason ? `(${w.rejectionReason})` : ''} (Saldo Di-refund)</span>
                             </span>
                           )}
                         </div>
-                        {w.status === 'Pending' && (
+
+                        {/* Jika sudah Selesai / Ditolak, tidak bisa di terima/di tolak lagi, cukup tampilkan riwayatnya saja */}
+                        {isWithFinished ? (
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">
+                            Riwayat Penarikan Selesai (Terkunci)
+                          </span>
+                        ) : (
                           <div className="flex items-center gap-2 self-end sm:self-center">
                             <button
                               type="button"
@@ -1599,6 +1648,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                         Ubah Saldo
                       </button>
                     </div>
+
                     <button
                       type="button"
                       onClick={() => handleToggleSuspendUser(u)}
@@ -1715,91 +1765,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                 </div>
               </div>
 
-              {/* Pengaturan Status Penarikan DANA & GoPay */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <Wallet className="w-4 h-4 text-blue-600" />
-                      <span>Kontrol Penarikan E-Wallet (DANA &amp; GoPay)</span>
-                    </h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Admin dapat menutup penarikan DANA, menutup penarikan GoPay, atau menutup keduanya secara mandiri.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  {/* DANA Setting */}
-                  <div className="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-extrabold text-slate-900">Jalur DANA</span>
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${
-                            tempDanaOpen
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          }`}
-                        >
-                          {tempDanaOpen ? 'BUKA (Aktif)' : 'TUTUP'}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-400">
-                        {tempDanaOpen
-                          ? 'Freelancer dapat mencairkan saldo ke nomor DANA.'
-                          : 'Penarikan via DANA dinonaktifkan sementara.'}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setTempDanaOpen((prev) => !prev)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer active:scale-95 border ${
-                        tempDanaOpen
-                          ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
-                          : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
-                      }`}
-                    >
-                      {tempDanaOpen ? 'Tutup DANA' : 'Buka DANA'}
-                    </button>
-                  </div>
-
-                  {/* GoPay Setting */}
-                  <div className="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-extrabold text-slate-900">Jalur GoPay</span>
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${
-                            tempGopayOpen
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          }`}
-                        >
-                          {tempGopayOpen ? 'BUKA (Aktif)' : 'TUTUP'}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-400">
-                        {tempGopayOpen
-                          ? 'Freelancer dapat mencairkan saldo ke nomor GoPay.'
-                          : 'Penarikan via GoPay dinonaktifkan sementara.'}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setTempGopayOpen((prev) => !prev)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer active:scale-95 border ${
-                        tempGopayOpen
-                          ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
-                          : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
-                      }`}
-                    >
-                      {tempGopayOpen ? 'Tutup GoPay' : 'Buka GoPay'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 block">
@@ -1850,16 +1815,15 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               </div>
 
               <div className="space-y-1.5 pt-2">
-                <label className="text-xs font-bold text-slate-700 block flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 block flex items-between">
                   <span>Link Download Aplikasi Android (.APK)</span>
-                  <span className="text-[10px] text-blue-600 font-bold">Admin dapat mengubah link APK kapan pun</span>
                 </label>
                 <input
                   type="url"
                   value={tempApkUrl}
                   onChange={(e) => setTempApkUrl(e.target.value)}
                   placeholder="https://www.mediafire.com/file/.../azyx19.apk/file"
-                  className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-slate-200 bg-white"
                 />
               </div>
             </div>
@@ -1906,60 +1870,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                     <span className="text-[11px] font-bold text-slate-500 block">Total Penghasilan:</span>
                     <div className="text-lg font-black text-slate-900 mt-0.5">
                       {formatRupiah(selectedUser.totalEarned || 0)}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-600 block">
-                    Ringkasan Aktivitas Akun:
-                  </span>
-                  <div className="grid grid-cols-2 gap-2.5 text-xs">
-                    <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-200 space-y-1">
-                      <div className="flex items-center gap-1.5 text-indigo-900 font-bold">
-                        <FileText className="w-4 h-4 text-indigo-600" />
-                        <span>Jumlah Riwayat</span>
-                      </div>
-                      <div className="text-2xl font-black text-indigo-950 font-mono">
-                        {selectedUserStats.totalRiwayat}{' '}
-                        <span className="text-xs font-semibold text-indigo-700 font-sans">Riwayat</span>
-                      </div>
-                    </div>
-                    <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-1">
-                      <div className="flex items-center gap-1.5 text-emerald-900 font-bold">
-                        <Wallet className="w-4 h-4 text-emerald-600" />
-                        <span>Jumlah Penarikan</span>
-                      </div>
-                      <div className="text-2xl font-black text-emerald-950 font-mono">
-                        {selectedUserStats.totalPenarikanCount}{' '}
-                        <span className="text-xs font-semibold text-emerald-700 font-sans">Kali</span>
-                      </div>
-                    </div>
-                    <div className="p-3.5 rounded-2xl bg-sky-50/70 border border-sky-200 space-y-1">
-                      <div className="flex items-center gap-1.5 text-sky-900 font-bold">
-                        <Send className="w-4 h-4 text-sky-600" />
-                        <span>Jumlah STOR</span>
-                      </div>
-                      <div className="text-2xl font-black text-sky-950 font-mono">
-                        {selectedUserStats.totalStor}{' '}
-                        <span className="text-xs font-semibold text-sky-700 font-sans">Akun</span>
-                      </div>
-                      <span className="text-[10px] text-sky-800 block">
-                        {selectedUserStats.storDiterima} Diterima &bull; {selectedUserStats.storPending} Pending &bull; {selectedUserStats.storDitolak} Ditolak
-                      </span>
-                    </div>
-                    <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-1">
-                      <div className="flex items-center gap-1.5 text-amber-900 font-bold">
-                        <Gift className="w-4 h-4 text-amber-600" />
-                        <span>Undangan Teman</span>
-                      </div>
-                      <div className="text-2xl font-black text-amber-950 font-mono">
-                        {selectedUserStats.totalUndangan}{' '}
-                        <span className="text-xs font-semibold text-amber-700 font-sans">Teman</span>
-                      </div>
-                      <span className="text-[10px] text-amber-800 block">
-                        {selectedUserStats.undanganBerhasil} Selesai &bull; {selectedUserStats.menungguStor} Menunggu Stor
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -2301,7 +2211,7 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                     Hapus Akun Yang Sudah Terpakai?
                   </h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Sebanyak <strong className="text-amber-700 font-bold">{usedStock.length} akun</strong> yang telah digenerate / diklaim oleh pengguna akan dihapus permanen dari database. Akun yang masih <strong>Tersedia</strong> tetap aman.
+                    Sebanyak <strong className="text-amber-700 font-bold">{usedStock.length} akun</strong> yang telah digenerate / diklaim oleh pengguna akan dihapus permanen dari database.
                   </p>
                 </div>
                 <div className="flex gap-2.5 pt-2">

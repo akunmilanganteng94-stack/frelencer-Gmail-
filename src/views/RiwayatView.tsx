@@ -98,7 +98,7 @@ export function RiwayatView() {
               [
                 { label: 'Semua Status', value: 'Semua', count: countSemua },
                 { label: 'Pending', value: 'Pending', count: countPending },
-                { label: 'Cek Admin', value: 'Cek Admin', count: countCekAdmin },
+                { label: 'Cek Status', value: 'Cek Admin', count: countCekAdmin },
                 { label: 'Diterima', value: 'Diterima', count: countDiterima },
                 { label: 'Ditolak', value: 'Ditolak', count: countDitolak },
               ] as const
@@ -127,6 +127,7 @@ export function RiwayatView() {
               );
             })}
           </div>
+
           <div className="relative w-full md:w-64">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
             <input
@@ -183,6 +184,7 @@ export function RiwayatView() {
                       )}
                     </button>
                   </div>
+
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-400">
                       <Calendar className="w-3 h-3 text-slate-400" />
@@ -203,7 +205,7 @@ export function RiwayatView() {
                       {sub.status === 'Ditolak' && <XCircle className="w-3 h-3" />}
                       {sub.status === 'Cek Admin' && <Eye className="w-3 h-3" />}
                       {sub.status === 'Pending' && <Clock className="w-3 h-3" />}
-                      <span>{sub.status}</span>
+                      <span>{sub.status === 'Cek Admin' ? 'Cek Status' : sub.status}</span>
                     </span>
                   </div>
                 </div>
@@ -222,6 +224,7 @@ export function RiwayatView() {
                       </p>
                     </div>
                   </div>
+
                   <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
                     <button
                       type="button"
@@ -365,6 +368,7 @@ export function RiwayatView() {
                     )}
                   </button>
                 </div>
+
                 <div className="grid grid-cols-2 gap-2 pt-1 text-xs text-slate-600">
                   <div className="p-2.5 rounded-xl bg-white border border-slate-200/70">
                     <span className="text-[11px] text-slate-400 block">Password Wajib</span>
@@ -375,6 +379,119 @@ export function RiwayatView() {
                     <span className="font-bold text-blue-700">
                       {formatRupiah(selectedSubForCheck.rewardAmount)}
                     </span>
+                  </div>
+                </div>
+
+                {/* TAHAPAN STATUS VERIFIKASI */}
+                <div className="pt-2 space-y-2">
+                  <span className="text-slate-600 font-bold uppercase tracking-wider text-[11px] block">
+                    Tahapan Status Pengecekan Akun:
+                  </span>
+
+                  <div className="space-y-2">
+                    {/* 1. PENDING */}
+                    <div
+                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition ${
+                        selectedSubForCheck.status === 'Pending'
+                          ? 'bg-amber-50/90 border-amber-300 text-amber-950 font-bold shadow-2xs'
+                          : 'bg-white border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Clock
+                          className={`w-4 h-4 shrink-0 ${
+                            selectedSubForCheck.status === 'Pending'
+                              ? 'text-amber-600 animate-spin'
+                              : 'text-slate-400'
+                          }`}
+                        />
+                        <div>
+                          <span className="text-xs font-bold block">1. Pending (Antrean Storan)</span>
+                          <span className="text-[10px] text-slate-500 font-normal">
+                            Akun berhasil dikirim dan menunggu antrean pengecekan
+                          </span>
+                        </div>
+                      </div>
+                      {selectedSubForCheck.status === 'Pending' && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200 text-amber-900 shrink-0">
+                          Aktif Sekarang
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 2. CEK STATUS / CEK ADMIN */}
+                    <div
+                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition ${
+                        selectedSubForCheck.status === 'Cek Admin'
+                          ? 'bg-blue-50/90 border-blue-300 text-blue-950 font-bold shadow-2xs'
+                          : 'bg-white border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Eye
+                          className={`w-4 h-4 shrink-0 ${
+                            selectedSubForCheck.status === 'Cek Admin'
+                              ? 'text-blue-600 animate-pulse'
+                              : 'text-slate-400'
+                          }`}
+                        />
+                        <div>
+                          <span className="text-xs font-bold block">2. Cek Status (Sedang Dicek Admin)</span>
+                          <span className="text-[10px] text-slate-500 font-normal">
+                            Akun sedang dalam proses pengujian login oleh admin
+                          </span>
+                        </div>
+                      </div>
+                      {selectedSubForCheck.status === 'Cek Admin' && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-200 text-blue-900 shrink-0">
+                          Sedang Dicek
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 3. DITERIMA / DITOLAK */}
+                    <div
+                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition ${
+                        selectedSubForCheck.status === 'Diterima'
+                          ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950 font-bold shadow-2xs'
+                          : selectedSubForCheck.status === 'Ditolak'
+                          ? 'bg-rose-50/90 border-rose-300 text-rose-950 font-bold shadow-2xs'
+                          : 'bg-white border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {selectedSubForCheck.status === 'Diterima' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        ) : selectedSubForCheck.status === 'Ditolak' ? (
+                          <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4 text-slate-400 shrink-0" />
+                        )}
+                        <div>
+                          <span className="text-xs font-bold block">
+                            3. {selectedSubForCheck.status === 'Ditolak' ? 'Ditolak (Gagal)' : 'Diterima (Selesai & Saldo Masuk)'}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-normal">
+                            {selectedSubForCheck.status === 'Diterima'
+                              ? `Saldo +${formatRupiah(selectedSubForCheck.rewardAmount)} telah masuk ke dompet Anda`
+                              : selectedSubForCheck.status === 'Ditolak'
+                              ? `Alasan: ${selectedSubForCheck.rejectionReason || 'Akun tidak memenuhi syarat'}`
+                              : 'Hasil akhir verifikasi oleh admin'}
+                          </span>
+                        </div>
+                      </div>
+                      {(selectedSubForCheck.status === 'Diterima' || selectedSubForCheck.status === 'Ditolak') && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+                            selectedSubForCheck.status === 'Diterima'
+                              ? 'bg-emerald-200 text-emerald-900'
+                              : 'bg-rose-200 text-rose-900'
+                          }`}
+                        >
+                          {selectedSubForCheck.status}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

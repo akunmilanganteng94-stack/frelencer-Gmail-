@@ -14,6 +14,7 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { notifyDataChange } from '../lib/syncHelper';
 import {
   Wallet,
   TrendingUp,
@@ -72,7 +73,6 @@ export function SaldoView() {
   const minWithdrawal = settings.minWithdrawal || 4000;
   const parsedAmount = parseInt(amountInput.replace(/[^0-9]/g, ''), 10) || 0;
   const hasPerakan = parsedAmount > 0 && parsedAmount % 1000 !== 0;
-
   const isDanaOpen = settings.withdrawalDanaOpen !== false;
   const isGopayOpen = settings.withdrawalGopayOpen !== false;
   const isAnyWithdrawalOpen = settings.withdrawalOpen !== false && (isDanaOpen || isGopayOpen);
@@ -121,7 +121,6 @@ export function SaldoView() {
       return;
     }
 
-    // Set default available method
     if (isDanaOpen) {
       setMethod('DANA');
     } else if (isGopayOpen) {
@@ -207,6 +206,7 @@ export function SaldoView() {
         if (!userDoc.exists()) {
           throw new Error('Data pengguna tidak ditemukan.');
         }
+
         const userData = userDoc.data();
         const availableBal = userData.balance || 0;
 
@@ -233,6 +233,9 @@ export function SaldoView() {
 
         transaction.set(newWithdrawalRef, withdrawalPayload);
       });
+
+      // Notify admin in realtime
+      notifyDataChange('withdrawal');
 
       showToast(
         'success',
@@ -438,6 +441,7 @@ export function SaldoView() {
                       </div>
                     </div>
                   </div>
+
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     <span className="text-[10px] text-slate-400">
                       {formatIndonesianDateTime(w.createdAt)}
@@ -458,6 +462,7 @@ export function SaldoView() {
                     </span>
                   </div>
                 </div>
+
                 {w.status === 'Ditolak' && w.rejectionReason && (
                   <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-[11px] text-rose-800 flex items-start gap-1.5">
                     <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />

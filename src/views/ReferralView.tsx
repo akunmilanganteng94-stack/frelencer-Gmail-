@@ -16,8 +16,6 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
-  Info,
-  HelpCircle,
   Search,
   TrendingUp,
   RefreshCw,
@@ -64,7 +62,6 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
 
   useEffect(() => {
     if (!currentUser) return;
-
     if (referralCode) {
       syncAndRepairReferralsForInviter(
         currentUser.uid,
@@ -146,6 +143,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
       collection(db, 'referrals'),
       where('inviterUid', '==', currentUser.uid)
     );
+
     const unsubReferrals = onSnapshot(
       qReferrals,
       (snapshot) => {
@@ -163,6 +161,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
       collection(db, 'users'),
       where('referredBy', '==', currentUser.uid)
     );
+
     const unsubUsers = onSnapshot(
       qUsers,
       (snapshot) => {
@@ -262,6 +261,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
             </h1>
           </div>
         </div>
+
         <div className="flex items-center gap-2 self-start sm:self-center">
           <button
             type="button"
@@ -287,6 +287,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
       <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#1e40af] via-[#2563eb] to-[#38bdf8] p-4 sm:p-5 text-white shadow-md shadow-blue-900/20 border border-blue-400/20">
         <div className="absolute -right-8 -top-8 w-44 h-44 rounded-full bg-sky-300/20 blur-2xl pointer-events-none" />
         <div className="absolute -left-10 -bottom-10 w-36 h-36 rounded-full bg-blue-950/40 blur-xl pointer-events-none" />
+
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5 max-w-xl">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-black text-white border border-white/30">
@@ -300,6 +301,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
               Bagikan kode referral Anda ke rekan freelancer. Ketika teman melakukan storan Gmail pertama yang berstatus <strong>Diterima</strong>, referral akan terhitung berhasil. Setiap mencapai kelipatan 20 teman berhasil, bonus <strong>Rp 10.000 otomatis masuk</strong> ke saldo Anda!
             </p>
           </div>
+
           <div className="bg-white/15 backdrop-blur-md rounded-xl p-3 sm:p-3.5 border border-white/25 text-center shrink-0 self-start md:self-center shadow-inner">
             <span className="text-[10px] font-bold text-sky-100 uppercase tracking-wider block">
               Bonus Tiap 20 Teman
@@ -334,6 +336,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
               </button>
             </div>
           </div>
+
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
@@ -418,6 +421,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
             <span className="text-xs font-bold text-slate-400 font-mono"> / 20 Teman</span>
           </div>
         </div>
+
         <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden p-0.5 border border-slate-200">
           <div
             className="h-full rounded-full bg-gradient-to-r from-[#1e40af] via-[#2563eb] to-[#38bdf8] transition-all duration-500 shadow-2xs"

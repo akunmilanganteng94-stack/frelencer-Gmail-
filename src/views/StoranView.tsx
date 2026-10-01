@@ -6,10 +6,12 @@ import { formatRupiah } from '../lib/utils';
 import { Submission, NavigationTab } from '../types';
 import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { notifyDataChange } from '../lib/syncHelper';
 import {
   getSavedGeneratedAccounts,
   recordGeneratedCountToday,
   getGeneratedCountToday,
+  verifyUserGeneratedEmail,
   GeneratedResultItem,
 } from '../components/GmailGenerator';
 import { useGmailStock } from '../hooks/useGmailStock';
@@ -47,8 +49,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const [inputData, setInputData] = useState('');
   const [inputError, setInputError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [validatedEmails, setValidatedEmails] = useState<string[]>([]);
 
   // Generated Gmail items
   const [generatedList, setGeneratedList] = useState<GeneratedResultItem[]>([]);
@@ -216,7 +216,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       );
 
       let newItems: GeneratedResultItem[] = [];
-
       if (claimed.length > 0) {
         recordGeneratedCountToday(claimed.length, currentUser?.uid);
         newItems = claimed.map((c) => ({
@@ -243,11 +242,16 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       const updated = [...newItems, ...generatedList];
       setGeneratedList(updated);
       setHasGeneratedOnce(true);
-
       if (currentUser?.uid) {
         localStorage.setItem(`gmail_gen_saved_${currentUser.uid}`, JSON.stringify(updated));
+        const allKey = `gmail_gen_all_${currentUser.uid}`;
+        try {
+          const rawHistory = localStorage.getItem(allKey);
+          const historyArr: string[] = rawHistory ? JSON.parse(rawHistory) : [];
+          const combined = Array.from(new Set([...historyArr, ...newItems.map((n) => n.email.trim().toLowerCase())]));
+          localStorage.setItem(allKey, JSON.stringify(combined));
+        } catch {}
       }
-
       showToast('success', 'Generate Berhasil', `${newItems.length} akun Gmail berhasil digenerate.`);
     } catch (e) {
       console.warn('Generate error:', e);
@@ -257,8 +261,8 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     }
   };
 
-  // Validation & Submit Form
-  const handleOpenConfirm = (e: FormEvent) => {
+  // Validation & Direct Submit Form
+  const handleDirectSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setInputError('');
 
@@ -272,6 +276,8 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       showToast('error', 'Akun Dibatasi', 'Akun Anda sedang ditangguhkan. Tidak dapat mengirim storan.');
       return;
     }
+
+    if (!currentUser) return;
 
     const rawLines = inputData
       .split('\n')
@@ -316,17 +322,26 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       cleanedEmails.push(cleanEmail);
     }
 
-    setValidatedEmails(cleanedEmails);
-    setShowConfirmModal(true);
-  };
-
-  // Submit to Firestore
-  const handleConfirmSubmit = async () => {
-    if (!currentUser || validatedEmails.length === 0) return;
+    // Validasi ketat: User wajib Gmail hasil generate akunnya sendiri, jika berbeda/tidak sesuai tidak bisa mengirim
     setSubmitting(true);
     try {
+      for (const email of cleanedEmails) {
+        const isFromGenerator = await verifyUserGeneratedEmail(email, currentUser.uid);
+        if (!isFromGenerator) {
+          setInputError(`Gagal kirim: Akun "${email}" bukan hasil generate akun Anda. Nama email tidak sesuai!`);
+          showToast(
+            'error',
+            'Nama Tidak Sesuai',
+            `Akun ${email} bukan hasil generate Anda! Nama email tidak sesuai.`
+          );
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // Langsung kirim tanpa konfirmasi
       const now = new Date().toISOString();
-      for (const email of validatedEmails) {
+      for (const email of cleanedEmails) {
         await addDoc(collection(db, 'submissions'), {
           userId: currentUser.uid,
           userEmail: currentUser.email || '',
@@ -339,16 +354,16 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         });
       }
 
+      // Beritahu admin secara realtime
+      notifyDataChange('storan');
+
       showToast(
         'success',
         'Storan Berhasil Dikirim',
-        `${validatedEmails.length} akun Gmail berhasil diserahkan ke antrean pengecekan.`
+        `${cleanedEmails.length} akun Gmail berhasil langsung dikirim ke antrean pengecekan.`
       );
-
       setInputData('');
       setInputError('');
-      setValidatedEmails([]);
-      setShowConfirmModal(false);
     } catch (err: unknown) {
       console.warn('Submission submit err:', err);
       showToast('error', 'Gagal Mengirim', 'Terjadi kendala saat menyimpan data ke database.');
@@ -391,38 +406,25 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           </div>
         </div>
 
-        {/* CARD RULES */}
-        <div className="bg-[#F3E8FF] border border-purple-200/80 rounded-[22px] sm:rounded-[24px] p-4 sm:p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-purple-100 text-[#A855F7] flex items-center justify-center shrink-0 shadow-2xs">
-              <FileText className="w-5 h-5 stroke-[2.2]" />
-            </div>
-            <div className="min-w-0">
-              <h4 className="text-xs sm:text-sm font-bold text-purple-950 tracking-tight">
-                Cek Rules dulu sebelum stor
-              </h4>
-              <p className="text-[11px] text-purple-700 font-medium mt-0.5">
-                Wajib dibaca agar Gmail tidak ditolak.
-              </p>
-            </div>
+        {/* JUDUL STOR & BUKA ATURAN DI PINGGIR */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Setor Daftar Gmail
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1 leading-relaxed">
+              Tempel daftar, satu Gmail per baris. Duplikat otomatis dihapus. Hanya Gmail hasil &quot;Generate Gmail&quot; milik akun ini yang bisa disetor.
+            </p>
           </div>
           <button
             type="button"
             onClick={() => onNavigate && onNavigate('rules')}
-            className="self-start sm:self-auto px-4 py-2 rounded-xl bg-[#A855F7] hover:bg-purple-600 text-white font-bold text-xs transition cursor-pointer active:scale-95 shadow-xs whitespace-nowrap"
+            className="self-start sm:self-center px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#A855F7] hover:text-purple-700 font-bold text-xs border border-purple-200 transition cursor-pointer active:scale-95 shadow-2xs flex items-center gap-1.5 whitespace-nowrap shrink-0"
+            title="Cek Rules dulu sebelum stor"
           >
-            Buka Rules
+            <FileText className="w-3.5 h-3.5" />
+            <span>Buka Rules</span>
           </button>
-        </div>
-
-        {/* JUDUL STOR */}
-        <div className="pt-1">
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Setor Daftar Gmail
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1 leading-relaxed">
-            Tempel daftar, satu Gmail per baris. Duplikat otomatis dihapus. Hanya Gmail hasil &quot;Generate Gmail&quot; milik akun ini yang bisa disetor.
-          </p>
         </div>
 
         {/* GENERATED GMAIL SECTION */}
@@ -453,7 +455,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 Maksimal generate dapat diatur admin (Maks saat ini: <strong>{maxAdminLimit} akun/hari</strong>). Sisa kuota Anda: <strong>{remainingQuota} akun</strong>.
               </p>
             </div>
-
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-1 shadow-2xs">
                 <button
@@ -568,9 +569,8 @@ export function StoranView({ onNavigate }: StoranViewProps) {
             </div>
           )}
 
-          {/* TOMBOL GENERATED GMAIL: ada logo salin salin semua Gmail, salin gmail belum di STOR, generate / generate lagi */}
+          {/* TOMBOL GENERATED GMAIL */}
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            {/* Tombol Salin Semua Gmail dengan logo salin */}
             <button
               type="button"
               onClick={handleCopyAllGenerated}
@@ -580,7 +580,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
               <span>Salin Semua Gmail</span>
             </button>
 
-            {/* Tombol Salin Gmail Belum Distor dengan logo salin */}
             <button
               type="button"
               onClick={handleCopyUnsubmittedGenerated}
@@ -590,7 +589,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
               <span>Salin Gmail Belum Distor</span>
             </button>
 
-            {/* Tombol teks generate nya ubah jadi generate doang kalo user sudah melakukan generate baru teks nya ubah jadi generate lagi */}
             <button
               type="button"
               disabled={generatingMore || settings.generatorOpen === false || remainingQuota <= 0}
@@ -610,19 +608,31 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         </div>
 
         {/* TEXTAREA SETOR */}
-        <form onSubmit={handleOpenConfirm} className="space-y-3 pt-2">
+        <form onSubmit={handleDirectSubmit} className="space-y-3 pt-2">
           <div className="space-y-1.5">
             <textarea
               rows={5}
               value={inputData}
               onChange={(e) => {
+                if (!settings.storanOpen) return;
                 setInputData(e.target.value);
                 setInputError('');
               }}
-              placeholder={'contoh1@gmail.com\ncontoh2@gmail.com'}
-              className="w-full p-4 rounded-2xl border border-slate-200 bg-slate-50/70 focus:bg-white focus:border-[#1677E8] focus:ring-2 focus:ring-[#1677E8]/20 font-mono text-xs sm:text-sm text-slate-900 outline-none resize-none transition"
+              disabled={!settings.storanOpen}
+              readOnly={!settings.storanOpen}
+              placeholder={
+                !settings.storanOpen
+                  ? 'Storan saat ini sedang ditutup. Tidak dapat mengetik akun Gmail.'
+                  : 'contoh1@gmail.com\ncontoh2@gmail.com'
+              }
+              className={`w-full p-4 rounded-2xl border font-mono text-xs sm:text-sm outline-none resize-none transition ${
+                !settings.storanOpen
+                  ? 'bg-slate-100/90 text-slate-400 border-dashed border-slate-300 cursor-not-allowed select-none'
+                  : 'bg-slate-50/70 text-slate-900 border-slate-200 focus:bg-white focus:border-[#1677E8] focus:ring-2 focus:ring-[#1677E8]/20'
+              }`}
               style={{ minHeight: '130px' }}
             />
+
             {inputError && (
               <p className="text-xs font-bold text-rose-600 flex items-center gap-1">
                 <span>{inputError}</span>
@@ -661,89 +671,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           </div>
         </form>
       </div>
-
-      {/* Confirmation Modal */}
-      <AnimatePresence>
-        {showConfirmModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ duration: 0.2 }}
-              className="w-full max-w-md bg-white rounded-[28px] shadow-2xl border border-slate-100 overflow-hidden text-[#102033]"
-            >
-              <div className="bg-gradient-to-r from-[#1677E8] to-[#0D5FC7] p-5 text-white flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <Send className="w-5 h-5 text-white" />
-                  <h3 className="text-base font-black tracking-tight">
-                    Konfirmasi Pengiriman Storan
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmModal(false)}
-                  className="p-1 rounded-full text-white/80 hover:text-white hover:bg-white/10"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="p-5 space-y-4 text-xs">
-                <div className="p-3.5 rounded-2xl bg-[#EEF8FF] border border-blue-100 space-y-1.5">
-                  <div className="flex justify-between font-bold text-slate-700">
-                    <span>Jumlah Akun:</span>
-                    <span className="text-[#1677E8] font-black">{validatedEmails.length} Akun</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-slate-700">
-                    <span>Password:</span>
-                    <span className="font-mono text-slate-900">{defaultPw}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-slate-700">
-                    <span>Potensi Imbalan:</span>
-                    <span className="text-[#1677E8] font-black">
-                      {formatRupiah(validatedEmails.length * activePrice)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <span className="text-slate-500 font-semibold block">
-                    Daftar akun yang akan disetor:
-                  </span>
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 max-h-36 overflow-y-auto space-y-1 font-mono text-xs">
-                    {validatedEmails.map((email, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <span className="text-slate-400">#{idx + 1}</span>
-                        <span className="text-slate-800 font-bold">{email}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmModal(false)}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="button"
-                    disabled={submitting}
-                    onClick={handleConfirmSubmit}
-                    className="flex-1 py-2.5 rounded-xl bg-[#1677E8] hover:bg-[#0D5FC7] text-white font-black shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>{submitting ? 'Mengirim...' : 'Ya, Kirim Sekarang'}</span>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

@@ -18,10 +18,6 @@ import {
   Edit2,
   ShieldCheck,
   X,
-  Mail,
-  Fingerprint,
-  Calendar,
-  Lock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -29,7 +25,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   const { userProfile, currentUser, isAdmin, logoutUser, updateProfileName, changePassword } = useAuth();
   const { settings } = useSettings();
   const { showToast } = useToast();
-
   const [copiedUid, setCopiedUid] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -62,7 +57,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   // Load Submissions realtime for authentic user stats
   useEffect(() => {
     if (!currentUser) return;
-
     const qSubs = query(
       collection(db, 'submissions'),
       where('userId', '==', currentUser.uid)
@@ -78,7 +72,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
       },
       (err) => console.warn('Submissions load in profile notice:', err)
     );
-
     return () => {
       unsubSubs();
     };
@@ -102,12 +95,10 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   const handlePhotoSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (file.size > 2 * 1024 * 1024) {
       showToast('error', 'Ukuran Terlalu Besar', 'Maksimal ukuran foto adalah 2 MB.');
       return;
     }
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const result = event.target?.result as string;
@@ -194,11 +185,8 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         className="hidden"
       />
 
-      {/* ==================================================
-          2. CARD PROFILE UTAMA
-          ================================================== */}
+      {/* CARD PROFILE UTAMA */}
       <div className="bg-white rounded-[28px] sm:rounded-[32px] overflow-hidden shadow-sm border border-blue-100/60">
-        {/* Header Card: Gradient Biru + Tulisan "Profil Saya" + Icon User */}
         <div className="bg-gradient-to-r from-[#1677E8] via-[#126fe3] to-[#0D5FC7] px-6 pt-5 pb-14 text-white relative">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-white">
@@ -210,9 +198,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
           </div>
         </div>
 
-        {/* Profile Avatar & Details Section */}
         <div className="px-6 pb-6 pt-0 flex flex-col items-center text-center relative">
-          {/* Avatar Menumpuk Antara Header Biru dan Bagian Putih */}
           <div className="-mt-12 relative mb-3">
             <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-md bg-gradient-to-tr from-[#1677E8] to-[#38bdf8] text-white flex items-center justify-center font-black text-3xl sm:text-4xl overflow-hidden">
               {avatarUrl ? (
@@ -225,8 +211,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                 <span>{initial}</span>
               )}
             </div>
-
-            {/* Tombol Kecil Icon Kamera di Kanan Bawah Avatar */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -238,7 +222,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
             </button>
           </div>
 
-          {/* Nama User & Email User */}
           <div className="space-y-0.5 max-w-xs">
             <div className="flex items-center justify-center gap-1.5">
               <h2 className="text-lg sm:text-xl font-extrabold text-[#102033] tracking-tight truncate">
@@ -261,7 +244,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
             </p>
           </div>
 
-          {/* Dua Tombol: "Ganti Foto" & "Hapus" */}
           <div className="pt-4 flex items-center justify-center gap-2.5 w-full max-w-xs">
             <button
               type="button"
@@ -282,14 +264,11 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         </div>
       </div>
 
-      {/* ==================================================
-          3. DATA USER (Card / Field Rounded)
-          ================================================== */}
+      {/* DATA USER */}
       <div className="bg-white rounded-[26px] p-4 sm:p-5 shadow-sm border border-blue-100/60 space-y-3">
         <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider px-1">
           Informasi Akun
         </h3>
-
         <div className="space-y-2">
           {/* UID */}
           <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100 flex items-center justify-between gap-2.5">
@@ -375,9 +354,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         </div>
       </div>
 
-      {/* ==================================================
-          4. STATISTIK TOTAL (Grid 2 x 2)
-          ================================================== */}
+      {/* STATISTIK TOTAL */}
       <div className="bg-white rounded-[26px] p-4 sm:p-5 shadow-sm border border-blue-100/60 space-y-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-amber-50 text-[#F59E0B] flex items-center justify-center shrink-0">
@@ -389,7 +366,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         </div>
 
         <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-          {/* Total Storan: Biru */}
           <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100">
             <span className="text-[11px] font-bold text-slate-500 block">
               Total Storan
@@ -399,7 +375,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
             </div>
           </div>
 
-          {/* Diterima: Hijau */}
           <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100">
             <span className="text-[11px] font-bold text-slate-500 block">
               Diterima
@@ -409,7 +384,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
             </div>
           </div>
 
-          {/* Ditolak: Merah */}
           <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100">
             <span className="text-[11px] font-bold text-slate-500 block">
               Ditolak
@@ -419,7 +393,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
             </div>
           </div>
 
-          {/* Pending: Orange */}
           <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100">
             <span className="text-[11px] font-bold text-slate-500 block">
               Pending
@@ -431,9 +404,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         </div>
       </div>
 
-      {/* ==================================================
-          5. KEAMANAN AKUN
-          ================================================== */}
+      {/* KEAMANAN AKUN */}
       <div className="bg-white rounded-[26px] p-4 sm:p-5 shadow-sm border border-blue-100/60 space-y-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#1677E8] flex items-center justify-center shrink-0">
@@ -444,7 +415,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
           </h3>
         </div>
 
-        {/* Tombol: Icon Key + "Ganti Kata Sandi" + chevron > */}
         <button
           type="button"
           onClick={() => {
@@ -472,9 +442,7 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
         </button>
       </div>
 
-      {/* ==================================================
-          6. KELUAR AKUN (Tombol Besar Warna Merah)
-          ================================================== */}
+      {/* KELUAR AKUN */}
       <button
         type="button"
         onClick={() => logoutUser()}

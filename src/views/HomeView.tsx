@@ -242,7 +242,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               <SearchCheck className="w-5 h-5 stroke-[2.2]" />
             </div>
             <span className="text-[11px] sm:text-xs font-semibold text-slate-700 mt-1.5">
-              Checker
+              Cek Status
             </span>
           </button>
 
@@ -414,7 +414,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         <div className="bg-white rounded-[22px] p-3.5 sm:p-4 shadow-sm border border-blue-100/50 flex items-center justify-between">
           <div>
             <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-slate-400 uppercase">
-              DI CEK
+              CEK STATUS
             </span>
             <div className="text-2xl sm:text-3xl font-black text-[#102033] mt-0.5">
               {loading ? '-' : totalDiCek}

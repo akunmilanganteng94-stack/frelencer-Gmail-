@@ -23,6 +23,7 @@ export function RulesView({ onNavigate }: RulesViewProps) {
   const { settings } = useSettings();
   const { openContactModal } = useContactAdmin();
   const [copied, setCopied] = useState(false);
+
   const activePassword = 'sgsg1122';
 
   const handleCopyPassword = () => {
@@ -60,6 +61,7 @@ export function RulesView({ onNavigate }: RulesViewProps) {
             </h1>
           </div>
         </div>
+
         <div className="flex items-center gap-2 self-start sm:self-center">
           {onNavigate && (
             <button
@@ -128,6 +130,7 @@ export function RulesView({ onNavigate }: RulesViewProps) {
             </p>
           </div>
         </div>
+
         <div className="space-y-3 pt-1">
           {settings.rules?.map((rule, idx) => (
             <div
@@ -176,6 +179,7 @@ export function RulesView({ onNavigate }: RulesViewProps) {
             </p>
           </div>
         </div>
+
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
             <ShieldCheck className="w-5 h-5" />

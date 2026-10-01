@@ -48,7 +48,6 @@ function MainApp() {
     captureReferralFromUrl();
   }, []);
 
-  // Loading apk nya namanya "azyx19"
   if (loading) {
     return (
       <div className="min-h-screen bg-[#EEF8FF] flex flex-col items-center justify-center p-4 select-none">
@@ -148,7 +147,6 @@ function MainApp() {
         </div>
       </footer>
 
-      {/* Tombol Segarkan Halaman Cepat (Floating Refresh Button) */}
       <FloatingRefreshButton />
     </div>
   );

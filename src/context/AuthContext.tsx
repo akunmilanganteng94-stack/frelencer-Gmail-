@@ -45,12 +45,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const ADMIN_EMAILS = ['apriliansyahazril10@gmail.com', 'nenioke659@gmail.com'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => auth.currentUser);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
+    try {
+      const cached = localStorage.getItem('azgmail_cached_user_profile');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     captureReferralFromUrl();
+  }, []);
+
+  // Quick loading resolver: loading memuat nya agak cepetan
+  useEffect(() => {
+    const quickTimer = setTimeout(() => {
+      setLoading(false);
+    }, 600);
+    return () => clearTimeout(quickTimer);
   }, []);
 
   useEffect(() => {
@@ -58,9 +73,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCurrentUser(user);
       if (!user) {
         setUserProfile(null);
+        try {
+          localStorage.removeItem('azgmail_cached_user_profile');
+        } catch {}
         setLoading(false);
         return;
       }
+
+      // Fast-load from local cache if matches
+      try {
+        const cachedRaw = localStorage.getItem(`azgmail_cached_user_profile_${user.uid}`);
+        if (cachedRaw) {
+          const parsed = JSON.parse(cachedRaw);
+          if (parsed && parsed.uid === user.uid) {
+            setUserProfile(parsed);
+            setLoading(false);
+          }
+        }
+      } catch {}
 
       const userDocRef = doc(db, 'users', user.uid);
       const unsubscribeDoc = onSnapshot(
@@ -74,7 +104,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               data.referralCode = myCode;
             }
             saveReferralCodeMapping(data.referralCode, user).catch(console.warn);
-
             if (!data.referredBy) {
               const pendingCode = getPendingReferralCode();
               if (pendingCode) {
@@ -84,7 +113,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 ).catch(console.warn);
               }
             }
-
             if (data.referralCode) {
               syncAndRepairReferralsForInviter(
                 user.uid,
@@ -93,8 +121,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 user.email || ''
               ).catch(console.warn);
             }
-
             setUserProfile(data);
+            try {
+              localStorage.setItem('azgmail_cached_user_profile', JSON.stringify(data));
+              localStorage.setItem(`azgmail_cached_user_profile_${user.uid}`, JSON.stringify(data));
+            } catch {}
           } else {
             const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
             const myCode = generateReferralCode(user.uid);
@@ -107,7 +138,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 console.warn('Inviter lookup notice during initial doc sync:', e);
               }
             }
-
             const newProfile: UserProfile = {
               uid: user.uid,
               email: user.email || '',
@@ -131,7 +161,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 ? { referredByCode: pendingCode }
                 : {}),
             };
-
             setDoc(userDocRef, newProfile, { merge: true }).catch((e) => {
               console.warn('Initial user profile sync notice:', e);
             });
@@ -140,6 +169,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               recordReferralForNewUser(user, pendingCode).catch(console.warn);
             }
             setUserProfile(newProfile);
+            try {
+              localStorage.setItem('azgmail_cached_user_profile', JSON.stringify(newProfile));
+              localStorage.setItem(`azgmail_cached_user_profile_${user.uid}`, JSON.stringify(newProfile));
+            } catch {}
           }
           setLoading(false);
         },
@@ -164,10 +197,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
         }
       );
-
       return () => unsubscribeDoc();
     });
-
     return () => unsubscribeAuth();
   }, []);
 
@@ -223,6 +254,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     await setDoc(doc(db, 'users', user.uid), profile, { merge: true });
     setUserProfile(profile);
+    try {
+      localStorage.setItem('azgmail_cached_user_profile', JSON.stringify(profile));
+      localStorage.setItem(`azgmail_cached_user_profile_${user.uid}`, JSON.stringify(profile));
+    } catch {}
 
     saveReferralCodeMapping(myReferralCode, {
       uid: user.uid,
@@ -247,7 +282,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     provider.setCustomParameters({ prompt: 'select_account' });
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
-
     const userDocRef = doc(db, 'users', user.uid);
     const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
     const myCode = generateReferralCode(user.uid);
@@ -291,6 +325,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         await setDoc(userDocRef, profile, { merge: true });
         setUserProfile(profile);
+        try {
+          localStorage.setItem('azgmail_cached_user_profile', JSON.stringify(profile));
+          localStorage.setItem(`azgmail_cached_user_profile_${user.uid}`, JSON.stringify(profile));
+        } catch {}
         saveReferralCodeMapping(myCode, {
           uid: user.uid,
           email: user.email || '',
@@ -319,10 +357,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           displayName: existing.displayName,
         }).catch(console.warn);
         setUserProfile(existing);
+        try {
+          localStorage.setItem('azgmail_cached_user_profile', JSON.stringify(existing));
+          localStorage.setItem(`azgmail_cached_user_profile_${user.uid}`, JSON.stringify(existing));
+        } catch {}
       }
     } catch (fsErr) {
       console.warn('Profile doc fetch/write issue during Google sign-in:', fsErr);
-      setUserProfile({
+      const fallbackProfile: UserProfile = {
         uid: user.uid,
         email: user.email || '',
         displayName: user.displayName || user.email?.split('@')[0] || 'User Google',
@@ -335,11 +377,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         createdAt: new Date().toISOString(),
         referralCode: myCode,
         referralRewardMilestones: [],
-      });
+      };
+      setUserProfile(fallbackProfile);
     }
   };
 
   const logoutUser = async () => {
+    try {
+      localStorage.removeItem('azgmail_cached_user_profile');
+    } catch {}
     await signOut(auth);
   };
 

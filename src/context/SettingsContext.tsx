@@ -44,8 +44,15 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [settings, setSettings] = useState<SystemSettings>(() => {
+    try {
+      const cached = localStorage.getItem('azgmail_cached_settings');
+      return cached ? { ...DEFAULT_SETTINGS, ...JSON.parse(cached) } : DEFAULT_SETTINGS;
+    } catch {
+      return DEFAULT_SETTINGS;
+    }
+  });
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const settingsDocRef = doc(db, 'settings', 'general');
@@ -54,7 +61,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data() as Partial<SystemSettings>;
-          setSettings({
+          const updated: SystemSettings = {
             ...DEFAULT_SETTINGS,
             ...data,
             storanOpen: data.storanOpen !== undefined ? data.storanOpen : true,
@@ -74,7 +81,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
                 : DEFAULT_SETTINGS.storanClosedReason,
             rules: Array.isArray(data.rules) && data.rules.length > 0 ? data.rules : DEFAULT_RULES,
             apkDownloadUrl: data.apkDownloadUrl || DEFAULT_SETTINGS.apkDownloadUrl,
-          });
+          };
+          setSettings(updated);
+          try {
+            localStorage.setItem('azgmail_cached_settings', JSON.stringify(updated));
+          } catch {}
         } else {
           setDoc(settingsDocRef, DEFAULT_SETTINGS).catch((err) => {
             console.warn('Could not auto-seed settings document:', err);
@@ -95,6 +106,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const merged = { ...settings, ...newSettings, gmailDefaultPassword: 'sgsg1122' };
       await setDoc(doc(db, 'settings', 'general'), merged, { merge: true });
       setSettings(merged);
+      try {
+        localStorage.setItem('azgmail_cached_settings', JSON.stringify(merged));
+      } catch {}
     } catch (error) {
       console.error('Error updating settings document:', error);
       const merged = { ...settings, ...newSettings, gmailDefaultPassword: 'sgsg1122' };

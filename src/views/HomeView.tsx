@@ -131,7 +131,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
     const raw = settings.announcement || '';
     if (!raw.trim()) {
       return [
-        'Storan OPEN setiap Senin - Jumat\nJam operasional: 07.00 - 17.00 WIB\nPassword wajib Gmail: sgsg1122.',
+        'Storan OPEN setiap Senin - Jumat\nJam operasional: 07.00 - 17.00 WIB\nPilihan Password wajib Gmail: zero1122 atau prabujaya.',
       ];
     }
     const parts = raw.split(/\n\s*---\s*\n/);
@@ -173,7 +173,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               />
             </button>
           </div>
-
           <div>
             <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-xs">
               {formatRupiah(userProfile?.balance || 0)}
@@ -182,7 +181,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               Harga / Gmail: {formatRupiah(settings.pricePerSubmission || 3000)}
             </div>
           </div>
-
           <div className="pt-2 flex items-center gap-2.5">
             <button
               type="button"
@@ -219,7 +217,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               Stor
             </span>
           </button>
-
           <button
             type="button"
             onClick={() => onNavigate('riwayat')}
@@ -232,7 +229,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               Riwayat
             </span>
           </button>
-
           <button
             type="button"
             onClick={() => setIsCheckerOpen(true)}
@@ -245,7 +241,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               Cek Status
             </span>
           </button>
-
           <button
             type="button"
             onClick={() => onNavigate('saldo')}
@@ -258,7 +253,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               Saldo
             </span>
           </button>
-
           <button
             type="button"
             onClick={() => onNavigate('rules')}
@@ -289,7 +283,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               Azyx Support
             </span>
           </button>
-
           <a
             href="https://whatsapp.com/channel/0029VbCwLl7J3jv1QSig1V0C"
             target="_blank"
@@ -303,7 +296,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               Komunitas
             </span>
           </a>
-
           <button
             type="button"
             onClick={() => setIsLeaderboardOpen(true)}
@@ -316,7 +308,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               Leaderboard
             </span>
           </button>
-
           <button
             type="button"
             onClick={() => onNavigate('referral')}
@@ -329,7 +320,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               Referral
             </span>
           </button>
-
           <button
             type="button"
             onClick={() => setIsLaporanOpen(true)}

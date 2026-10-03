@@ -22,14 +22,22 @@ interface RulesViewProps {
 export function RulesView({ onNavigate }: RulesViewProps) {
   const { settings } = useSettings();
   const { openContactModal } = useContactAdmin();
-  const [copied, setCopied] = useState(false);
+  const [copied1, setCopied1] = useState(false);
+  const [copied2, setCopied2] = useState(false);
 
-  const activePassword = 'sgsg1122';
+  const pw1 = settings.storanPassword1 || 'zero1122';
+  const pw2 = settings.storanPassword2 || 'prabujaya';
 
-  const handleCopyPassword = () => {
-    navigator.clipboard.writeText(activePassword);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyPw1 = () => {
+    navigator.clipboard.writeText(pw1);
+    setCopied1(true);
+    setTimeout(() => setCopied1(false), 2000);
+  };
+
+  const handleCopyPw2 = () => {
+    navigator.clipboard.writeText(pw2);
+    setCopied2(true);
+    setTimeout(() => setCopied2(false), 2000);
   };
 
   return (
@@ -76,42 +84,50 @@ export function RulesView({ onNavigate }: RulesViewProps) {
         </div>
       </div>
 
-      <div className="rounded-3xl bg-gradient-to-r from-orange-50 via-amber-50 to-white p-5 sm:p-6 border border-orange-200 shadow-xs space-y-3">
+      <div className="rounded-3xl bg-gradient-to-r from-blue-50 via-indigo-50 to-white p-5 sm:p-6 border border-blue-200 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 shadow-2xs">
+            <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
               <KeyRound className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-xs font-black uppercase tracking-wider text-orange-900">
-                Password Gmail Wajib
+              <div className="text-xs font-black uppercase tracking-wider text-blue-900">
+                Pilihan Password Gmail Wajib (Pilih Salah Satu)
               </div>
-              <div className="flex items-center gap-2.5 mt-0.5">
-                <span className="font-mono text-xl sm:text-2xl font-black text-orange-600 bg-white px-3 py-1 rounded-xl border border-orange-300 shadow-2xs select-all">
-                  {activePassword}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopyPassword}
-                  className="px-3 py-1.5 rounded-xl bg-white hover:bg-orange-100 border border-orange-300 text-orange-700 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs cursor-pointer"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-emerald-700">Tersalin!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Salin</span>
-                    </>
-                  )}
-                </button>
+              <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-blue-200 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400">PW 1:</span>
+                  <span className="font-mono text-base sm:text-lg font-black text-blue-700 select-all">
+                    {pw1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyPw1}
+                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-blue-700 transition cursor-pointer"
+                    title="Salin zero1122"
+                  >
+                    {copied1 ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-200 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400">PW 2:</span>
+                  <span className="font-mono text-base sm:text-lg font-black text-indigo-700 select-all">
+                    {pw2}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyPw2}
+                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-indigo-700 transition cursor-pointer"
+                    title="Salin prabujaya"
+                  >
+                    {copied2 ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-          <div className="text-xs text-orange-950 font-medium sm:text-right max-w-sm">
-            Semua akun Gmail yang dibuat dan disetor <strong className="font-bold">WAJIB</strong> menggunakan password di atas. Jika password berbeda, akun akan otomatis ditolak saat pengecekan.
+          <div className="text-xs text-slate-600 font-medium sm:text-right max-w-sm">
+            Semua akun Gmail yang dibuat dan disetor <strong className="font-bold text-slate-900">WAJIB</strong> menggunakan salah satu password di atas (<code className="font-mono font-bold">zero1122</code> atau <code className="font-mono font-bold">prabujaya</code>).
           </div>
         </div>
       </div>

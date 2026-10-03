@@ -20,7 +20,6 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export function RiwayatView() {
   const { currentUser } = useAuth();
-  const activePassword = 'sgsg1122';
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'Semua' | SubmissionStatus>('Semua');
@@ -163,6 +162,7 @@ export function RiwayatView() {
         <div className="space-y-2 sm:space-y-2.5">
           {filteredSubmissions.map((sub) => {
             const cleanEmail = sub.dataContent.split('|')[0].trim();
+            const subPw = sub.storanPassword || 'zero1122';
             return (
               <div
                 key={sub.id}
@@ -184,7 +184,6 @@ export function RiwayatView() {
                       )}
                     </button>
                   </div>
-
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-400">
                       <Calendar className="w-3 h-3 text-slate-400" />
@@ -220,11 +219,10 @@ export function RiwayatView() {
                         {cleanEmail}
                       </p>
                       <p className="text-[10px] sm:text-[11px] text-slate-500">
-                        PW: <strong className="font-mono text-orange-600">{activePassword}</strong> &bull; Imbalan: <strong className="text-blue-700">{formatRupiah(sub.rewardAmount || 3000)}</strong>
+                        PW: <strong className="font-mono text-orange-600">{subPw}</strong> &bull; Imbalan: <strong className="text-blue-700">{formatRupiah(sub.rewardAmount || 3000)}</strong>
                       </p>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
                     <button
                       type="button"
@@ -371,8 +369,10 @@ export function RiwayatView() {
 
                 <div className="grid grid-cols-2 gap-2 pt-1 text-xs text-slate-600">
                   <div className="p-2.5 rounded-xl bg-white border border-slate-200/70">
-                    <span className="text-[11px] text-slate-400 block">Password Wajib</span>
-                    <span className="font-mono font-bold text-orange-600">{activePassword}</span>
+                    <span className="text-[11px] text-slate-400 block">Password Pilihan</span>
+                    <span className="font-mono font-bold text-orange-600">
+                      {selectedSubForCheck.storanPassword || 'zero1122'}
+                    </span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-white border border-slate-200/70">
                     <span className="text-[11px] text-slate-400 block">Nominal Imbalan</span>
@@ -387,9 +387,7 @@ export function RiwayatView() {
                   <span className="text-slate-600 font-bold uppercase tracking-wider text-[11px] block">
                     Tahapan Status Pengecekan Akun:
                   </span>
-
                   <div className="space-y-2">
-                    {/* 1. PENDING */}
                     <div
                       className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition ${
                         selectedSubForCheck.status === 'Pending'
@@ -419,7 +417,6 @@ export function RiwayatView() {
                       )}
                     </div>
 
-                    {/* 2. CEK STATUS / CEK ADMIN */}
                     <div
                       className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition ${
                         selectedSubForCheck.status === 'Cek Admin'
@@ -449,7 +446,6 @@ export function RiwayatView() {
                       )}
                     </div>
 
-                    {/* 3. DITERIMA / DITOLAK */}
                     <div
                       className={`p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition ${
                         selectedSubForCheck.status === 'Diterima'

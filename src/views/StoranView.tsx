@@ -25,9 +25,9 @@ import {
   Sparkles,
   Clock,
   CheckCircle2,
-  X,
   Plus,
   Minus,
+  KeyRound,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -41,8 +41,30 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const { showToast } = useToast();
   const { claimAccounts } = useGmailStock();
 
-  // Password nya cuma sgsg1122 saja
-  const defaultPw = 'sgsg1122';
+  // Dua pilihan password untuk storan & status buka/tutup masing-masing
+  const PW1 = settings.storanPassword1 || 'zero1122';
+  const PW2 = settings.storanPassword2 || 'prabujaya';
+  const pw1Open = settings.storanPassword1Open !== false;
+  const pw2Open = settings.storanPassword2Open !== false;
+
+  // 1 Saklar buka/tutup tunggal (terbuka jika master buka dan minimal 1 password buka)
+  const isStoranOpen = settings.storanOpen !== false && (pw1Open || pw2Open);
+
+  // User memilih SALAH SATU password saja (default menyesuaikan password yang buka)
+  const [selectedPassword, setSelectedPassword] = useState<'zero1122' | 'prabujaya'>(() => {
+    if (!pw1Open && pw2Open) return 'prabujaya';
+    return 'zero1122';
+  });
+
+  // Otomatis sinkronkan password aktif jika salah satu ditutup admin
+  useEffect(() => {
+    if (!pw1Open && pw2Open && selectedPassword === 'zero1122') {
+      setSelectedPassword('prabujaya');
+    } else if (pw1Open && !pw2Open && selectedPassword === 'prabujaya') {
+      setSelectedPassword('zero1122');
+    }
+  }, [pw1Open, pw2Open, selectedPassword]);
+
   const activePrice = settings.pricePerSubmission || 3000;
 
   // Textarea input
@@ -86,20 +108,20 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     return () => unsubscribe();
   }, [currentUser]);
 
-  // Load generated Gmail list
-  const loadGeneratedList = () => {
-    const list = getSavedGeneratedAccounts(currentUser?.uid);
-    setGeneratedList(list);
-    if (list.length > 0) {
-      setHasGeneratedOnce(true);
-    }
-  };
+  // Set of submitted emails for this user & timestamp map untuk retensi 1 hari
+  const submittedEmailsMap = useMemo(() => {
+    const map = new Map<string, number>();
+    submissions.forEach((s) => {
+      const clean = s.dataContent.split('|')[0].trim().toLowerCase();
+      if (clean) {
+        const time = new Date(s.createdAt).getTime() || Date.now();
+        const prev = map.get(clean) || 0;
+        if (time > prev) map.set(clean, time);
+      }
+    });
+    return map;
+  }, [submissions]);
 
-  useEffect(() => {
-    loadGeneratedList();
-  }, [currentUser]);
-
-  // Set of submitted emails for this user
   const submittedEmailsSet = useMemo(() => {
     const set = new Set<string>();
     submissions.forEach((s) => {
@@ -108,6 +130,60 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     });
     return set;
   }, [submissions]);
+
+  // Load generated Gmail list dengan aturan masa simpan (retensi):
+  // - Belum di stor: disimpan 2 hari (48 jam)
+  // - Sudah di stor: disimpan 1 hari (24 jam)
+  // - Tidak akan hilang kecuali dihapus manual atau masa retensi habis
+  const loadGeneratedList = () => {
+    const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000; // 48 jam
+    const ONE_DAY_MS = 1 * 24 * 60 * 60 * 1000;  // 24 jam
+
+    const rawList = getSavedGeneratedAccounts(currentUser?.uid);
+    if (!rawList || rawList.length === 0) {
+      setGeneratedList([]);
+      return;
+    }
+
+    const now = Date.now();
+    let hasExpired = false;
+
+    const filtered = rawList.filter((item) => {
+      const clean = item.email.trim().toLowerCase();
+      const submittedTime = submittedEmailsMap.get(clean);
+      const genTime = item.generatedAt ? new Date(item.generatedAt).getTime() : now;
+
+      if (submittedTime !== undefined) {
+        // Sudah di-stor: hilang setelah 1 hari (24 jam)
+        const ageSinceSubmit = now - submittedTime;
+        const keep = ageSinceSubmit < ONE_DAY_MS;
+        if (!keep) hasExpired = true;
+        return keep;
+      } else {
+        // Belum di-stor: tidak akan hilang kecuali dihapus atau sudah 2 hari (48 jam)
+        const ageSinceGen = now - genTime;
+        const keep = ageSinceGen < TWO_DAYS_MS;
+        if (!keep) hasExpired = true;
+        return keep;
+      }
+    });
+
+    setGeneratedList(filtered);
+    if (filtered.length > 0) {
+      setHasGeneratedOnce(true);
+    }
+
+    // Bersihkan storage lokal jika ada akun yang telah melewati masa retensi
+    if (hasExpired && currentUser?.uid) {
+      try {
+        localStorage.setItem(`gmail_gen_saved_${currentUser.uid}`, JSON.stringify(filtered));
+      } catch {}
+    }
+  };
+
+  useEffect(() => {
+    loadGeneratedList();
+  }, [currentUser, submittedEmailsMap]);
 
   // Generated counts
   const totalGenerated = generatedList.length;
@@ -176,29 +252,27 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     );
   };
 
-  // Max generate can be configured by admin
+  // Max generate limit configured by admin
   const maxAdminLimit = typeof settings.dailyGenerateLimit === 'number' && settings.dailyGenerateLimit > 0
     ? settings.dailyGenerateLimit
     : 10;
   const todayUsedQuota = getGeneratedCountToday(currentUser?.uid);
   const remainingQuota = Math.max(0, maxAdminLimit - todayUsedQuota);
 
-  // Generate Handler: can specify count, capped by admin limit
+  // Generate accounts
   const handleGenerateAccounts = async () => {
     if (settings.generatorOpen === false) {
       showToast('error', 'Ditutup', 'Fitur Generate Gmail sedang dinonaktifkan sementara oleh Admin.');
       return;
     }
-
     if (remainingQuota <= 0) {
       showToast(
         'error',
         'Batas Tercapai',
-        `Batas kuota generate harian Anda (${maxAdminLimit} akun) sudah penuh. Batas dapat diatur oleh Admin.`
+        `Batas kuota generate harian Anda (${maxAdminLimit} akun) sudah penuh.`
       );
       return;
     }
-
     const countToGenerate = Math.min(generateCount, remainingQuota);
     if (countToGenerate <= 0) {
       showToast('warning', 'Jumlah Tidak Valid', 'Tentukan jumlah akun yang valid.');
@@ -212,7 +286,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         currentUser?.uid,
         userProfile?.displayName || 'Freelancer',
         currentUser?.email || '',
-        defaultPw
+        selectedPassword
       );
 
       let newItems: GeneratedResultItem[] = [];
@@ -221,18 +295,17 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         newItems = claimed.map((c) => ({
           id: c.id,
           email: c.email,
-          password: defaultPw,
+          password: selectedPassword,
           generatedAt: new Date().toISOString(),
         }));
       } else {
-        // Fallback generator
         for (let i = 0; i < countToGenerate; i++) {
           const randomHex = Math.random().toString(36).substring(2, 8);
           const generatedEmail = `user.${randomHex}@gmail.com`;
           newItems.push({
             id: `gen_${Date.now()}_${i}`,
             email: generatedEmail,
-            password: defaultPw,
+            password: selectedPassword,
             generatedAt: new Date().toISOString(),
           });
         }
@@ -242,6 +315,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       const updated = [...newItems, ...generatedList];
       setGeneratedList(updated);
       setHasGeneratedOnce(true);
+
       if (currentUser?.uid) {
         localStorage.setItem(`gmail_gen_saved_${currentUser.uid}`, JSON.stringify(updated));
         const allKey = `gmail_gen_all_${currentUser.uid}`;
@@ -252,6 +326,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           localStorage.setItem(allKey, JSON.stringify(combined));
         } catch {}
       }
+
       showToast('success', 'Generate Berhasil', `${newItems.length} akun Gmail berhasil digenerate.`);
     } catch (e) {
       console.warn('Generate error:', e);
@@ -266,7 +341,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     e.preventDefault();
     setInputError('');
 
-    if (!settings.storanOpen) {
+    if (!isStoranOpen) {
       showToast('error', 'Storan Tutup', 'Layanan storan saat ini sedang ditutup oleh admin.');
       setInputError('Layanan storan saat ini sedang ditutup.');
       return;
@@ -293,36 +368,30 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     for (let i = 0; i < rawLines.length; i++) {
       const line = rawLines[i];
       const lineNum = i + 1;
-
       if (line.includes(' ')) {
         setInputError(`Baris ${lineNum}: tidak boleh mengandung spasi.`);
         return;
       }
-
       let cleanEmail = line.toLowerCase();
       if (!cleanEmail.includes('@')) {
         cleanEmail = `${cleanEmail}@gmail.com`;
       }
-
       if (!cleanEmail.includes('@gmail.com') && !cleanEmail.includes('@googlemail.com')) {
         setInputError(`Baris ${lineNum}: bukan alamat Gmail yang valid (@gmail.com).`);
         return;
       }
-
       if (cleanedEmails.includes(cleanEmail)) {
         setInputError(`Baris ${lineNum}: Akun "${cleanEmail}" duplikat dalam pengiriman ini.`);
         return;
       }
-
       if (submittedEmailsSet.has(cleanEmail)) {
         setInputError(`Baris ${lineNum}: Akun "${cleanEmail}" sudah pernah Anda setorkan sebelumnya.`);
         return;
       }
-
       cleanedEmails.push(cleanEmail);
     }
 
-    // Validasi ketat: User wajib Gmail hasil generate akunnya sendiri, jika berbeda/tidak sesuai tidak bisa mengirim
+    // Validasi ketat: User wajib Gmail hasil generate akunnya sendiri
     setSubmitting(true);
     try {
       for (const email of cleanedEmails) {
@@ -339,7 +408,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         }
       }
 
-      // Langsung kirim tanpa konfirmasi
+      // Langsung kirim dengan password yang dipilih user (1 baris)
       const now = new Date().toISOString();
       for (const email of cleanedEmails) {
         await addDoc(collection(db, 'submissions'), {
@@ -349,18 +418,18 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           dataContent: email,
           rewardAmount: activePrice,
           status: 'Pending',
+          storanPassword: selectedPassword,
           createdAt: now,
-          adminNotes: `PW: ${defaultPw}`,
+          adminNotes: `PW: ${selectedPassword}`,
         });
       }
 
       // Beritahu admin secara realtime
       notifyDataChange('storan');
-
       showToast(
         'success',
         'Storan Berhasil Dikirim',
-        `${cleanedEmails.length} akun Gmail berhasil langsung dikirim ke antrean pengecekan.`
+        `${cleanedEmails.length} akun Gmail berhasil dikirim ke antrean pengecekan.`
       );
       setInputData('');
       setInputError('');
@@ -376,17 +445,17 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     <div className="space-y-4 max-w-3xl mx-auto select-none pb-20">
       {/* CARD UTAMA STOR */}
       <div className="bg-white rounded-[28px] sm:rounded-[32px] p-4 sm:p-6 sm:p-7 shadow-sm border border-blue-100/60 space-y-4">
-        {/* NOTIFIKASI STOR DIBUKA / DITUTUP */}
+        {/* NOTIFIKASI 1 SAKLAR STOR BUKA / TUTUP */}
         <div
           className={`p-3.5 sm:p-4 rounded-[22px] border flex items-start gap-3 transition ${
-            settings.storanOpen
+            isStoranOpen
               ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
               : 'bg-amber-50/80 border-amber-200 text-amber-950'
           }`}
         >
           <div
             className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${
-              settings.storanOpen
+              isStoranOpen
                 ? 'bg-emerald-100 text-emerald-600'
                 : 'bg-amber-100 text-amber-600'
             }`}
@@ -395,13 +464,15 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-xs sm:text-sm font-black tracking-tight">
-              {settings.storanOpen ? 'Storan Sedang DIBUKA' : 'Storan sedang ditutup'}
+              {isStoranOpen
+                ? 'Storan Sedang DIBUKA (Pilihan Password: zero1122 & prabujaya)'
+                : 'Layanan Storan Sedang DITUTUP oleh Admin'}
             </h3>
             <p className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5 leading-relaxed">
-              {settings.storanOpen
+              {isStoranOpen
                 ? `Jadwal: ${settings.storanSchedule || 'Senin - Jumat, 07.00 - 17.00 WIB'}`
                 : settings.storanClosedReason ||
-                  'OPEN 9 OKTOBER ( Bisa Berubah ) more info di saluran'}
+                  'Admin sedang menutup penerimaan storan baru. Silakan kembali pada jam operasional.'}
             </p>
           </div>
         </div>
@@ -413,7 +484,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
               Setor Daftar Gmail
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1 leading-relaxed">
-              Tempel daftar, satu Gmail per baris. Duplikat otomatis dihapus. Hanya Gmail hasil &quot;Generate Gmail&quot; milik akun ini yang bisa disetor.
+              Tempel daftar, satu Gmail per baris. Hanya Gmail hasil &quot;Generate Gmail&quot; milik akun ini yang bisa disetor.
             </p>
           </div>
           <button
@@ -438,21 +509,20 @@ export function StoranView({ onNavigate }: StoranViewProps) {
             </span>
           </div>
 
-          {/* Generator Disabled Alert */}
           {settings.generatorOpen === false && (
             <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
               <span>Fitur Generate Gmail sedang dinonaktifkan sementara oleh Admin.</span>
             </div>
           )}
 
-          {/* Input Menentukan Jumlah Generate (Max Diatur Admin) */}
+          {/* Input Menentukan Jumlah Generate */}
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <label className="text-xs font-bold text-slate-800 block">
                 Tentukan Jumlah Akun yang Di-generate:
               </label>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Maksimal generate dapat diatur admin (Maks saat ini: <strong>{maxAdminLimit} akun/hari</strong>). Sisa kuota Anda: <strong>{remainingQuota} akun</strong>.
+              <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5">
+                Batas saat ini: <strong>{maxAdminLimit} akun/hari</strong>. Sisa kuota Anda: <strong>{remainingQuota} akun</strong>.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -501,66 +571,80 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 const clean = item.email.trim().toLowerCase();
                 const isSubmitted = submittedEmailsSet.has(clean);
                 const isCopied = copiedItemId === item.id;
-
                 return (
                   <div
                     key={item.id}
-                    className={`rounded-xl p-2.5 sm:p-3 border flex items-center justify-between gap-2.5 transition ${
+                    className={`rounded-xl px-2.5 py-2 border flex items-center justify-between gap-2 transition ${
                       isSubmitted
-                        ? 'bg-slate-50 border-slate-200 opacity-70'
-                        : 'bg-gray-100 border-gray-300 text-gray-800' // warna generate yang belum di stor nya abu"
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-950 shadow-2xs'
+                        : 'bg-slate-100 border-slate-300 text-slate-800'
                     }`}
                   >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <span className="font-mono text-xs sm:text-sm font-bold text-slate-900 truncate">
+                    <div className="min-w-0 flex-1 pr-1">
+                      <span
+                        className={`font-mono text-[11px] sm:text-xs font-bold select-all break-all leading-tight block ${
+                          isSubmitted ? 'text-emerald-950' : 'text-slate-800'
+                        }`}
+                      >
                         {item.email}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      {/* Badge status: warna generate yang belum di stor nya abu" */}
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide inline-flex items-center gap-1 ${
+                        className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide inline-flex items-center gap-0.5 border ${
                           isSubmitted
-                            ? 'bg-slate-200 text-slate-600'
-                            : 'bg-gray-200 text-gray-700 border border-gray-300' // warna abu"
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : 'bg-slate-200 text-slate-700 border-slate-300'
                         }`}
                       >
                         {isSubmitted ? (
                           <>
-                            <CheckCircle2 className="w-3 h-3 text-slate-500" />
-                            <span>di stor</span>
+                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                            <span>Sudah Distor</span>
                           </>
                         ) : (
                           <>
-                            <Clock className="w-3 h-3 text-gray-500" />
-                            <span>belum di STOR</span>
+                            <Clock className="w-2.5 h-2.5 text-slate-500" />
+                            <span>Belum Distor</span>
                           </>
                         )}
                       </span>
 
-                      {/* dan salin Gmail nya ada di pinggir hapus */}
+                      {/* Tombol Salin Hanya Logo Saja */}
                       <button
                         type="button"
                         onClick={() => handleCopySingle(item.id, item.email)}
-                        className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-blue-700 text-xs font-bold border border-slate-200 transition flex items-center gap-1 cursor-pointer shadow-2xs"
-                        title="Salin Gmail ini"
+                        className={`p-1.5 rounded-lg border transition cursor-pointer active:scale-90 ${
+                          isCopied
+                            ? 'bg-emerald-100 border-emerald-400 text-emerald-700'
+                            : isSubmitted
+                            ? 'bg-white hover:bg-emerald-100 border-emerald-300 text-emerald-800'
+                            : 'bg-white hover:bg-slate-200 border-slate-300 text-slate-700'
+                        }`}
+                        title={isCopied ? 'Tersalin' : 'Salin alamat Gmail ini'}
+                        aria-label="Salin Gmail"
                       >
                         {isCopied ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
                         ) : (
-                          <Copy className="w-3.5 h-3.5 text-slate-500" />
+                          <Copy className="w-3.5 h-3.5 stroke-[2.2]" />
                         )}
-                        <span>{isCopied ? 'Tersalin' : 'Salin Gmail'}</span>
                       </button>
 
+                      {/* Tombol Hapus Logo Saja */}
                       <button
                         type="button"
                         onClick={() => handleDeleteGenerated(item.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer"
+                        className={`p-1.5 rounded-lg transition cursor-pointer active:scale-90 ${
+                          isSubmitted
+                            ? 'text-emerald-700 hover:text-rose-600 hover:bg-rose-50'
+                            : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
+                        }`}
                         title="Hapus dari daftar lokal"
+                        aria-label="Hapus Gmail"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5 stroke-[2]" />
                       </button>
                     </div>
                   </div>
@@ -569,7 +653,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
             </div>
           )}
 
-          {/* TOMBOL GENERATED GMAIL */}
+          {/* Tombol Generated Gmail */}
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <button
               type="button"
@@ -579,7 +663,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
               <Copy className="w-3.5 h-3.5 text-slate-500" />
               <span>Salin Semua Gmail</span>
             </button>
-
             <button
               type="button"
               onClick={handleCopyUnsubmittedGenerated}
@@ -588,7 +671,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
               <Copy className="w-3.5 h-3.5 text-[#1677E8]" />
               <span>Salin Gmail Belum Distor</span>
             </button>
-
             <button
               type="button"
               disabled={generatingMore || settings.generatorOpen === false || remainingQuota <= 0}
@@ -607,32 +689,95 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           </div>
         </div>
 
+        {/* PEMILIHAN PASSWORD STOR - 1 BARIS SAJA (GAK MAKAN TEMPAT) */}
+        <div className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/70 to-blue-50/90 border border-blue-200/80 flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black text-slate-800 flex items-center gap-1.5 shrink-0">
+              <KeyRound className="w-4 h-4 text-blue-600" />
+              <span>Pilih Password:</span>
+            </span>
+
+            {/* Segmented Buttons 1 Baris */}
+            <div className="inline-flex p-1 bg-white border border-slate-200 rounded-xl shadow-2xs gap-1">
+              <button
+                type="button"
+                disabled={!pw1Open}
+                onClick={() => pw1Open && setSelectedPassword('zero1122')}
+                className={`px-3 py-1 rounded-lg font-mono font-black text-xs transition cursor-pointer flex items-center gap-1.5 ${
+                  !pw1Open
+                    ? 'opacity-40 bg-slate-100 text-slate-400 cursor-not-allowed line-through'
+                    : selectedPassword === 'zero1122'
+                    ? 'bg-blue-600 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-blue-700 hover:bg-slate-50'
+                }`}
+                title={pw1Open ? 'Pilih password zero1122' : 'Password zero1122 sedang ditutup oleh Admin'}
+              >
+                <span>{PW1}</span>
+                {!pw1Open && <span className="text-[9px] font-sans font-bold text-rose-500">(Tutup)</span>}
+              </button>
+              <button
+                type="button"
+                disabled={!pw2Open}
+                onClick={() => pw2Open && setSelectedPassword('prabujaya')}
+                className={`px-3 py-1 rounded-lg font-mono font-black text-xs transition cursor-pointer flex items-center gap-1.5 ${
+                  !pw2Open
+                    ? 'opacity-40 bg-slate-100 text-slate-400 cursor-not-allowed line-through'
+                    : selectedPassword === 'prabujaya'
+                    ? 'bg-indigo-600 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-indigo-700 hover:bg-slate-50'
+                }`}
+                title={pw2Open ? 'Pilih password prabujaya' : 'Password prabujaya sedang ditutup oleh Admin'}
+              >
+                <span>{PW2}</span>
+                {!pw2Open && <span className="text-[9px] font-sans font-bold text-rose-500">(Tutup)</span>}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-semibold text-slate-500 hidden sm:inline">
+              PW Aktif: <strong className="font-mono text-blue-700">{selectedPassword}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(selectedPassword);
+                showToast('info', 'Tersalin', `Password ${selectedPassword} disalin ke clipboard.`);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 transition flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95"
+              title={`Salin ${selectedPassword}`}
+            >
+              <Copy className="w-3 h-3 text-slate-500" />
+              <span>Salin PW</span>
+            </button>
+          </div>
+        </div>
+
         {/* TEXTAREA SETOR */}
-        <form onSubmit={handleDirectSubmit} className="space-y-3 pt-2">
+        <form onSubmit={handleDirectSubmit} className="space-y-3 pt-1">
           <div className="space-y-1.5">
             <textarea
               rows={5}
               value={inputData}
               onChange={(e) => {
-                if (!settings.storanOpen) return;
+                if (!isStoranOpen) return;
                 setInputData(e.target.value);
                 setInputError('');
               }}
-              disabled={!settings.storanOpen}
-              readOnly={!settings.storanOpen}
+              disabled={!isStoranOpen}
+              readOnly={!isStoranOpen}
               placeholder={
-                !settings.storanOpen
+                !isStoranOpen
                   ? 'Storan saat ini sedang ditutup. Tidak dapat mengetik akun Gmail.'
-                  : 'contoh1@gmail.com\ncontoh2@gmail.com'
+                  : `contoh1@gmail.com\ncontoh2@gmail.com`
               }
               className={`w-full p-4 rounded-2xl border font-mono text-xs sm:text-sm outline-none resize-none transition ${
-                !settings.storanOpen
+                !isStoranOpen
                   ? 'bg-slate-100/90 text-slate-400 border-dashed border-slate-300 cursor-not-allowed select-none'
                   : 'bg-slate-50/70 text-slate-900 border-slate-200 focus:bg-white focus:border-[#1677E8] focus:ring-2 focus:ring-[#1677E8]/20'
               }`}
               style={{ minHeight: '130px' }}
             />
-
             {inputError && (
               <p className="text-xs font-bold text-rose-600 flex items-center gap-1">
                 <span>{inputError}</span>
@@ -645,8 +790,10 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 <div className="font-bold text-slate-700">
                   Terdeteksi: {detectedLines.length} baris
                 </div>
-                <div className="text-[#1677E8] font-bold">
-                  PW: {defaultPw} &bull; {formatRupiah(activePrice)} Jika di ACC
+                <div className="text-[#1677E8] font-bold flex items-center gap-1.5">
+                  <span>PW Terpilih: <strong className="font-mono bg-blue-100/70 text-blue-900 px-1.5 py-0.2 rounded">{selectedPassword}</strong></span>
+                  <span>&bull;</span>
+                  <span>{formatRupiah(activePrice)} Jika di ACC</span>
                 </div>
                 <div className="text-[11px] text-slate-400">
                   Estimasi pengecekan 24 - 30 jam.
@@ -657,7 +804,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
               <button
                 type="submit"
                 disabled={
-                  !settings.storanOpen ||
+                  !isStoranOpen ||
                   userProfile?.status === 'suspended' ||
                   detectedLines.length === 0 ||
                   submitting

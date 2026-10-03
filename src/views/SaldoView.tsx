@@ -34,6 +34,7 @@ export function SaldoView() {
   const { userProfile, currentUser } = useAuth();
   const { settings } = useSettings();
   const { showToast } = useToast();
+
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -73,6 +74,7 @@ export function SaldoView() {
   const minWithdrawal = settings.minWithdrawal || 4000;
   const parsedAmount = parseInt(amountInput.replace(/[^0-9]/g, ''), 10) || 0;
   const hasPerakan = parsedAmount > 0 && parsedAmount % 1000 !== 0;
+
   const isDanaOpen = settings.withdrawalDanaOpen !== false;
   const isGopayOpen = settings.withdrawalGopayOpen !== false;
   const isAnyWithdrawalOpen = settings.withdrawalOpen !== false && (isDanaOpen || isGopayOpen);
@@ -111,6 +113,7 @@ export function SaldoView() {
       showToast('error', 'Akun Dibatasi', 'Akun Anda sedang dibatasi. Tidak dapat melakukan penarikan.');
       return;
     }
+
     const currentBalance = userProfile?.balance || 0;
     if (currentBalance < minWithdrawal) {
       showToast(
@@ -126,7 +129,6 @@ export function SaldoView() {
     } else if (isGopayOpen) {
       setMethod('GoPay');
     }
-
     setAmountInput('');
     setFormError('');
     setIsConfirmed(false);
@@ -136,18 +138,16 @@ export function SaldoView() {
   const handleWithdrawSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError('');
-    if (!currentUser || !userProfile) return;
 
+    if (!currentUser || !userProfile) return;
     if (!isAnyWithdrawalOpen) {
       setFormError('Layanan penarikan sedang ditutup oleh admin.');
       return;
     }
-
     if (method === 'DANA' && !isDanaOpen) {
       setFormError('Penarikan melalui DANA sedang ditutup oleh admin. Silakan gunakan metode lain.');
       return;
     }
-
     if (method === 'GoPay' && !isGopayOpen) {
       setFormError('Penarikan melalui GoPay sedang ditutup oleh admin. Silakan gunakan metode lain.');
       return;
@@ -160,19 +160,16 @@ export function SaldoView() {
       setFormError('Masukkan nominal penarikan yang valid.');
       return;
     }
-
     if (numericAmount % 1000 !== 0) {
       setFormError(
         'Penarikan tidak boleh ada perakan! Nominal wajib bulat kelipatan Rp 1.000 (contoh: 5.000, 10.000, dst.).'
       );
       return;
     }
-
     if (numericAmount < minWithdrawal) {
       setFormError(`Minimal penarikan adalah ${formatRupiah(minWithdrawal)}.`);
       return;
     }
-
     if (numericAmount > currentBalance) {
       setFormError(
         `Saldo kamu tidak mencukupi untuk nominal ${formatRupiah(numericAmount)}. Saldo saat ini: ${formatRupiah(currentBalance)}.`
@@ -185,12 +182,10 @@ export function SaldoView() {
       setFormError('Nomor tujuan e-wallet tidak valid. Format: 08xxx (10-13 digit).');
       return;
     }
-
     if (!recipientName.trim()) {
       setFormError('Nama pemilik akun e-wallet wajib diisi.');
       return;
     }
-
     if (!isConfirmed) {
       setFormError('Harap centang konfirmasi bahwa data nomor dan nama penerima sudah benar.');
       return;
@@ -209,7 +204,6 @@ export function SaldoView() {
 
         const userData = userDoc.data();
         const availableBal = userData.balance || 0;
-
         if (availableBal < numericAmount) {
           throw new Error(`Saldo tidak mencukupi. Saldo saat ini: ${formatRupiah(availableBal)}`);
         }
@@ -310,7 +304,6 @@ export function SaldoView() {
               />
             </button>
           </div>
-
           <div>
             <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-xs">
               {formatRupiah(userBalance)}
@@ -319,7 +312,6 @@ export function SaldoView() {
               Harga / Gmail: {formatRupiah(settings.pricePerSubmission || 3000)} &bull; Min. Tarik: {formatRupiah(minWithdrawal)}
             </div>
           </div>
-
           <div className="pt-2 flex items-center gap-2.5">
             <button
               type="button"
@@ -441,7 +433,6 @@ export function SaldoView() {
                       </div>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     <span className="text-[10px] text-slate-400">
                       {formatIndonesianDateTime(w.createdAt)}
@@ -462,7 +453,6 @@ export function SaldoView() {
                     </span>
                   </div>
                 </div>
-
                 {w.status === 'Ditolak' && w.rejectionReason && (
                   <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-[11px] text-rose-800 flex items-start gap-1.5">
                     <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
@@ -614,6 +604,7 @@ export function SaldoView() {
                       })}
                     </div>
                   </div>
+
                   <div className="sm:col-span-7">
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Nomor {method}

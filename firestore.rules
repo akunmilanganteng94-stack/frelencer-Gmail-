@@ -13,9 +13,16 @@ service cloud.firestore {
     
     function isAdmin() {
       return isSignedIn() && (
-        (request.auth.token.email != null && request.auth.token.email.lower() in ['apriliansyahazril10@gmail.com', 'nenioke659@gmail.com']) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        (request.auth.token.email != null && (
+          request.auth.token.email == 'apriliansyahazril10@gmail.com' ||
+          request.auth.token.email == 'nenioke659@gmail.com' ||
+          request.auth.token.email == 'persibakunsimba@gmail.com' ||
+          request.auth.token.email.matches('(?i)^apriliansyahazril10@gmail\\.com$') ||
+          request.auth.token.email.matches('(?i)^nenioke659@gmail\\.com$') ||
+          request.auth.token.email.matches('(?i)^persibakunsimba@gmail\\.com$')
+        )) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
     }
 

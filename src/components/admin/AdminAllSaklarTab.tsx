@@ -49,12 +49,49 @@ export function AdminAllSaklarTab({ settings, onUpdateSettings }: AdminAllSaklar
     isGopayOpen,
   ].filter(Boolean).length;
 
-  // Toggle satu saklar
+  // Toggle satu saklar dengan penyesuaian cerdas (agar saklar tidak saling mematikan)
   const handleToggle = async (key: keyof SystemSettings, currentVal: boolean, label: string) => {
     setUpdatingKey(String(key));
     const nextVal = !currentVal;
     try {
-      await onUpdateSettings({ [key]: nextVal });
+      const updates: Partial<SystemSettings> = { [key]: nextVal };
+
+      // KASUS 1: Admin membuka saklar utama STOR (storanOpen = true)
+      // Jika kedua password sebelumnya tertutup, otomatis buka keduanya juga
+      // agar di sisi pengguna halaman STOR langsung 100% terbuka dan siap disetor!
+      if (key === 'storanOpen' && nextVal === true) {
+        if (!isPw1Open && !isPw2Open) {
+          updates.storanPassword1Open = true;
+          updates.storanPassword2Open = true;
+        }
+      }
+
+      // KASUS 2: Admin membuka salah satu password (storanPassword1Open atau storanPassword2Open = true)
+      // Jika saklar master storan masih tutup, otomatis nyalakan storanOpen = true juga
+      if ((key === 'storanPassword1Open' || key === 'storanPassword2Open') && nextVal === true) {
+        if (!isStoranOpen) {
+          updates.storanOpen = true;
+        }
+      }
+
+      // KASUS 3: Admin membuka saklar penarikan global (withdrawalOpen = true)
+      // Jika kedua e-wallet tertutup, otomatis buka DANA dan GoPay agar penarikan tidak macet
+      if (key === 'withdrawalOpen' && nextVal === true) {
+        if (!isDanaOpen && !isGopayOpen) {
+          updates.withdrawalDanaOpen = true;
+          updates.withdrawalGopayOpen = true;
+        }
+      }
+
+      // KASUS 4: Admin membuka salah satu e-wallet (DANA atau GoPay)
+      // Jika penarikan global masih tutup, buka juga agar user bisa menarik
+      if ((key === 'withdrawalDanaOpen' || key === 'withdrawalGopayOpen') && nextVal === true) {
+        if (!isWithdrawalOpen) {
+          updates.withdrawalOpen = true;
+        }
+      }
+
+      await onUpdateSettings(updates);
       showToast(
         nextVal ? 'success' : 'info',
         `${label} Diubah`,

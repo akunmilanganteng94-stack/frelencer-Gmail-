@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { SystemSettings } from '../types';
 import { db } from '../lib/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { notifyDataChange, subscribeDataChange } from '../lib/syncHelper';
 
 const DEFAULT_PASSWORD_1 = 'zero1122';
 const DEFAULT_PASSWORD_2 = 'prabujaya';
@@ -112,21 +113,39 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     );
-    return () => unsubscribe();
+
+    // Sinkronisasi realtime lokal dan antar-tab / window
+    const unsubscribeSync = subscribeDataChange(() => {
+      try {
+        const cached = localStorage.getItem('azgmail_cached_settings');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setSettings((prev) => ({ ...prev, ...parsed }));
+        }
+      } catch {}
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeSync();
+    };
   }, []);
 
   const updateSettings = async (newSettings: Partial<SystemSettings>) => {
+    const merged = { ...settings, ...newSettings };
+    // Update local state dan localStorage segera tanpa menunggu jaringan
+    setSettings(merged);
     try {
-      const merged = { ...settings, ...newSettings };
+      localStorage.setItem('azgmail_cached_settings', JSON.stringify(merged));
+    } catch {}
+
+    // Siarkan ke seluruh tab & komponen yang sedang terbuka
+    notifyDataChange('all');
+
+    try {
       await setDoc(doc(db, 'settings', 'general'), merged, { merge: true });
-      setSettings(merged);
-      try {
-        localStorage.setItem('azgmail_cached_settings', JSON.stringify(merged));
-      } catch {}
     } catch (error) {
-      console.error('Error updating settings document:', error);
-      const merged = { ...settings, ...newSettings };
-      setSettings(merged);
+      console.error('Error updating settings document in Firestore:', error);
       throw error;
     }
   };

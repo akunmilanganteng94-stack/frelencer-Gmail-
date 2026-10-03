@@ -1,7 +1,6 @@
 /**
  * Realtime sync helper across components and browser tabs/windows
  */
-
 type SyncEventType = 'storan' | 'withdrawal' | 'all';
 
 let broadcastChannel: BroadcastChannel | null = null;
@@ -14,16 +13,17 @@ try {
 }
 
 export function notifyDataChange(type: SyncEventType = 'all') {
-  if (typeof window === 'undefined') return;
-  try {
-    const payload = { type, timestamp: Date.now() };
-    if (broadcastChannel) {
-      broadcastChannel.postMessage(payload);
+  if (typeof window !== 'undefined') {
+    try {
+      const payload = { type, timestamp: Date.now() };
+      if (broadcastChannel) {
+        broadcastChannel.postMessage(payload);
+      }
+      window.dispatchEvent(new CustomEvent('azgmail_sync_event', { detail: payload }));
+      localStorage.setItem('azgmail_last_sync_timestamp', JSON.stringify(payload));
+    } catch (e) {
+      console.warn('Sync dispatch notice:', e);
     }
-    window.dispatchEvent(new CustomEvent('azgmail_sync_event', { detail: payload }));
-    localStorage.setItem('azgmail_last_sync_timestamp', JSON.stringify(payload));
-  } catch (e) {
-    console.warn('Sync dispatch notice:', e);
   }
 }
 

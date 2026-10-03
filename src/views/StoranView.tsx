@@ -44,11 +44,15 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   // Dua pilihan password untuk storan & status buka/tutup masing-masing
   const PW1 = settings.storanPassword1 || 'zero1122';
   const PW2 = settings.storanPassword2 || 'prabujaya';
-  const pw1Open = settings.storanPassword1Open !== false;
-  const pw2Open = settings.storanPassword2Open !== false;
 
-  // 1 Saklar buka/tutup tunggal (terbuka jika master buka dan minimal 1 password buka)
-  const isStoranOpen = settings.storanOpen !== false && (pw1Open || pw2Open);
+  // 1 Saklar Utama STOR: Jika settings.storanOpen true, storan DIJAMIN BUKA untuk user!
+  const isStoranOpen = settings.storanOpen !== false;
+
+  // Penanganan status password: jika kedua password tertutup tapi storan buka,
+  // otomatis buka keduanya agar freelancer tidak terkunci
+  const bothPasswordsExplicitlyClosed = settings.storanPassword1Open === false && settings.storanPassword2Open === false;
+  const pw1Open = bothPasswordsExplicitlyClosed ? true : settings.storanPassword1Open !== false;
+  const pw2Open = bothPasswordsExplicitlyClosed ? true : settings.storanPassword2Open !== false;
 
   // User memilih SALAH SATU password saja (default menyesuaikan password yang buka)
   const [selectedPassword, setSelectedPassword] = useState<'zero1122' | 'prabujaya'>(() => {

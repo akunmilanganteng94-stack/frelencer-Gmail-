@@ -75,9 +75,10 @@ export function SaldoView() {
   const parsedAmount = parseInt(amountInput.replace(/[^0-9]/g, ''), 10) || 0;
   const hasPerakan = parsedAmount > 0 && parsedAmount % 1000 !== 0;
 
-  const isDanaOpen = settings.withdrawalDanaOpen !== false;
-  const isGopayOpen = settings.withdrawalGopayOpen !== false;
-  const isAnyWithdrawalOpen = settings.withdrawalOpen !== false && (isDanaOpen || isGopayOpen);
+  const bothWalletsClosed = settings.withdrawalDanaOpen === false && settings.withdrawalGopayOpen === false;
+  const isDanaOpen = bothWalletsClosed ? true : settings.withdrawalDanaOpen !== false;
+  const isGopayOpen = bothWalletsClosed ? true : settings.withdrawalGopayOpen !== false;
+  const isAnyWithdrawalOpen = settings.withdrawalOpen !== false;
 
   useEffect(() => {
     if (!currentUser) return;

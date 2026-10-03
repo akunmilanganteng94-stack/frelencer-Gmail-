@@ -12,7 +12,7 @@ import {
   writeBatch,
   getDocs,
 } from 'firebase/firestore';
-import { db, handleFirestoreError } from '../lib/firebase';
+import { auth, db, handleFirestoreError } from '../lib/firebase';
 import { GmailStockItem, OperationType } from '../types';
 
 const INDONESIAN_FIRST_NAMES = [
@@ -31,7 +31,7 @@ const INDONESIAN_LAST_NAMES = [
   'suhendra', 'saputro', 'ananda', 'wardhana', 'purnomo', 'wicaksono', 'pangestu'
 ];
 
-export function generateFreshStockAccounts(count: number, defaultPassword = 'sgsg1122'): { email: string; password: string }[] {
+export function generateFreshStockAccounts(count: number, defaultPassword = 'zero1122'): { email: string; password: string }[] {
   const generated: { email: string; password: string }[] = [];
   const used = new Set<string>();
 
@@ -57,6 +57,7 @@ export function generateFreshStockAccounts(count: number, defaultPassword = 'sgs
       });
     }
   }
+
   return generated;
 }
 
@@ -65,49 +66,69 @@ export function useGmailStock() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stockColRef = collection(db, 'gmail_stock');
-    const q = query(stockColRef, orderBy('addedAt', 'desc'));
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const items: GmailStockItem[] = [];
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          items.push({
-            id: docSnap.id,
-            email: data.email || '',
-            password: data.password || 'sgsg1122',
-            status: data.status || 'available',
-            addedAt: data.addedAt || new Date().toISOString(),
-            claimedBy: data.claimedBy || undefined,
-            claimedByName: data.claimedByName || undefined,
-            claimedByEmail: data.claimedByEmail || undefined,
-            claimedAt: data.claimedAt || undefined,
-          });
-        });
-        setStock(items);
-        setLoading(false);
+    let unsubscribeSnapshot: (() => void) | null = null;
 
-        if (
-          items.length === 0 &&
-          !snapshot.metadata.hasPendingWrites &&
-          localStorage.getItem('gmail_stock_cleared_by_admin') !== 'true' &&
-          !sessionStorage.getItem('gmail_stock_seed_attempted')
-        ) {
-          sessionStorage.setItem('gmail_stock_seed_attempted', 'true');
-          seedInitialAccounts();
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        setStock([]);
+        setLoading(false);
+        if (unsubscribeSnapshot) {
+          unsubscribeSnapshot();
+          unsubscribeSnapshot = null;
         }
-      },
-      (err) => {
-        console.warn('Could not read gmail_stock in realtime:', err);
-        setLoading(false);
+        return;
       }
-    );
 
-    return () => unsubscribe();
+      const stockColRef = collection(db, 'gmail_stock');
+      const q = query(stockColRef, orderBy('addedAt', 'desc'));
+
+      unsubscribeSnapshot = onSnapshot(
+        q,
+        (snapshot) => {
+          const items: GmailStockItem[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            items.push({
+              id: docSnap.id,
+              email: data.email || '',
+              password: data.password || 'zero1122',
+              status: data.status || 'available',
+              addedAt: data.addedAt || new Date().toISOString(),
+              claimedBy: data.claimedBy || undefined,
+              claimedByName: data.claimedByName || undefined,
+              claimedByEmail: data.claimedByEmail || undefined,
+              claimedAt: data.claimedAt || undefined,
+            });
+          });
+          setStock(items);
+          setLoading(false);
+
+          if (
+            items.length === 0 &&
+            !snapshot.metadata.hasPendingWrites &&
+            localStorage.getItem('gmail_stock_cleared_by_admin') !== 'true' &&
+            !sessionStorage.getItem('gmail_stock_seed_attempted')
+          ) {
+            sessionStorage.setItem('gmail_stock_seed_attempted', 'true');
+            seedInitialAccounts();
+          }
+        },
+        (err) => {
+          console.warn('Could not read gmail_stock in realtime:', err);
+          setLoading(false);
+        }
+      );
+    });
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+      }
+    };
   }, []);
 
-  const seedInitialAccounts = async (count = 50, defaultPassword = 'sgsg1122') => {
+  const seedInitialAccounts = async (count = 50, defaultPassword = 'zero1122') => {
     try {
       const freshAccounts = generateFreshStockAccounts(count, defaultPassword);
       const batch = writeBatch(db);
@@ -131,7 +152,7 @@ export function useGmailStock() {
     }
   };
 
-  const replenishStock = async (count = 50, defaultPassword = 'sgsg1122'): Promise<number> => {
+  const replenishStock = async (count = 50, defaultPassword = 'zero1122'): Promise<number> => {
     localStorage.removeItem('gmail_stock_cleared_by_admin');
     const freshAccounts = generateFreshStockAccounts(count, defaultPassword);
     const existingEmails = new Set(stock.map((s) => s.email.toLowerCase()));
@@ -182,14 +203,13 @@ export function useGmailStock() {
   const availableStock = stock.filter((item) => item.status === 'available');
   const usedStock = stock.filter((item) => item.status === 'used');
 
-  const addSingleAccount = async (email: string, password = 'sgsg1122') => {
+  const addSingleAccount = async (email: string, password = 'zero1122') => {
     localStorage.removeItem('gmail_stock_cleared_by_admin');
     const cleanEmail = email.trim();
     if (!cleanEmail) throw new Error('Email tidak boleh kosong.');
     if (!cleanEmail.includes('@gmail.com') && !cleanEmail.includes('@googlemail.com')) {
       throw new Error('Alamat harus berupa akun Gmail (@gmail.com).');
     }
-
     const exists = stock.some((s) => s.email.toLowerCase() === cleanEmail.toLowerCase());
     if (exists) {
       throw new Error(`Email ${cleanEmail} sudah ada di dalam stok.`);
@@ -198,13 +218,13 @@ export function useGmailStock() {
     const newDocRef = doc(collection(db, 'gmail_stock'));
     await setDoc(newDocRef, {
       email: cleanEmail,
-      password: password.trim() || 'sgsg1122',
+      password: password.trim() || 'zero1122',
       status: 'available',
       addedAt: new Date().toISOString(),
     });
   };
 
-  const addBulkAccounts = async (rawText: string, defaultPassword = 'sgsg1122'): Promise<number> => {
+  const addBulkAccounts = async (rawText: string, defaultPassword = 'zero1122'): Promise<number> => {
     localStorage.removeItem('gmail_stock_cleared_by_admin');
     const lines = rawText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
     if (lines.length === 0) return 0;
@@ -283,7 +303,7 @@ export function useGmailStock() {
       userId?: string,
       userName?: string,
       userEmail?: string,
-      defaultPassword = 'sgsg1122'
+      defaultPassword = 'zero1122'
     ): Promise<GmailStockItem[]> => {
       let currentAvailable = stock.filter((s) => s.status === 'available');
 

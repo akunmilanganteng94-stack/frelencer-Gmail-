@@ -689,66 +689,80 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           </div>
         </div>
 
-        {/* PEMILIHAN PASSWORD STOR - 1 BARIS SAJA (GAK MAKAN TEMPAT) */}
-        <div className="p-2.5 sm:p-3 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/70 to-blue-50/90 border border-blue-200/80 flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-black text-slate-800 flex items-center gap-1.5 shrink-0">
-              <KeyRound className="w-4 h-4 text-blue-600" />
-              <span>Pilih Password:</span>
-            </span>
+        {/* PEMILIHAN PASSWORD STOR - TIDAK TERPOTONG DI MOBILE MAUPUN DESKTOP */}
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/70 to-blue-50/90 border border-blue-200/80 shadow-2xs space-y-2.5">
+          {/* Header Baris Password: Judul di kiri, Salin PW di kanan */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                <KeyRound className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-xs font-black text-slate-900 truncate">
+                Pilihan Password Storan
+              </span>
+            </div>
 
-            {/* Segmented Buttons 1 Baris */}
-            <div className="inline-flex p-1 bg-white border border-slate-200 rounded-xl shadow-2xs gap-1">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[11px] font-semibold text-slate-500 hidden sm:inline">
+                Aktif: <strong className="font-mono text-blue-700">{selectedPassword}</strong>
+              </span>
               <button
                 type="button"
-                disabled={!pw1Open}
-                onClick={() => pw1Open && setSelectedPassword('zero1122')}
-                className={`px-3 py-1 rounded-lg font-mono font-black text-xs transition cursor-pointer flex items-center gap-1.5 ${
-                  !pw1Open
-                    ? 'opacity-40 bg-slate-100 text-slate-400 cursor-not-allowed line-through'
-                    : selectedPassword === 'zero1122'
-                    ? 'bg-blue-600 text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-blue-700 hover:bg-slate-50'
-                }`}
-                title={pw1Open ? 'Pilih password zero1122' : 'Password zero1122 sedang ditutup oleh Admin'}
+                onClick={() => {
+                  navigator.clipboard.writeText(selectedPassword);
+                  showToast('info', 'Tersalin', `Password ${selectedPassword} disalin ke clipboard.`);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 transition flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95"
+                title={`Salin password aktif: ${selectedPassword}`}
               >
-                <span>{PW1}</span>
-                {!pw1Open && <span className="text-[9px] font-sans font-bold text-rose-500">(Tutup)</span>}
-              </button>
-              <button
-                type="button"
-                disabled={!pw2Open}
-                onClick={() => pw2Open && setSelectedPassword('prabujaya')}
-                className={`px-3 py-1 rounded-lg font-mono font-black text-xs transition cursor-pointer flex items-center gap-1.5 ${
-                  !pw2Open
-                    ? 'opacity-40 bg-slate-100 text-slate-400 cursor-not-allowed line-through'
-                    : selectedPassword === 'prabujaya'
-                    ? 'bg-indigo-600 text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-indigo-700 hover:bg-slate-50'
-                }`}
-                title={pw2Open ? 'Pilih password prabujaya' : 'Password prabujaya sedang ditutup oleh Admin'}
-              >
-                <span>{PW2}</span>
-                {!pw2Open && <span className="text-[9px] font-sans font-bold text-rose-500">(Tutup)</span>}
+                <Copy className="w-3 h-3 text-slate-500" />
+                <span>Salin PW</span>
               </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[11px] font-semibold text-slate-500 hidden sm:inline">
-              PW Aktif: <strong className="font-mono text-blue-700">{selectedPassword}</strong>
-            </span>
+          {/* Tombol Pilihan Password: Grid 2 Kolom Penuh (Tidak Akan Terpotong di Layar Mobile) */}
+          <div className="grid grid-cols-2 gap-2 p-1 bg-white/90 border border-slate-200 rounded-xl shadow-2xs">
             <button
               type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(selectedPassword);
-                showToast('info', 'Tersalin', `Password ${selectedPassword} disalin ke clipboard.`);
-              }}
-              className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 transition flex items-center gap-1 cursor-pointer shadow-2xs active:scale-95"
-              title={`Salin ${selectedPassword}`}
+              disabled={!pw1Open}
+              onClick={() => pw1Open && setSelectedPassword('zero1122')}
+              className={`py-2 px-2.5 rounded-lg font-mono font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5 text-center min-w-0 truncate active:scale-98 ${
+                !pw1Open
+                  ? 'opacity-40 bg-slate-100 text-slate-400 cursor-not-allowed line-through'
+                  : selectedPassword === 'zero1122'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-700 hover:text-blue-700 hover:bg-slate-50'
+              }`}
+              title={pw1Open ? 'Pilih password zero1122' : 'Password zero1122 sedang ditutup oleh Admin'}
             >
-              <Copy className="w-3 h-3 text-slate-500" />
-              <span>Salin PW</span>
+              <span className="truncate">{PW1}</span>
+              {!pw1Open ? (
+                <span className="text-[9px] font-sans font-bold text-rose-500 shrink-0">(Tutup)</span>
+              ) : selectedPassword === 'zero1122' ? (
+                <Check className="w-3.5 h-3.5 text-white stroke-[2.5] shrink-0" />
+              ) : null}
+            </button>
+
+            <button
+              type="button"
+              disabled={!pw2Open}
+              onClick={() => pw2Open && setSelectedPassword('prabujaya')}
+              className={`py-2 px-2.5 rounded-lg font-mono font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5 text-center min-w-0 truncate active:scale-98 ${
+                !pw2Open
+                  ? 'opacity-40 bg-slate-100 text-slate-400 cursor-not-allowed line-through'
+                  : selectedPassword === 'prabujaya'
+                  ? 'bg-indigo-600 text-white shadow-2xs'
+                  : 'text-slate-700 hover:text-indigo-700 hover:bg-slate-50'
+              }`}
+              title={pw2Open ? 'Pilih password prabujaya' : 'Password prabujaya sedang ditutup oleh Admin'}
+            >
+              <span className="truncate">{PW2}</span>
+              {!pw2Open ? (
+                <span className="text-[9px] font-sans font-bold text-rose-500 shrink-0">(Tutup)</span>
+              ) : selectedPassword === 'prabujaya' ? (
+                <Check className="w-3.5 h-3.5 text-white stroke-[2.5] shrink-0" />
+              ) : null}
             </button>
           </div>
         </div>

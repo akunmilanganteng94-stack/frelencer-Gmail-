@@ -3,10 +3,11 @@ import { SystemSettings } from '../types';
 import { db } from '../lib/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
-const DEFAULT_GMAIL_PASSWORD = 'sgsg1122';
+const DEFAULT_PASSWORD_1 = 'zero1122';
+const DEFAULT_PASSWORD_2 = 'prabujaya';
 
 const DEFAULT_RULES = [
-  'Password akun Gmail WAJIB menggunakan: sgsg1122.',
+  'Password akun Gmail WAJIB memilih salah satu: zero1122 atau prabujaya (sesuai pilihan saat stor).',
   'Akun Gmail harus fresh, aktif, dan dapat login tanpa terhalang 2FA atau verifikasi nomor yang terkunci.',
   'Dilarang mengaktifkan Verifikasi 2 Langkah (2-Step Verification) atau kunci keamanan yang menghambat verifikasi admin.',
   'Kirimkan storan dalam sistem 1 baris untuk 1 akun Gmail (Format: email@gmail.com).',
@@ -16,17 +17,26 @@ const DEFAULT_RULES = [
 ];
 
 const DEFAULT_SETTINGS: SystemSettings = {
-  storanOpen: true,
+  storanOpen: true, // 1 saklar buka/tutup stor tunggal
+  storanPassword1: DEFAULT_PASSWORD_1,
+  storanPassword2: DEFAULT_PASSWORD_2,
+  storanPassword1Open: true, // Saklar buka/tutup password 1
+  storanPassword2Open: true, // Saklar buka/tutup password 2
   storanSchedule: 'Senin - Jumat, 07.00 - 17.00 WIB (Sabtu & Minggu CLOSE)',
   pricePerSubmission: 3000,
   withdrawalOpen: true,
   withdrawalDanaOpen: true,
   withdrawalGopayOpen: true,
   minWithdrawal: 4000,
+  maxWithdrawal: 1000000,
+  maintenanceMode: false,
+  websiteStatus: 'online',
+  adminAccessCode: 'admin123',
+  defaultStor: 'STOR 1',
   rules: DEFAULT_RULES,
   announcement:
-    'Storan Akun Gmail OPEN setiap Senin - Jumat!\nJam operasional: 07.00 - 17.00 WIB\nPassword wajib Gmail: sgsg1122\nPastikan akun fresh dan tidak mengaktifkan 2FA.',
-  gmailDefaultPassword: DEFAULT_GMAIL_PASSWORD,
+    'Storan Akun Gmail OPEN setiap Senin - Jumat!\nJam operasional: 07.00 - 17.00 WIB\nPilihan Password wajib: zero1122 atau prabujaya\nPastikan akun fresh dan tidak mengaktifkan 2FA.',
+  gmailDefaultPassword: 'zero1122 / prabujaya',
   generatorOpen: true,
   adminWhatsApp: '6285199219856',
   dailyGenerateLimit: 10,
@@ -65,10 +75,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             ...DEFAULT_SETTINGS,
             ...data,
             storanOpen: data.storanOpen !== undefined ? data.storanOpen : true,
+            storanPassword1: data.storanPassword1 || DEFAULT_PASSWORD_1,
+            storanPassword2: data.storanPassword2 || DEFAULT_PASSWORD_2,
+            storanPassword1Open: data.storanPassword1Open !== undefined ? data.storanPassword1Open : true,
+            storanPassword2Open: data.storanPassword2Open !== undefined ? data.storanPassword2Open : true,
             withdrawalOpen: data.withdrawalOpen !== undefined ? data.withdrawalOpen : true,
             withdrawalDanaOpen: data.withdrawalDanaOpen !== undefined ? data.withdrawalDanaOpen : true,
             withdrawalGopayOpen: data.withdrawalGopayOpen !== undefined ? data.withdrawalGopayOpen : true,
-            gmailDefaultPassword: 'sgsg1122', // Password nya cuma sgsg1122 saja
+            gmailDefaultPassword: 'zero1122 / prabujaya',
             generatorOpen: data.generatorOpen !== undefined ? data.generatorOpen : true,
             adminWhatsApp: data.adminWhatsApp || '6285199219856',
             dailyGenerateLimit:
@@ -103,7 +117,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const updateSettings = async (newSettings: Partial<SystemSettings>) => {
     try {
-      const merged = { ...settings, ...newSettings, gmailDefaultPassword: 'sgsg1122' };
+      const merged = { ...settings, ...newSettings };
       await setDoc(doc(db, 'settings', 'general'), merged, { merge: true });
       setSettings(merged);
       try {
@@ -111,7 +125,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       } catch {}
     } catch (error) {
       console.error('Error updating settings document:', error);
-      const merged = { ...settings, ...newSettings, gmailDefaultPassword: 'sgsg1122' };
+      const merged = { ...settings, ...newSettings };
       setSettings(merged);
       throw error;
     }

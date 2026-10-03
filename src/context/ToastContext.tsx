@@ -21,7 +21,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       const id = Math.random().toString(36).substring(2, 9);
       const newToast: ToastMessage = { id, type, title, message };
       setToasts((prev) => [...prev, newToast]);
-
       setTimeout(() => {
         removeToast(id);
       }, 4500);

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Submission } from '../types';
+import { Submission, SystemSettings } from '../types';
 import {
   formatRupiah,
   formatIndonesianDateTime,
@@ -29,9 +29,11 @@ import {
 interface AdminAllStorTabProps {
   submissions: Submission[];
   defaultPassword?: string;
-  onOpenBulkCheckModal?: () => void;
-  onOpenBulkConfirmModal: () => void;
-  onOpenBulkRejectModal?: () => void;
+  settings?: SystemSettings;
+  onUpdateSettings?: (newSettings: Partial<SystemSettings>) => Promise<void>;
+  onOpenBulkCheckModal?: (passwordMode?: 'ALL' | 'zero1122' | 'prabujaya') => void;
+  onOpenBulkConfirmModal: (passwordMode?: 'ALL' | 'zero1122' | 'prabujaya') => void;
+  onOpenBulkRejectModal?: (passwordMode?: 'ALL' | 'zero1122' | 'prabujaya') => void;
   onAcceptSubmission: (sub: Submission) => void;
   onCheckSubmission?: (sub: Submission) => void;
   onRejectSubmission: (sub: Submission) => void;
@@ -48,9 +50,23 @@ type FilterStatusType =
   | 'Diterima'
   | 'Ditolak';
 
+export const getSubmissionPassword = (sub: Submission): 'zero1122' | 'prabujaya' | string => {
+  if (sub.storanPassword) return sub.storanPassword;
+  const notes = (sub.adminNotes || '').toLowerCase();
+  if (notes.includes('prabujaya')) return 'prabujaya';
+  if (notes.includes('zero1122')) return 'zero1122';
+  if (sub.dataContent.includes('|')) {
+    const p = sub.dataContent.split('|')[1]?.trim().toLowerCase();
+    if (p === 'prabujaya') return 'prabujaya';
+    if (p === 'zero1122') return 'zero1122';
+  }
+  return 'zero1122';
+};
+
 export function AdminAllStorTab({
   submissions,
-  defaultPassword = 'sgsg1122',
+  settings,
+  onUpdateSettings,
   onOpenBulkCheckModal,
   onOpenBulkConfirmModal,
   onOpenBulkRejectModal,
@@ -62,6 +78,7 @@ export function AdminAllStorTab({
 }: AdminAllStorTabProps) {
   const { showToast } = useToast();
   const [filterStatus, setFilterStatus] = useState<FilterStatusType>('All');
+  const [passwordFilter, setPasswordFilter] = useState<'ALL' | 'zero1122' | 'prabujaya'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   const getCleanEmail = (content: string) => {
@@ -89,24 +106,34 @@ export function AdminAllStorTab({
     () => submissions.filter((s) => s.status === 'Pending'),
     [submissions]
   );
-
   const cekAdminList = useMemo(
     () => submissions.filter((s) => s.status === 'Cek Admin'),
     [submissions]
   );
-
   const acceptedList = useMemo(
     () => submissions.filter((s) => s.status === 'Diterima'),
     [submissions]
   );
-
   const rejectedList = useMemo(
     () => submissions.filter((s) => s.status === 'Ditolak'),
     [submissions]
   );
 
+  const countZero = useMemo(
+    () => submissions.filter((s) => getSubmissionPassword(s) === 'zero1122').length,
+    [submissions]
+  );
+  const countPrabu = useMemo(
+    () => submissions.filter((s) => getSubmissionPassword(s) === 'prabujaya').length,
+    [submissions]
+  );
+
   const filteredList = useMemo(() => {
     return submissions.filter((sub) => {
+      if (passwordFilter !== 'ALL') {
+        const subPw = getSubmissionPassword(sub);
+        if (subPw !== passwordFilter) return false;
+      }
       let matchesStatus = true;
       if (filterStatus === 'Pending_Kemarin') {
         matchesStatus =
@@ -120,7 +147,6 @@ export function AdminAllStorTab({
       } else if (filterStatus !== 'All') {
         matchesStatus = sub.status === filterStatus;
       }
-
       if (!matchesStatus) return false;
 
       const cleanEmail = getCleanEmail(sub.dataContent).toLowerCase();
@@ -132,14 +158,15 @@ export function AdminAllStorTab({
         sub.id.toLowerCase().includes(q)
       );
     });
-  }, [submissions, filterStatus, searchQuery]);
+  }, [submissions, passwordFilter, filterStatus, searchQuery]);
 
   const handleCopyEmails = (
     mode:
       | 'pending_yesterday'
       | 'pending_today'
       | 'current_filter'
-      | 'all_lines'
+      | 'all_lines',
+    withPassword: boolean = false
   ) => {
     let targetList: Submission[] = [];
     let labelNotice = 'Semua Akun';
@@ -152,7 +179,7 @@ export function AdminAllStorTab({
       labelNotice = 'Semua Pendingan Hari Ini';
     } else if (mode === 'current_filter') {
       targetList = filteredList;
-      labelNotice = 'Sesuai Filter';
+      labelNotice = passwordFilter !== 'ALL' ? `Sesuai Filter (PW: ${passwordFilter})` : 'Sesuai Filter';
     } else if (mode === 'all_lines') {
       targetList = submissions;
       labelNotice = 'Semua Storan';
@@ -163,12 +190,22 @@ export function AdminAllStorTab({
       return;
     }
 
-    const textToCopy = targetList.map((s) => getCleanEmail(s.dataContent)).join('\n');
+    const textToCopy = targetList
+      .map((s) => {
+        const email = getCleanEmail(s.dataContent);
+        if (withPassword) {
+          const pw = getSubmissionPassword(s);
+          return `${email}|${pw}`;
+        }
+        return email;
+      })
+      .join('\n');
+
     navigator.clipboard.writeText(textToCopy);
     showToast(
       'success',
       `${labelNotice} Berhasil Disalin`,
-      `${targetList.length} akun Gmail berhasil disalin (1 baris 1 akun).`
+      `${targetList.length} akun Gmail disalin ${withPassword ? 'dengan format email|password' : '(1 baris 1 akun)'}.`
     );
   };
 
@@ -185,7 +222,7 @@ export function AdminAllStorTab({
             Semua Gmail STOR-an User
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-            Data antrean storan akun Gmail freelancer. Password wajib: <strong>sgsg1122</strong>.
+            Data antrean storan akun Gmail freelancer. Pilihan password: <strong>zero1122</strong> atau <strong>prabujaya</strong>.
           </p>
         </div>
 
@@ -193,31 +230,154 @@ export function AdminAllStorTab({
           {onOpenBulkCheckModal && (
             <button
               type="button"
-              onClick={onOpenBulkCheckModal}
+              onClick={() => onOpenBulkCheckModal(passwordFilter)}
               className="px-4 sm:px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-blue-500/25 transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
             >
               <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Cek Bulk</span>
+              <span>Cek Bulk {passwordFilter !== 'ALL' ? `(${passwordFilter})` : ''}</span>
             </button>
           )}
+
           <button
             type="button"
-            onClick={onOpenBulkConfirmModal}
+            onClick={() => onOpenBulkConfirmModal(passwordFilter)}
             className="px-4 sm:px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-500/25 transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
           >
             <ListCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span>Terima Bulk</span>
+            <span>Terima Bulk {passwordFilter !== 'ALL' ? `(${passwordFilter})` : ''}</span>
           </button>
+
           {onOpenBulkRejectModal && (
             <button
               type="button"
-              onClick={onOpenBulkRejectModal}
+              onClick={() => onOpenBulkRejectModal(passwordFilter)}
               className="px-4 sm:px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-rose-500/25 transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
             >
               <ListX className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Tolak Bulk</span>
+              <span>Tolak Bulk {passwordFilter !== 'ALL' ? `(${passwordFilter})` : ''}</span>
             </button>
           )}
+        </div>
+      </div>
+
+      {/* PILIH MODE PASSWORD & SAKLAR TUNGGAL STOR */}
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+              <KeyRound className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-2">
+                <span>Filter Mode Password All STOR:</span>
+              </h3>
+            </div>
+          </div>
+
+          {/* 1 SAKLAR BUKA/TUTUP STOR TUNGGAL */}
+          {onUpdateSettings && settings && (
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[11px] font-bold text-slate-500">Saklar Utama STOR:</span>
+              <button
+                type="button"
+                onClick={() =>
+                  onUpdateSettings({
+                    storanOpen: settings.storanOpen === false ? true : false,
+                  })
+                }
+                className={`px-3 py-1.5 rounded-xl text-xs font-black border transition cursor-pointer active:scale-95 shadow-2xs ${
+                  settings.storanOpen !== false
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                    : 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100'
+                }`}
+              >
+                STOR: {settings.storanOpen !== false ? 'BUKA' : 'TUTUP'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+          {/* Semua Mode */}
+          <button
+            type="button"
+            onClick={() => setPasswordFilter('ALL')}
+            className={`p-3 rounded-2xl border text-left transition cursor-pointer select-none flex items-center justify-between ${
+              passwordFilter === 'ALL'
+                ? 'bg-slate-900 text-white border-slate-950 shadow-md ring-2 ring-slate-900/20'
+                : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200 text-slate-800'
+            }`}
+          >
+            <div>
+              <div
+                className={`text-[10px] font-bold uppercase tracking-wider ${
+                  passwordFilter === 'ALL' ? 'text-slate-300' : 'text-slate-500'
+                }`}
+              >
+                Semua Mode
+              </div>
+              <div className="text-base font-black tracking-tight mt-0.5">Semua Password</div>
+            </div>
+            <span
+              className={`px-2.5 py-1 rounded-xl text-xs font-black font-mono ${
+                passwordFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'
+              }`}
+            >
+              {submissions.length}
+            </span>
+          </button>
+
+          {/* Mode 1: zero1122 */}
+          <button
+            type="button"
+            onClick={() => setPasswordFilter('zero1122')}
+            className={`p-3 rounded-2xl border text-left transition cursor-pointer select-none flex items-center justify-between ${
+              passwordFilter === 'zero1122'
+                ? 'bg-blue-600 text-white border-blue-700 shadow-md ring-2 ring-blue-500/20'
+                : 'bg-blue-50/50 hover:bg-blue-50 border-blue-200/80 text-blue-950'
+            }`}
+          >
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                Password 1
+              </div>
+              <div className="font-mono text-base font-black tracking-tight mt-0.5">zero1122</div>
+            </div>
+            <span
+              className={`px-2.5 py-1 rounded-xl text-xs font-black font-mono ${
+                passwordFilter === 'zero1122' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-800'
+              }`}
+            >
+              {countZero}
+            </span>
+          </button>
+
+          {/* Mode 2: prabujaya */}
+          <button
+            type="button"
+            onClick={() => setPasswordFilter('prabujaya')}
+            className={`p-3 rounded-2xl border text-left transition cursor-pointer select-none flex items-center justify-between ${
+              passwordFilter === 'prabujaya'
+                ? 'bg-indigo-600 text-white border-indigo-700 shadow-md ring-2 ring-indigo-500/20'
+                : 'bg-indigo-50/50 hover:bg-indigo-50 border-indigo-200/80 text-indigo-950'
+            }`}
+          >
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
+                Password 2
+              </div>
+              <div className="font-mono text-base font-black tracking-tight mt-0.5">prabujaya</div>
+            </div>
+            <span
+              className={`px-2.5 py-1 rounded-xl text-xs font-black font-mono ${
+                passwordFilter === 'prabujaya'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-indigo-100 text-indigo-800'
+              }`}
+            >
+              {countPrabu}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -463,6 +623,7 @@ export function AdminAllStorTab({
                 <tr>
                   <th className="px-5 py-3.5 w-12 text-center">#</th>
                   <th className="px-5 py-3.5">Akun Gmail Disetor</th>
+                  <th className="px-5 py-3.5">Password</th>
                   <th className="px-5 py-3.5">User Pengirim</th>
                   <th className="px-5 py-3.5">Waktu Storan</th>
                   <th className="px-5 py-3.5">Imbalan</th>
@@ -473,6 +634,7 @@ export function AdminAllStorTab({
               <tbody className="divide-y divide-slate-100">
                 {filteredList.map((sub, idx) => {
                   const cleanEmail = getCleanEmail(sub.dataContent);
+                  const subPw = getSubmissionPassword(sub);
                   const isPending = sub.status === 'Pending';
                   const isCekAdmin = sub.status === 'Cek Admin';
                   const isAccepted = sub.status === 'Diterima';
@@ -504,11 +666,23 @@ export function AdminAllStorTab({
                               showToast('info', 'Email Disalin', cleanEmail);
                             }}
                             className="text-slate-400 hover:text-indigo-600 transition cursor-pointer p-0.5"
-                            title="Salin Email"
+                            title="Salin Email Saja"
                           >
                             <Copy className="w-3 h-3" />
                           </button>
                         </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-black text-xs ${
+                            subPw === 'prabujaya'
+                              ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                              : 'bg-blue-100 text-blue-800 border border-blue-200'
+                          }`}
+                        >
+                          <KeyRound className="w-3 h-3" />
+                          <span>{subPw}</span>
+                        </span>
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="font-bold text-slate-800">{sub.userName || 'Freelancer'}</div>
@@ -593,11 +767,11 @@ export function AdminAllStorTab({
                           <button
                             type="button"
                             onClick={() => {
-                              navigator.clipboard.writeText(`${cleanEmail}|${defaultPassword}`);
-                              showToast('info', 'Disalin', `${cleanEmail}|${defaultPassword}`);
+                              navigator.clipboard.writeText(`${cleanEmail}|${subPw}`);
+                              showToast('info', 'Disalin', `${cleanEmail}|${subPw}`);
                             }}
                             className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
-                            title="Salin Format Email|Password"
+                            title={`Salin Format ${cleanEmail}|${subPw}`}
                           >
                             <KeyRound className="w-3.5 h-3.5" />
                           </button>

@@ -199,7 +199,8 @@ export function GmailGenerator({
   const { settings } = useSettings();
   const { showToast } = useToast();
   const { currentUser } = useAuth();
-  const { availableStock, claimAccounts } = useGmailStock();
+  const { claimAccounts } = useGmailStock();
+
   const [count, setCount] = useState<number>(1);
   const [generating, setGenerating] = useState<boolean>(false);
   const [results, setResults] = useState<GeneratedResultItem[]>([]);
@@ -209,7 +210,7 @@ export function GmailGenerator({
     getGeneratedCountToday(currentUser?.uid)
   );
 
-  const activePassword = 'sgsg1122';
+  const activePassword = settings.storanPassword1 || 'zero1122';
   const isFeatureOpen = settings.generatorOpen !== false;
   const dailyLimit =
     typeof settings.dailyGenerateLimit === 'number' && settings.dailyGenerateLimit > 0
@@ -260,7 +261,6 @@ export function GmailGenerator({
       showToast('warning', 'Fitur Ditutup', 'Fitur generator saat ini ditutup oleh admin.');
       return;
     }
-
     if (remainingQuota <= 0) {
       showToast(
         'warning',
@@ -269,7 +269,6 @@ export function GmailGenerator({
       );
       return;
     }
-
     if (count > remainingQuota) {
       showToast(
         'warning',
@@ -434,6 +433,7 @@ export function GmailGenerator({
             </p>
           </div>
         </div>
+
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
           <div
             className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold flex items-center gap-1 ${
@@ -494,7 +494,7 @@ export function GmailGenerator({
           <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
-              Batas kuota generate harian Anda ({dailyLimit} akun) telah tercapai hari ini. Kuota akan direset otomatis setiap hari (24 jam).
+              Batas kuota generate harian Anda ({dailyLimit} akun) telah tercapai hari ini. Kuota akan direset otomatis setiap hari.
             </span>
           </div>
         )}
@@ -561,6 +561,7 @@ export function GmailGenerator({
                   </span>
                 </div>
               </div>
+
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
@@ -595,7 +596,7 @@ export function GmailGenerator({
                     className={`p-2.5 sm:p-3 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
                       isStored
                         ? 'bg-slate-50 border-slate-200 opacity-70'
-                        : 'bg-gray-100 border-gray-300 hover:border-gray-400 text-gray-800' // warna generate yang belum di stor nya abu"
+                        : 'bg-gray-100 border-gray-300 hover:border-gray-400 text-gray-800'
                     }`}
                   >
                     <div className="space-y-1 min-w-0 flex-1">
@@ -611,13 +612,13 @@ export function GmailGenerator({
                           <Mail className="w-3.5 h-3.5 text-gray-500 shrink-0" />
                           <span>{item.email}</span>
                         </span>
+
                         {isStored ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                             <span>di stor</span>
                           </span>
                         ) : (
-                          // warna generate yang belum di stor nya abu"
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-gray-200 text-gray-700 border border-gray-300 shadow-2xs">
                             <Clock className="w-3 h-3 text-gray-500" />
                             <span>belum di STOR</span>
@@ -626,7 +627,6 @@ export function GmailGenerator({
                       </div>
                     </div>
 
-                    {/* salin Gmail nya ada di pinggir hapus */}
                     <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
                       {!isStored && onSelectEmailForStoran && (
                         <button
@@ -640,7 +640,6 @@ export function GmailGenerator({
                         </button>
                       )}
 
-                      {/* Salin Gmail */}
                       <button
                         type="button"
                         onClick={() => handleCopyText(item.email, item.id, 'Email')}
@@ -655,7 +654,6 @@ export function GmailGenerator({
                         <span>{isEmailCopied ? 'Tersalin' : 'Salin Gmail'}</span>
                       </button>
 
-                      {/* Hapus di pinggir salin */}
                       <button
                         type="button"
                         onClick={() => {

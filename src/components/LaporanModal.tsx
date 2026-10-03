@@ -129,6 +129,7 @@ export function LaporanModal({
                     </span>
                   </div>
                 </div>
+
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
                   <span className="font-semibold text-slate-600">
                     Total Seluruh Gmail Distor

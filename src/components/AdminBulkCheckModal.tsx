@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   ClipboardCheck,
@@ -19,12 +19,14 @@ interface AdminBulkCheckModalProps {
   isOpen: boolean;
   onClose: () => void;
   submissions: Submission[];
+  initialPasswordMode?: 'ALL' | 'zero1122' | 'prabujaya';
 }
 
 export function AdminBulkCheckModal({
   isOpen,
   onClose,
   submissions,
+  initialPasswordMode = 'ALL',
 }: AdminBulkCheckModalProps) {
   const { showToast } = useToast();
   const [inputText, setInputText] = useState('');
@@ -62,12 +64,52 @@ export function AdminBulkCheckModal({
       .filter(Boolean);
   }, [pendingTodaySubs]);
 
+  const getSubPw = (s: Submission) => {
+    if (s.storanPassword) return s.storanPassword;
+    const n = (s.adminNotes || '').toLowerCase();
+    if (n.includes('prabujaya')) return 'prabujaya';
+    if (n.includes('zero1122')) return 'zero1122';
+    if (s.dataContent.includes('|')) {
+      const p = s.dataContent.split('|')[1]?.trim().toLowerCase();
+      if (p === 'prabujaya') return 'prabujaya';
+      if (p === 'zero1122') return 'zero1122';
+    }
+    return 'zero1122';
+  };
+
+  const pendingZeroEmails = useMemo(() => {
+    return submissions
+      .filter((s) => s.status === 'Pending' && getSubPw(s) === 'zero1122')
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [submissions]);
+
+  const pendingPrabuEmails = useMemo(() => {
+    return submissions
+      .filter((s) => s.status === 'Pending' && getSubPw(s) === 'prabujaya')
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [submissions]);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialPasswordMode === 'zero1122') {
+        setInputText(pendingZeroEmails.join('\n'));
+      } else if (initialPasswordMode === 'prabujaya') {
+        setInputText(pendingPrabuEmails.join('\n'));
+      } else {
+        setInputText('');
+      }
+      setStep('input');
+      setProcessedCount(0);
+    }
+  }, [isOpen, initialPasswordMode, pendingZeroEmails, pendingPrabuEmails]);
+
   const parsedEmails = useMemo(() => {
     if (!inputText.trim()) return [];
     const lines = inputText.split('\n');
     const result: string[] = [];
     const seen = new Set<string>();
-
     for (const rawLine of lines) {
       const line = rawLine.trim();
       if (!line) continue;
@@ -205,7 +247,7 @@ export function AdminBulkCheckModal({
                     Klik untuk memuat otomatis
                   </span>
                 </div>
-                
+
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
                   <span className="text-[11px] font-bold text-slate-700 w-full sm:w-auto">
                     Kemarin:
@@ -243,6 +285,40 @@ export function AdminBulkCheckModal({
                     className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-200/80 hover:bg-slate-300 text-slate-800 transition cursor-pointer active:scale-95"
                   >
                     <span>Semua Hari Ini ({pendingTodayEmails.length})</span>
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
+                  <span className="text-[11px] font-bold text-slate-700 w-full sm:w-auto">
+                    Per Password:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pendingZeroEmails.length === 0) {
+                        showToast('info', 'Tidak Ada Data', 'Tidak ada pendingan password zero1122');
+                        return;
+                      }
+                      setInputText(pendingZeroEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${pendingZeroEmails.length} Gmail zero1122 dimuat`);
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-300 transition cursor-pointer active:scale-95"
+                  >
+                    <span>zero1122 ({pendingZeroEmails.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pendingPrabuEmails.length === 0) {
+                        showToast('info', 'Tidak Ada Data', 'Tidak ada pendingan password prabujaya');
+                        return;
+                      }
+                      setInputText(pendingPrabuEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${pendingPrabuEmails.length} Gmail prabujaya dimuat`);
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-300 transition cursor-pointer active:scale-95"
+                  >
+                    <span>prabujaya ({pendingPrabuEmails.length})</span>
                   </button>
                 </div>
               </div>
@@ -328,6 +404,9 @@ export function AdminBulkCheckModal({
                           </span>
                         </div>
                       </div>
+                      <span className="px-2 py-0.5 rounded-md font-mono text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200 shrink-0">
+                        {getSubPw(sub)}
+                      </span>
                     </div>
                   );
                 })}

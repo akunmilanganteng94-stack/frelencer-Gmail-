@@ -6,6 +6,7 @@ import {
   isEarlierThanTodayWIB,
 } from '../lib/utils';
 import { useToast } from '../context/ToastContext';
+import { getSubmissionPassword } from './AdminAllStorTab';
 import {
   Copy,
   Check,
@@ -140,7 +141,7 @@ export function AdminYesterdayPendingTab({
             </span>
           </h2>
           <p className="text-xs sm:text-sm text-amber-100 max-w-xl leading-relaxed">
-            Prioritas penanganan akun yang disetor kemarin. Password wajib: <strong>sgsg1122</strong>.
+            Prioritas penanganan akun yang disetor kemarin. Pilihan password: <strong>zero1122</strong> atau <strong>prabujaya</strong>.
           </p>
         </div>
 
@@ -155,6 +156,7 @@ export function AdminYesterdayPendingTab({
               <span>Cek Bulk</span>
             </button>
           )}
+
           <button
             type="button"
             onClick={onOpenBulkConfirmModal}
@@ -163,6 +165,7 @@ export function AdminYesterdayPendingTab({
             <ListCheck className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>Terima Bulk</span>
           </button>
+
           <button
             type="button"
             onClick={onOpenBulkRejectModal}
@@ -245,6 +248,7 @@ export function AdminYesterdayPendingTab({
                 </th>
                 <th className="py-3 px-4">No</th>
                 <th className="py-3 px-4">Alamat Gmail Disetor</th>
+                <th className="py-3 px-4">Password</th>
                 <th className="py-3 px-4">Pengirim / Freelancer</th>
                 <th className="py-3 px-4">Waktu Setor</th>
                 <th className="py-3 px-4">Reward</th>
@@ -254,7 +258,7 @@ export function AdminYesterdayPendingTab({
             <tbody className="divide-y divide-slate-100 bg-white">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
                     <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-400 mb-2" />
                     <p className="font-bold text-slate-700 text-sm">
                       {searchQuery
@@ -302,6 +306,17 @@ export function AdminYesterdayPendingTab({
                             <Copy className="w-3.5 h-3.5" />
                           </button>
                         </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-black text-xs ${
+                            getSubmissionPassword(sub) === 'prabujaya'
+                              ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                              : 'bg-blue-100 text-blue-800 border border-blue-200'
+                          }`}
+                        >
+                          {getSubmissionPassword(sub)}
+                        </span>
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-slate-800">{sub.userName || 'Freelancer'}</div>

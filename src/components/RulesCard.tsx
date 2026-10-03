@@ -9,7 +9,7 @@ interface RulesCardProps {
 
 export function RulesCard({ onNavigate, onClick }: RulesCardProps) {
   const { settings } = useSettings();
-  const activePassword = settings.gmailDefaultPassword || 'sgsg1122';
+  const activePassword = settings.gmailDefaultPassword || 'zero1122 / prabujaya';
 
   const handleClick = () => {
     if (onClick) {

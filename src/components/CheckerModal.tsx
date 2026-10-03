@@ -264,14 +264,12 @@ export function CheckerModal({
                             </span>
                           </span>
                         </div>
-
                         <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                           <span className="text-slate-500">Reward Saldo:</span>
                           <span className="font-bold text-[#1677E8]">
                             {formatRupiah(item.rewardAmount || 3000)}
                           </span>
                         </div>
-
                         {item.rejectionReason && (
                           <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-[11px] font-medium border border-rose-100">
                             <strong>Alasan Tolak:</strong> {item.rejectionReason}

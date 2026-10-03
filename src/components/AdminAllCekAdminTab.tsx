@@ -10,6 +10,7 @@ import { useToast } from '../context/ToastContext';
 import { doc, runTransaction, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { processReferralOnSubmissionAccepted } from '../lib/referralHelper';
+import { getSubmissionPassword } from './AdminAllStorTab';
 import {
   Copy,
   Check,
@@ -39,7 +40,6 @@ interface AdminAllCekAdminTabProps {
 
 export function AdminAllCekAdminTab({
   submissions,
-  defaultPassword = 'sgsg1122',
   onOpenBulkCheckModal,
   onOpenBulkConfirmModal,
   onOpenBulkRejectModal,
@@ -534,12 +534,16 @@ export function AdminAllCekAdminTab({
                       </td>
                       <td className="px-4 py-3.5 font-mono">
                         <div className="flex items-center gap-1.5">
-                          <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-bold">
-                            {defaultPassword}
+                          <span className={`px-2 py-0.5 rounded border font-bold text-xs ${
+                            getSubmissionPassword(sub) === 'prabujaya'
+                              ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
+                              : 'bg-blue-50 border-blue-200 text-blue-800'
+                          }`}>
+                            {getSubmissionPassword(sub)}
                           </span>
                           <button
                             type="button"
-                            onClick={() => handleCopyText(defaultPassword, `pw-${sub.id}`)}
+                            onClick={() => handleCopyText(getSubmissionPassword(sub), `pw-${sub.id}`)}
                             className="text-slate-400 hover:text-indigo-600 transition cursor-pointer"
                             title="Salin Password"
                           >

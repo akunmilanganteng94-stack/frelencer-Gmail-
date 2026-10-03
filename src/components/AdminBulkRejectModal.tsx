@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   XCircle,
@@ -22,6 +22,7 @@ interface AdminBulkRejectModalProps {
   isOpen: boolean;
   onClose: () => void;
   submissions: Submission[];
+  initialPasswordMode?: 'ALL' | 'zero1122' | 'prabujaya';
 }
 
 const PRESET_REASONS = [
@@ -37,6 +38,7 @@ export function AdminBulkRejectModal({
   isOpen,
   onClose,
   submissions,
+  initialPasswordMode = 'ALL',
 }: AdminBulkRejectModalProps) {
   const { showToast } = useToast();
   const [inputText, setInputText] = useState('');
@@ -75,12 +77,52 @@ export function AdminBulkRejectModal({
       .filter(Boolean);
   }, [pendingTodaySubs]);
 
+  const getSubPw = (s: Submission) => {
+    if (s.storanPassword) return s.storanPassword;
+    const n = (s.adminNotes || '').toLowerCase();
+    if (n.includes('prabujaya')) return 'prabujaya';
+    if (n.includes('zero1122')) return 'zero1122';
+    if (s.dataContent.includes('|')) {
+      const p = s.dataContent.split('|')[1]?.trim().toLowerCase();
+      if (p === 'prabujaya') return 'prabujaya';
+      if (p === 'zero1122') return 'zero1122';
+    }
+    return 'zero1122';
+  };
+
+  const pendingZeroEmails = useMemo(() => {
+    return submissions
+      .filter((s) => (s.status === 'Pending' || s.status === 'Cek Admin') && getSubPw(s) === 'zero1122')
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [submissions]);
+
+  const pendingPrabuEmails = useMemo(() => {
+    return submissions
+      .filter((s) => (s.status === 'Pending' || s.status === 'Cek Admin') && getSubPw(s) === 'prabujaya')
+      .map((s) => getCleanEmailFromSubmission(s.dataContent))
+      .filter(Boolean);
+  }, [submissions]);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialPasswordMode === 'zero1122') {
+        setInputText(pendingZeroEmails.join('\n'));
+      } else if (initialPasswordMode === 'prabujaya') {
+        setInputText(pendingPrabuEmails.join('\n'));
+      } else {
+        setInputText('');
+      }
+      setStep('input');
+      setProcessedCount(0);
+    }
+  }, [isOpen, initialPasswordMode, pendingZeroEmails, pendingPrabuEmails]);
+
   const parsedEmails = useMemo(() => {
     if (!inputText.trim()) return [];
     const lines = inputText.split('\n');
     const result: string[] = [];
     const seen = new Set<string>();
-
     for (const rawLine of lines) {
       const line = rawLine.trim();
       if (!line) continue;
@@ -264,7 +306,7 @@ export function AdminBulkRejectModal({
                   <span>Petunjuk Tolak Massal:</span>
                 </div>
                 <p>
-                  Tempel daftar alamat Gmail yang ingin ditolak. Masukkan <strong>1 baris = 1 akun Gmail</strong>. Sistem akan mencocokkan akun tersebut dengan storan berstatus <strong>Pending</strong>, lalu mengubah statusnya menjadi <strong>Ditolak</strong> dan menyematkan alasan yang Anda tulis ke akun pengguna terkait.
+                  Tempel daftar alamat Gmail yang ingin ditolak. Masukkan <strong>1 baris = 1 akun Gmail</strong>. Sistem akan mencocokkan akun tersebut dengan storan berstatus <strong>Pending / Cek Admin</strong>, lalu mengubah statusnya menjadi <strong>Ditolak</strong> dan menyematkan alasan yang Anda tulis ke akun pengguna terkait.
                 </p>
               </div>
 
@@ -310,6 +352,38 @@ export function AdminBulkRejectModal({
                     <span>Semua Hari Ini ({pendingTodayEmails.length})</span>
                   </button>
                 </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
+                  <span className="text-[10px] font-bold text-slate-800 bg-slate-200 px-2 py-0.5 rounded">Per Password:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pendingZeroEmails.length === 0) {
+                        showToast('info', 'Kosong', 'Tidak ada antrean pending untuk password zero1122.');
+                        return;
+                      }
+                      setInputText(pendingZeroEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${pendingZeroEmails.length} akun zero1122 dimuat.`);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>zero1122 ({pendingZeroEmails.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (pendingPrabuEmails.length === 0) {
+                        showToast('info', 'Kosong', 'Tidak ada antrean pending untuk password prabujaya.');
+                        return;
+                      }
+                      setInputText(pendingPrabuEmails.join('\n'));
+                      showToast('success', 'Dimuat', `${pendingPrabuEmails.length} akun prabujaya dimuat.`);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>prabujaya ({pendingPrabuEmails.length})</span>
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -350,7 +424,7 @@ export function AdminBulkRejectModal({
                   <label className="block text-xs font-black text-slate-800 flex items-center justify-between mb-1">
                     <span className="flex items-center gap-1.5">
                       <MessageSquareWarning className="w-4 h-4 text-rose-600" />
-                      <span>Alasan Penolakan (Wajib - Terlihat oleh Freelancer)</span>
+                      <span>Alasan Penolakan (Ketik Manual atau Pilih Template):</span>
                     </span>
                     <span className="text-rose-600 text-[11px] font-bold">*Wajib</span>
                   </label>
@@ -363,6 +437,7 @@ export function AdminBulkRejectModal({
                     className="w-full p-3 text-xs rounded-xl border border-slate-300 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20 outline-none bg-white shadow-2xs"
                   />
                 </div>
+
                 <div>
                   <span className="text-[11px] font-bold text-slate-500 block mb-1.5">
                     Pilih Template Alasan Cepat:
@@ -399,7 +474,7 @@ export function AdminBulkRejectModal({
                   <div className="text-2xl font-black text-rose-700 mt-1">
                     {matchAnalysis.readyToReject.length}
                   </div>
-                  <div className="text-[10px] text-rose-600 mt-0.5">Status Pending</div>
+                  <div className="text-[10px] text-rose-600 mt-0.5">Status Pending / Cek Admin</div>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
@@ -459,8 +534,13 @@ export function AdminBulkRejectModal({
                         className="p-2.5 flex items-center justify-between gap-3 bg-slate-50/50 hover:bg-white"
                       >
                         <div className="min-w-0 flex-1">
-                          <div className="font-mono font-bold text-slate-900 truncate">
-                            {item.email}
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-slate-900 truncate">
+                              {item.email}
+                            </span>
+                            <span className="px-1.5 py-0.2 rounded font-mono font-black text-[10px] bg-blue-100 text-blue-800 border border-blue-200 shrink-0">
+                              {getSubPw(item.submission)}
+                            </span>
                           </div>
                           <div className="text-[11px] text-slate-500">
                             Pengirim: {item.submission.userName} ({item.submission.userEmail})
@@ -511,7 +591,6 @@ export function AdminBulkRejectModal({
                   <span className="font-bold text-slate-800">{rejectionReason}</span>
                 </div>
               </div>
-
               <div className="pt-3 flex justify-center gap-2">
                 <button
                   type="button"

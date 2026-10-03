@@ -70,6 +70,7 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
       const completedCount = list.filter((r) => r.status === 'completed').length;
       const currentMilestones = userProfile?.referralRewardMilestones || [];
       const earnedMilestonesCount = Math.floor(completedCount / 20);
+
       let needsSync = false;
       for (let m = 1; m <= earnedMilestonesCount; m++) {
         if (!currentMilestones.includes(m * 20)) {
@@ -111,7 +112,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
       collection(db, 'referrals'),
       where('inviterUid', '==', currentUser.uid)
     );
-
     const unsubRef = onSnapshot(
       qRef,
       (snapshot) => {
@@ -129,7 +129,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
       collection(db, 'users'),
       where('referredBy', '==', currentUser.uid)
     );
-
     const unsubUsers = onSnapshot(
       qUsers,
       (snapshot) => {
@@ -193,7 +192,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
       className={`rounded-3xl bg-white border border-blue-200/80 p-5 sm:p-6 shadow-sm relative overflow-hidden space-y-4 ${className}`}
     >
       <div className="absolute top-0 right-0 w-60 h-60 bg-gradient-to-br from-blue-400/10 via-sky-400/10 to-transparent rounded-full blur-2xl pointer-events-none" />
-
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#1e40af] via-blue-600 to-[#38bdf8] text-white flex items-center justify-center shadow-md shadow-blue-500/25 shrink-0">
@@ -213,7 +211,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
             </p>
           </div>
         </div>
-
         <button
           type="button"
           onClick={handleShareWhatsApp}
@@ -243,7 +240,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
             </button>
           </div>
         </div>
-
         <button
           type="button"
           onClick={handleCopyShareLink}

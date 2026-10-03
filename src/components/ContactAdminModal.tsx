@@ -64,7 +64,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                 </span>
               </div>
               <p className="text-emerald-100 text-xs mt-1">
-                Layanan bantuan & konfirmasi seputar akun Gmail & pencairan saldo
+                Layanan bantuan &amp; konfirmasi seputar akun Gmail &amp; pencairan saldo
               </p>
             </div>
 
@@ -114,6 +114,7 @@ export function ContactAdminModal({ isOpen, onClose }: ContactAdminModalProps) {
                     </p>
                   </div>
                 </div>
+
                 <div className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                   <ShieldCheck className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                   <div>
@@ -185,7 +186,7 @@ export function ContactAdminFloatingButton({
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
               </div>
               <p className="text-[10px] text-slate-500 truncate hover:text-blue-600 font-medium">
-                Klik untuk update & pengumuman
+                Klik untuk update &amp; pengumuman
               </p>
             </div>
             <button

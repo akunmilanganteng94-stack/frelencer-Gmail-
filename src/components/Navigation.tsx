@@ -55,7 +55,7 @@ export function Navigation({
 
           {/* Sebelah kanan */}
           <div className="flex items-center gap-2">
-            {/* Tombol Toggle Mode Desktop (Khusus Admin, di user dihapus) */}
+            {/* Tombol Toggle Mode Desktop (Khusus Admin) */}
             {isAdmin && onToggleDesktopMode && (
               <button
                 type="button"
@@ -112,7 +112,7 @@ export function Navigation({
         </div>
       </header>
 
-      {/* BOTTOM NAVIGATION (FIXED DI BAGIAN BAWAH LAYAR) */}
+      {/* BOTTOM NAVIGATION */}
       <nav
         aria-label="Bottom Navigation"
         className="fixed bottom-0 left-0 right-0 z-40 select-none pointer-events-none"

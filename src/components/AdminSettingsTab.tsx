@@ -480,7 +480,7 @@ export function AdminSettingsTab({
         <h3 className="text-sm sm:text-base font-black text-slate-900 pb-2 border-b border-slate-100">
           Parameter Operasional Lainnya
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200 space-y-2">
             <label className="text-xs font-black text-emerald-950 block">
               Harga Komisi per Akun Diterima (Rp)
@@ -506,6 +506,22 @@ export function AdminSettingsTab({
               onChange={(e) => setTempMinWithdrawal(Number(e.target.value))}
               className="w-full px-3.5 py-2.5 text-sm font-black text-slate-900 rounded-xl border border-blue-300 bg-white"
             />
+          </div>
+          <div className="p-4 rounded-2xl bg-purple-50/50 border border-purple-200 space-y-2">
+            <label className="text-xs font-black text-purple-950 block">
+              Max Generate Akun (User / Hari)
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="200"
+              value={tempDailyGenerateLimit}
+              onChange={(e) => setTempDailyGenerateLimit(Math.max(1, Number(e.target.value) || 1))}
+              className="w-full px-3.5 py-2.5 text-sm font-black text-slate-900 rounded-xl border border-purple-300 bg-white"
+            />
+            <p className="text-[10px] text-purple-800">
+              Batas kuota generate harian yang didapat tiap freelancer dari stok admin.
+            </p>
           </div>
         </div>
 

@@ -276,7 +276,7 @@ export function GmailGenerator({
   const { settings } = useSettings();
   const { showToast } = useToast();
   const { currentUser } = useAuth();
-  const { claimAccounts } = useGmailStock();
+  const { claimAccounts, availableStock } = useGmailStock(true);
   const [count, setCount] = useState<number>(1);
   const [generating, setGenerating] = useState<boolean>(false);
   const [results, setResults] = useState<GeneratedResultItem[]>([]);
@@ -330,6 +330,14 @@ export function GmailGenerator({
   const handleGenerate = async () => {
     if (!isFeatureOpen) {
       showToast('warning', 'Fitur Ditutup', 'Fitur generator saat ini ditutup oleh admin.');
+      return;
+    }
+    if (availableStock.length === 0) {
+      showToast(
+        'error',
+        'Stok Admin Kosong',
+        'Stok akun generator dari Admin saat ini sedang kosong. Silakan tunggu admin mengisi stok baru atau hubungi admin.'
+      );
       return;
     }
     if (remainingQuota <= 0) {
@@ -691,15 +699,15 @@ export function GmailGenerator({
                         </span>
                         {isStored ? (
                           <span
-                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs"
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs"
                             title="Akun sudah distorkan. Otomatis terhapus setelah 24 jam."
                           >
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            <span>di stor {remainingHours !== null ? `(hapus dlm ${remainingHours}j)` : ''}</span>
+                            <span>di STOR {remainingHours !== null ? `(hapus dlm ${remainingHours}j)` : ''}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gray-200 text-gray-700 border border-gray-300 shadow-2xs">
-                            <Clock className="w-3 h-3 text-gray-500" />
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-200 text-slate-700 border border-slate-300 shadow-2xs">
+                            <Clock className="w-3 h-3 text-slate-500" />
                             <span>belum di STOR</span>
                           </span>
                         )}

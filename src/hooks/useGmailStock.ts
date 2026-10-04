@@ -11,8 +11,9 @@ import {
   orderBy,
   writeBatch,
   getDocs,
+  limit,
 } from 'firebase/firestore';
-import { auth, db, handleFirestoreError } from '../lib/firebase';
+import { db, handleFirestoreError } from '../lib/firebase';
 import { GmailStockItem, OperationType } from '../types';
 
 const INDONESIAN_FIRST_NAMES = [
@@ -31,58 +32,58 @@ const INDONESIAN_LAST_NAMES = [
   'suhendra', 'saputro', 'ananda', 'wardhana', 'purnomo', 'wicaksono', 'pangestu'
 ];
 
-export function generateFreshStockAccounts(count: number, defaultPassword = 'zero1122'): { email: string; password: string }[] {
+export function generateFreshStockAccounts(
+  count: number,
+  defaultPassword = 'zero1122',
+  existingEmailsSet?: Set<string>
+): { email: string; password: string }[] {
   const generated: { email: string; password: string }[] = [];
   const used = new Set<string>();
 
   for (let i = 0; i < count; i++) {
     let email = '';
     let attempts = 0;
-    while (attempts < 100) {
+    while (attempts < 200) {
       const first = INDONESIAN_FIRST_NAMES[Math.floor(Math.random() * INDONESIAN_FIRST_NAMES.length)];
       const last = INDONESIAN_LAST_NAMES[Math.floor(Math.random() * INDONESIAN_LAST_NAMES.length)];
-      const num = Math.floor(100 + Math.random() * 900);
-      const sep = Math.random() > 0.5 ? '.' : '';
+      const num = Math.floor(100 + Math.random() * 99000);
+      const sep = Math.random() > 0.4 ? '.' : '';
       email = `${first}${sep}${last}${num}@gmail.com`.toLowerCase();
-      if (!used.has(email)) {
+      if (!used.has(email) && (!existingEmailsSet || !existingEmailsSet.has(email))) {
         used.add(email);
+        if (existingEmailsSet) existingEmailsSet.add(email);
         break;
       }
       attempts++;
     }
-    if (email) {
-      generated.push({
-        email,
-        password: defaultPassword,
-      });
+    if (!email || used.has(email)) {
+      const rnd = Math.random().toString(36).substring(2, 7);
+      email = `user.${rnd}${Math.floor(100 + Math.random() * 900)}@gmail.com`.toLowerCase();
+      used.add(email);
+      if (existingEmailsSet) existingEmailsSet.add(email);
     }
+    generated.push({
+      email,
+      password: defaultPassword,
+    });
   }
-
   return generated;
 }
 
-export function useGmailStock() {
+export function useGmailStock(subscribe = false) {
   const [stock, setStock] = useState<GmailStockItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(subscribe);
 
   useEffect(() => {
-    let unsubscribeSnapshot: (() => void) | null = null;
+    if (!subscribe) {
+      setLoading(false);
+      return;
+    }
 
-    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        setStock([]);
-        setLoading(false);
-        if (unsubscribeSnapshot) {
-          unsubscribeSnapshot();
-          unsubscribeSnapshot = null;
-        }
-        return;
-      }
-
+    try {
       const stockColRef = collection(db, 'gmail_stock');
       const q = query(stockColRef, orderBy('addedAt', 'desc'));
-
-      unsubscribeSnapshot = onSnapshot(
+      const unsubscribe = onSnapshot(
         q,
         (snapshot) => {
           const items: GmailStockItem[] = [];
@@ -110,30 +111,26 @@ export function useGmailStock() {
             !sessionStorage.getItem('gmail_stock_seed_attempted')
           ) {
             sessionStorage.setItem('gmail_stock_seed_attempted', 'true');
-            seedInitialAccounts();
+            seedInitialAccounts().catch(() => {});
           }
         },
         (err) => {
-          console.warn('Could not read gmail_stock in realtime:', err);
+          console.warn('Could not read gmail_stock in realtime (notice):', err);
           setLoading(false);
         }
       );
-    });
-
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-      }
-    };
-  }, []);
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn('Notice setting up gmail_stock listener:', e);
+      setLoading(false);
+    }
+  }, [subscribe]);
 
   const seedInitialAccounts = async (count = 50, defaultPassword = 'zero1122') => {
     try {
       const freshAccounts = generateFreshStockAccounts(count, defaultPassword);
       const batch = writeBatch(db);
       const timestamp = new Date().toISOString();
-
       freshAccounts.forEach(({ email, password }) => {
         const newDocRef = doc(collection(db, 'gmail_stock'));
         batch.set(newDocRef, {
@@ -143,7 +140,6 @@ export function useGmailStock() {
           addedAt: timestamp,
         });
       });
-
       await batch.commit();
       return freshAccounts.length;
     } catch (e) {
@@ -157,7 +153,6 @@ export function useGmailStock() {
     const freshAccounts = generateFreshStockAccounts(count, defaultPassword);
     const existingEmails = new Set(stock.map((s) => s.email.toLowerCase()));
     const toAdd = freshAccounts.filter((a) => !existingEmails.has(a.email.toLowerCase()));
-
     if (toAdd.length === 0) return 0;
 
     const timestamp = new Date().toISOString();
@@ -234,18 +229,26 @@ export function useGmailStock() {
     const batch = writeBatch(db);
 
     for (const line of lines) {
-      const parts = line.split('|');
-      const email = parts[0].trim();
-      const customPass = parts[1] ? parts[1].trim() : defaultPassword;
+      let emailPart = line.trim();
+      let customPass = defaultPassword;
+      if (emailPart.includes('|')) {
+        const parts = emailPart.split('|');
+        emailPart = parts[0].trim();
+        customPass = parts[1]?.trim() || defaultPassword;
+      }
+      if (!emailPart.includes('@')) {
+        emailPart = `${emailPart}@gmail.com`;
+      }
+      emailPart = emailPart.toLowerCase();
 
       if (
-        (email.includes('@gmail.com') || email.includes('@googlemail.com')) &&
-        !existingEmails.has(email.toLowerCase())
+        (emailPart.endsWith('@gmail.com') || emailPart.endsWith('@googlemail.com')) &&
+        !existingEmails.has(emailPart)
       ) {
-        existingEmails.add(email.toLowerCase());
+        existingEmails.add(emailPart);
         const newDocRef = doc(collection(db, 'gmail_stock'));
         batch.set(newDocRef, {
-          email,
+          email: emailPart,
           password: customPass,
           status: 'available',
           addedAt: new Date().toISOString(),
@@ -305,54 +308,112 @@ export function useGmailStock() {
       userEmail?: string,
       defaultPassword = 'zero1122'
     ): Promise<GmailStockItem[]> => {
-      let currentAvailable = stock.filter((s) => s.status === 'available');
-
-      if (currentAvailable.length < count) {
-        const needed = count - currentAvailable.length + 20;
-        const fresh = generateFreshStockAccounts(needed, defaultPassword);
-        const timestamp = new Date().toISOString();
-        const batch = writeBatch(db);
-        const newCreatedItems: GmailStockItem[] = [];
-
-        fresh.forEach(({ email, password }) => {
-          const newDocRef = doc(collection(db, 'gmail_stock'));
-          const itemData: GmailStockItem = {
-            id: newDocRef.id,
-            email,
-            password,
-            status: 'available',
-            addedAt: timestamp,
-          };
-          batch.set(newDocRef, itemData);
-          newCreatedItems.push(itemData);
-        });
-
-        await batch.commit();
-        currentAvailable = [...currentAvailable, ...newCreatedItems];
-      }
-
-      const takeCount = Math.min(count, currentAvailable.length);
-      const chosen = currentAvailable.slice(0, takeCount);
+      if (count <= 0) return [];
+      const timestamp = new Date().toISOString();
+      const claimedItems: GmailStockItem[] = [];
+      const claimedEmails = new Set<string>();
 
       try {
-        const batch = writeBatch(db);
-        const timestamp = new Date().toISOString();
-        chosen.forEach((item) => {
-          const docRef = doc(db, 'gmail_stock', item.id);
-          batch.update(docRef, {
-            status: 'used',
-            claimedBy: userId || 'user',
-            claimedByName: userName || 'Freelancer',
-            claimedByEmail: userEmail || '',
-            claimedAt: timestamp,
-          });
-        });
-        await batch.commit();
+        const availQuery = query(
+          collection(db, 'gmail_stock'),
+          where('status', '==', 'available'),
+          limit(count * 2)
+        );
+        const availSnap = await getDocs(availQuery);
+        if (!availSnap.empty) {
+          const batch = writeBatch(db);
+          let taken = 0;
+          for (const docSnap of availSnap.docs) {
+            if (taken >= count) break;
+            const data = docSnap.data();
+            if (data.status === 'available') {
+              const item: GmailStockItem = {
+                id: docSnap.id,
+                email: data.email || '',
+                password: data.password || defaultPassword,
+                status: 'used',
+                claimedBy: userId || 'user',
+                claimedByName: userName || 'Freelancer',
+                claimedByEmail: userEmail || '',
+                claimedAt: timestamp,
+                addedAt: data.addedAt || timestamp,
+              };
+              const emailKey = (data.email || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+              batch.update(docSnap.ref, {
+                status: 'used',
+                claimedBy: userId || 'user',
+                claimedByName: userName || 'Freelancer',
+                claimedByEmail: userEmail || '',
+                claimedAt: timestamp,
+              });
+              if (emailKey) {
+                const claimedDocRef = doc(db, 'claimed_emails', emailKey);
+                batch.set(claimedDocRef, {
+                  email: (data.email || '').toLowerCase().trim(),
+                  claimedBy: userId || 'user',
+                  claimedByName: userName || 'Freelancer',
+                  claimedAt: timestamp,
+                });
+              }
+              claimedItems.push(item);
+              claimedEmails.add(item.email.toLowerCase());
+              taken++;
+            }
+          }
+          if (taken > 0) {
+            await batch.commit();
+          }
+        }
       } catch (err) {
-        console.warn('Failed to mark claimed accounts in batch:', err);
+        console.warn('Gagal klaim stok yang tersedia dari Firestore:', err);
       }
 
-      return chosen;
+      const remainingNeeded = count - claimedItems.length;
+      if (remainingNeeded > 0) {
+        try {
+          const existingEmails = new Set<string>();
+          stock.forEach((s) => existingEmails.add(s.email.toLowerCase()));
+          claimedEmails.forEach((e) => existingEmails.add(e.toLowerCase()));
+
+          const fresh = generateFreshStockAccounts(
+            remainingNeeded,
+            defaultPassword,
+            existingEmails
+          );
+          const batch = writeBatch(db);
+          fresh.forEach(({ email, password }) => {
+            const newDocRef = doc(collection(db, 'gmail_stock'));
+            const newItem: GmailStockItem = {
+              id: newDocRef.id,
+              email,
+              password,
+              status: 'used',
+              claimedBy: userId || 'user',
+              claimedByName: userName || 'Freelancer',
+              claimedByEmail: userEmail || '',
+              claimedAt: timestamp,
+              addedAt: timestamp,
+            };
+            batch.set(newDocRef, newItem);
+            const emailKey = email.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+            if (emailKey) {
+              const claimedDocRef = doc(db, 'claimed_emails', emailKey);
+              batch.set(claimedDocRef, {
+                email: email.toLowerCase().trim(),
+                claimedBy: userId || 'user',
+                claimedByName: userName || 'Freelancer',
+                claimedAt: timestamp,
+              });
+            }
+            claimedItems.push(newItem);
+          });
+          await batch.commit();
+        } catch (err) {
+          console.warn('Gagal generate stok eksklusif user:', err);
+        }
+      }
+
+      return claimedItems;
     },
     [stock]
   );

@@ -108,7 +108,7 @@ function MainApp() {
           >
             {currentTab === 'home' && <HomeView onNavigate={setCurrentTab} />}
             {currentTab === 'storan' && <StoranView onNavigate={setCurrentTab} />}
-            {currentTab === 'riwayat' && <RiwayatView />}
+            {currentTab === 'riwayat' && <RiwayatView onNavigate={setCurrentTab} />}
             {currentTab === 'saldo' && <SaldoView />}
             {currentTab === 'rules' && <RulesView onNavigate={setCurrentTab} />}
             {currentTab === 'akun' && <AkunView onNavigate={setCurrentTab} />}

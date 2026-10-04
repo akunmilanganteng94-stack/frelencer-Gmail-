@@ -51,6 +51,7 @@ export interface Submission {
   rejectionReason?: string;
   adminNotes?: string;
   passwordUsed?: string;
+  storanPassword?: string;
   createdAt: string;
   reviewedAt?: string;
   checkedAt?: string;
@@ -98,10 +99,19 @@ export interface SystemSettings {
   withdrawalGopayOpen?: boolean;
   passwordZero1122Open?: boolean;
   passwordPrabujayaOpen?: boolean;
+  storanPassword1Open?: boolean;
+  storanPassword2Open?: boolean;
+  storanPassword1?: string;
+  storanPassword2?: string;
   password1Name?: string;
   password2Name?: string;
   passwordList?: string[];
   minWithdrawal: number;
+  maxWithdrawal?: number;
+  defaultStor?: 'STOR 1' | 'STOR 2';
+  maintenanceMode?: boolean;
+  websiteStatus?: 'online' | 'maintenance' | 'operational';
+  adminAccessCode?: string;
   rules: string[];
   announcement: string;
   gmailDefaultPassword?: string;

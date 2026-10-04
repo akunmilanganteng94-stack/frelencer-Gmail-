@@ -13,15 +13,12 @@ service cloud.firestore {
     
     function isAdmin() {
       return isSignedIn() && (
-        (request.auth.token.email != null && (
-          request.auth.token.email == 'apriliansyahazril10@gmail.com' ||
-          request.auth.token.email == 'nenioke659@gmail.com' ||
-          request.auth.token.email == 'persibakunsimba@gmail.com' ||
-          request.auth.token.email.matches('(?i)^apriliansyahazril10@gmail\\.com$') ||
-          request.auth.token.email.matches('(?i)^nenioke659@gmail\\.com$') ||
-          request.auth.token.email.matches('(?i)^persibakunsimba@gmail\\.com$')
-        )) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (request.auth.token.email != null && request.auth.token.email.lower() in [
+          'apriliansyahazril10@gmail.com',
+          'nenioke659@gmail.com',
+          'stokakuntiktokrilzstr@gmail.com'
+        ]) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
     }
@@ -34,15 +31,15 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isOwner(userId) || isAdmin();
+      allow read: if true;
+      allow create: if isSignedIn();
       allow update: if isSignedIn();
       allow delete: if isAdmin();
     }
 
     // Submissions collection
     match /submissions/{submissionId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn();
       allow delete: if isAdmin();
@@ -50,28 +47,35 @@ service cloud.firestore {
 
     // Withdrawals collection
     match /withdrawals/{withdrawalId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // Gmail Stock collection
-    match /gmail_stock/{stockId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
-    }
-
-    // Referrals collection
-    match /referrals/{referralId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn();
       allow delete: if isAdmin();
     }
 
-    // Referral codes lookup collection (public read so invitation links can resolve)
+    // Gmail Stock collection
+    match /gmail_stock/{stockId} {
+      allow read: if true;
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // Globally claimed generated emails
+    match /claimed_emails/{emailId} {
+      allow read: if true;
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // Referrals collection
+    match /referrals/{referralId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    // Referral codes lookup collection
     match /referral_codes/{code} {
       allow read: if true;
       allow create, update: if isSignedIn();

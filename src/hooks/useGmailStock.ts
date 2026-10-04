@@ -82,18 +82,18 @@ export function useGmailStock(subscribe = false) {
 
     try {
       const stockColRef = collection(db, 'gmail_stock');
-      const q = query(stockColRef, orderBy('addedAt', 'desc'));
       const unsubscribe = onSnapshot(
-        q,
+        stockColRef,
         (snapshot) => {
           const items: GmailStockItem[] = [];
           snapshot.forEach((docSnap) => {
             const data = docSnap.data();
+            const isUsed = data.status === 'used' || Boolean(data.claimedBy);
             items.push({
               id: docSnap.id,
               email: data.email || '',
               password: data.password || 'zero1122',
-              status: data.status || 'available',
+              status: isUsed ? 'used' : 'available',
               addedAt: data.addedAt || new Date().toISOString(),
               claimedBy: data.claimedBy || undefined,
               claimedByName: data.claimedByName || undefined,
@@ -101,18 +101,9 @@ export function useGmailStock(subscribe = false) {
               claimedAt: data.claimedAt || undefined,
             });
           });
+          items.sort((a, b) => new Date(b.addedAt || 0).getTime() - new Date(a.addedAt || 0).getTime());
           setStock(items);
           setLoading(false);
-
-          if (
-            items.length === 0 &&
-            !snapshot.metadata.hasPendingWrites &&
-            localStorage.getItem('gmail_stock_cleared_by_admin') !== 'true' &&
-            !sessionStorage.getItem('gmail_stock_seed_attempted')
-          ) {
-            sessionStorage.setItem('gmail_stock_seed_attempted', 'true');
-            seedInitialAccounts().catch(() => {});
-          }
         },
         (err) => {
           console.warn('Could not read gmail_stock in realtime (notice):', err);
@@ -195,8 +186,8 @@ export function useGmailStock(subscribe = false) {
     return usedItems.length;
   };
 
-  const availableStock = stock.filter((item) => item.status === 'available');
-  const usedStock = stock.filter((item) => item.status === 'used');
+  const availableStock = stock.filter((item) => item.status !== 'used' && !item.claimedBy);
+  const usedStock = stock.filter((item) => item.status === 'used' || Boolean(item.claimedBy));
 
   const addSingleAccount = async (email: string, password = 'zero1122') => {
     localStorage.removeItem('gmail_stock_cleared_by_admin');
@@ -311,111 +302,79 @@ export function useGmailStock(subscribe = false) {
       if (count <= 0) return [];
       const timestamp = new Date().toISOString();
       const claimedItems: GmailStockItem[] = [];
-      const claimedEmails = new Set<string>();
 
-      try {
-        const availQuery = query(
-          collection(db, 'gmail_stock'),
-          where('status', '==', 'available'),
-          limit(count * 2)
+      // Ambil seluruh dokumen dari gmail_stock
+      const stockColRef = collection(db, 'gmail_stock');
+      const snap = await getDocs(stockColRef);
+
+      // Cari akun yang belum terpakai
+      const availableDocs = snap.docs.filter((docSnap) => {
+        const d = docSnap.data();
+        return d.status !== 'used' && !d.claimedBy;
+      });
+
+      if (availableDocs.length === 0) {
+        throw new Error(
+          'Stok akun generator dari Admin saat ini kosong. Silakan tunggu admin mengisi stok baru atau hubungi admin.'
         );
-        const availSnap = await getDocs(availQuery);
-        if (!availSnap.empty) {
-          const batch = writeBatch(db);
-          let taken = 0;
-          for (const docSnap of availSnap.docs) {
-            if (taken >= count) break;
-            const data = docSnap.data();
-            if (data.status === 'available') {
-              const item: GmailStockItem = {
-                id: docSnap.id,
-                email: data.email || '',
-                password: data.password || defaultPassword,
-                status: 'used',
-                claimedBy: userId || 'user',
-                claimedByName: userName || 'Freelancer',
-                claimedByEmail: userEmail || '',
-                claimedAt: timestamp,
-                addedAt: data.addedAt || timestamp,
-              };
-              const emailKey = (data.email || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-              batch.update(docSnap.ref, {
-                status: 'used',
-                claimedBy: userId || 'user',
-                claimedByName: userName || 'Freelancer',
-                claimedByEmail: userEmail || '',
-                claimedAt: timestamp,
-              });
-              if (emailKey) {
-                const claimedDocRef = doc(db, 'claimed_emails', emailKey);
-                batch.set(claimedDocRef, {
-                  email: (data.email || '').toLowerCase().trim(),
-                  claimedBy: userId || 'user',
-                  claimedByName: userName || 'Freelancer',
-                  claimedAt: timestamp,
-                });
-              }
-              claimedItems.push(item);
-              claimedEmails.add(item.email.toLowerCase());
-              taken++;
-            }
-          }
-          if (taken > 0) {
-            await batch.commit();
-          }
-        }
-      } catch (err) {
-        console.warn('Gagal klaim stok yang tersedia dari Firestore:', err);
       }
 
-      const remainingNeeded = count - claimedItems.length;
-      if (remainingNeeded > 0) {
-        try {
-          const existingEmails = new Set<string>();
-          stock.forEach((s) => existingEmails.add(s.email.toLowerCase()));
-          claimedEmails.forEach((e) => existingEmails.add(e.toLowerCase()));
+      const docsToClaim = availableDocs.slice(0, count);
 
-          const fresh = generateFreshStockAccounts(
-            remainingNeeded,
-            defaultPassword,
-            existingEmails
-          );
-          const batch = writeBatch(db);
-          fresh.forEach(({ email, password }) => {
-            const newDocRef = doc(collection(db, 'gmail_stock'));
-            const newItem: GmailStockItem = {
-              id: newDocRef.id,
-              email,
-              password,
-              status: 'used',
+      for (const docSnap of docsToClaim) {
+        const data = docSnap.data();
+        const itemEmail = data.email || '';
+        const itemPass = data.password || defaultPassword;
+        const item: GmailStockItem = {
+          id: docSnap.id,
+          email: itemEmail,
+          password: itemPass,
+          status: 'used',
+          claimedBy: userId || 'user',
+          claimedByName: userName || 'Freelancer',
+          claimedByEmail: userEmail || '',
+          claimedAt: timestamp,
+          addedAt: data.addedAt || timestamp,
+        };
+
+        // Update dokumen stock di Firestore menjadi 'used' (Terpakai)
+        await updateDoc(docSnap.ref, {
+          status: 'used',
+          claimedBy: userId || 'user',
+          claimedByName: userName || 'Freelancer',
+          claimedByEmail: userEmail || '',
+          claimedAt: timestamp,
+        });
+
+        // Simpan juga ke claimed_emails secara aman untuk verifikasi storan
+        try {
+          const emailKey = itemEmail.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+          if (emailKey) {
+            await setDoc(doc(db, 'claimed_emails', emailKey), {
+              email: itemEmail.toLowerCase().trim(),
               claimedBy: userId || 'user',
               claimedByName: userName || 'Freelancer',
-              claimedByEmail: userEmail || '',
               claimedAt: timestamp,
-              addedAt: timestamp,
-            };
-            batch.set(newDocRef, newItem);
-            const emailKey = email.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-            if (emailKey) {
-              const claimedDocRef = doc(db, 'claimed_emails', emailKey);
-              batch.set(claimedDocRef, {
-                email: email.toLowerCase().trim(),
-                claimedBy: userId || 'user',
-                claimedByName: userName || 'Freelancer',
-                claimedAt: timestamp,
-              });
-            }
-            claimedItems.push(newItem);
-          });
-          await batch.commit();
-        } catch (err) {
-          console.warn('Gagal generate stok eksklusif user:', err);
+            });
+          }
+        } catch (e) {
+          console.warn('Non-fatal: could not save to claimed_emails:', e);
         }
+
+        claimedItems.push(item);
       }
+
+      // Update state lokal secara instan
+      setStock((prev) =>
+        prev.map((s) => {
+          const matched = claimedItems.find((c) => c.id === s.id);
+          return matched ? { ...s, ...matched, status: 'used' } : s;
+        })
+      );
 
       return claimedItems;
     },
-    [stock]
+    []
   );
 
   const clearAllStock = async () => {

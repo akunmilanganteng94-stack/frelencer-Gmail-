@@ -50,7 +50,7 @@ export interface Submission {
   submissionType?: string;
   rejectionReason?: string;
   adminNotes?: string;
-  storanPassword?: 'zero1122' | 'prabujaya' | string;
+  passwordUsed?: string;
   createdAt: string;
   reviewedAt?: string;
   checkedAt?: string;
@@ -90,22 +90,18 @@ export interface GmailStockItem {
 }
 
 export interface SystemSettings {
-  storanOpen: boolean; // 1 saklar buka/tutup stor utama
-  storanPassword1?: string;
-  storanPassword2?: string;
-  storanPassword1Open?: boolean;
-  storanPassword2Open?: boolean;
+  storanOpen: boolean;
   storanSchedule: string;
   pricePerSubmission: number;
   withdrawalOpen: boolean;
   withdrawalDanaOpen?: boolean;
   withdrawalGopayOpen?: boolean;
+  passwordZero1122Open?: boolean;
+  passwordPrabujayaOpen?: boolean;
+  password1Name?: string;
+  password2Name?: string;
+  passwordList?: string[];
   minWithdrawal: number;
-  maxWithdrawal?: number;
-  maintenanceMode?: boolean;
-  websiteStatus?: 'online' | 'maintenance' | 'operational';
-  adminAccessCode?: string;
-  defaultStor?: 'STOR 1' | 'STOR 2';
   rules: string[];
   announcement: string;
   gmailDefaultPassword?: string;

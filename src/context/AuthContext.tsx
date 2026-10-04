@@ -41,19 +41,22 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 const ADMIN_EMAILS = [
   'apriliansyahazril10@gmail.com',
   'nenioke659@gmail.com',
-  'persibakunsimba@gmail.com',
+  'stokakuntiktokrilzstr@gmail.com',
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(() => auth.currentUser);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
     try {
-      const cached = localStorage.getItem('azgmail_cached_user_profile');
-      return cached ? JSON.parse(cached) : null;
+      const u = auth.currentUser;
+      if (!u) return null;
+      const cached = localStorage.getItem(`azgmail_cached_user_profile_${u.uid}`) || localStorage.getItem('azgmail_cached_user_profile');
+      if (!cached) return null;
+      const parsed = JSON.parse(cached);
+      return parsed && parsed.uid === u.uid ? parsed : null;
     } catch {
       return null;
     }
@@ -185,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
         },
         (err) => {
-          console.warn('User doc snapshot sync notice:', err?.message || err);
+          console.warn('User doc snapshot sync notice (using local profile while rules sync):', err?.message || err);
           const isDefaultAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
           const myCode = generateReferralCode(user.uid);
           setUserProfile((prev) => prev || {
@@ -212,8 +215,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = Boolean(
     currentUser &&
-      ((currentUser.email && ADMIN_EMAILS.includes(currentUser.email.toLowerCase())) ||
-        userProfile?.role === 'admin')
+      ((currentUser.email && ADMIN_EMAILS.includes(currentUser.email.toLowerCase().trim())) ||
+        (userProfile && userProfile.uid === currentUser.uid && userProfile.role === 'admin'))
   );
 
   const loginUser = async (email: string, pass: string) => {
@@ -259,17 +262,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ? { referredByCode: effectiveRef }
         : {}),
     };
+
     await setDoc(doc(db, 'users', user.uid), profile, { merge: true });
     setUserProfile(profile);
     try {
       localStorage.setItem('azgmail_cached_user_profile', JSON.stringify(profile));
       localStorage.setItem(`azgmail_cached_user_profile_${user.uid}`, JSON.stringify(profile));
     } catch {}
+
     saveReferralCodeMapping(myReferralCode, {
       uid: user.uid,
       email: email.trim(),
       displayName: name.trim(),
     }).catch(console.warn);
+
     if (effectiveRef) {
       recordReferralForNewUser(
         {
@@ -327,17 +333,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ? { referredByCode: effectiveRef }
             : {}),
         };
+
         await setDoc(userDocRef, profile, { merge: true });
         setUserProfile(profile);
         try {
           localStorage.setItem('azgmail_cached_user_profile', JSON.stringify(profile));
           localStorage.setItem(`azgmail_cached_user_profile_${user.uid}`, JSON.stringify(profile));
         } catch {}
+
         saveReferralCodeMapping(myCode, {
           uid: user.uid,
           email: user.email || '',
           displayName: profile.displayName,
         }).catch(console.warn);
+
         if (effectiveRef) {
           recordReferralForNewUser(
             {
@@ -359,6 +368,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: user.email || '',
           displayName: existing.displayName,
         }).catch(console.warn);
+
         setUserProfile(existing);
         try {
           localStorage.setItem('azgmail_cached_user_profile', JSON.stringify(existing));

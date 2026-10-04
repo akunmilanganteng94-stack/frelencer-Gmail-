@@ -42,7 +42,6 @@ export function AdminStockGeneratorTab({
     deleteAccount,
     clearUsedAccounts,
     clearAllStock,
-    replenishStock,
     resetAllUsedToAvailable,
   } = useGmailStock();
 
@@ -71,8 +70,9 @@ export function AdminStockGeneratorTab({
   // Filtered accounts
   const filteredStock = useMemo(() => {
     return stock.filter((item) => {
-      if (statusFilter === 'available' && item.status !== 'available') return false;
-      if (statusFilter === 'used' && item.status !== 'used') return false;
+      const isAvail = item.status !== 'used' && !item.claimedBy;
+      if (statusFilter === 'available' && !isAvail) return false;
+      if (statusFilter === 'used' && isAvail) return false;
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
       const email = item.email.toLowerCase();
@@ -194,18 +194,6 @@ export function AdminStockGeneratorTab({
     }
   };
 
-  const handleAutoReplenish = async () => {
-    setSubmitting(true);
-    try {
-      const added = await replenishStock(50, 'zero1122');
-      showToast('success', 'Generate Otomatis', `${added} akun Gmail segar berhasil digenerate ke stok.`);
-    } catch (err: unknown) {
-      showToast('error', 'Gagal', err instanceof Error ? err.message : String(err));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleResetUsed = async () => {
     setSubmitting(true);
     try {
@@ -250,16 +238,6 @@ export function AdminStockGeneratorTab({
           >
             <FileText className="w-4 h-4" />
             <span>Tambah Bulk (Banyak)</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleAutoReplenish}
-            disabled={submitting}
-            className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            title="Generate otomatis 50 akun Gmail fresh"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${submitting ? 'animate-spin' : ''}`} />
-            <span>Auto +50 Stok</span>
           </button>
         </div>
       </div>
@@ -442,7 +420,7 @@ export function AdminStockGeneratorTab({
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredStock.map((item, idx) => {
-                  const isAvailable = item.status === 'available';
+                  const isAvailable = item.status !== 'used' && !item.claimedBy;
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/70 transition">
                       <td className="px-4 py-3 text-center font-mono text-slate-400">
@@ -470,13 +448,23 @@ export function AdminStockGeneratorTab({
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
                             isAvailable
                               ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                              : 'bg-slate-200 text-slate-700'
+                              : 'bg-amber-100 text-amber-900 border border-amber-300'
                           }`}
                         >
-                          {isAvailable ? 'Tersedia' : 'Terpakai'}
+                          {isAvailable ? (
+                            <>
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>Tersedia</span>
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="w-3 h-3 text-amber-600" />
+                              <span>Terpakai</span>
+                            </>
+                          )}
                         </span>
                       </td>
                       <td className="px-4 py-3">

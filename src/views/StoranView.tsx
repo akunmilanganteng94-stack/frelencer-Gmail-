@@ -40,7 +40,8 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const { userProfile, currentUser } = useAuth();
   const { settings } = useSettings();
   const { showToast } = useToast();
-  const { claimAccounts } = useGmailStock();
+  const { claimAccounts, availableStock, loading: stockLoading } = useGmailStock(true);
+  const [recentlySubmittedEmails, setRecentlySubmittedEmails] = useState<Set<string>>(new Set());
 
   const pw1 = settings.password1Name || 'zero1122';
   const pw2 = settings.password2Name || 'prabujaya';
@@ -148,8 +149,23 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       const clean = s.dataContent.split('|')[0].trim().toLowerCase();
       if (clean) set.add(clean);
     });
+    recentlySubmittedEmails.forEach((e) => set.add(e));
     return set;
-  }, [submissions]);
+  }, [submissions, recentlySubmittedEmails]);
+
+  // Use email directly for storan textarea
+  const handleUseEmailForStoran = (email: string) => {
+    const clean = email.trim().toLowerCase();
+    setInputData((prev) => {
+      const lines = prev.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+      if (!lines.includes(clean)) {
+        lines.push(clean);
+      }
+      return lines.join('\n');
+    });
+    setInputError('');
+    showToast('info', 'Akun Dipilih', `${clean} dimasukkan ke kolom storan.`);
+  };
 
   // Generated counts
   const totalGenerated = generatedList.length;
@@ -225,10 +241,18 @@ export function StoranView({ onNavigate }: StoranViewProps) {
   const todayUsedQuota = getGeneratedCountToday(currentUser?.uid);
   const remainingQuota = Math.max(0, maxAdminLimit - todayUsedQuota);
 
-  // Generate Handler
+  // Generate Handler - Strictly claim from admin stock
   const handleGenerateAccounts = async () => {
     if (settings.generatorOpen === false) {
       showToast('error', 'Ditutup', 'Fitur Generate Gmail sedang dinonaktifkan sementara oleh Admin.');
+      return;
+    }
+    if (availableStock.length === 0) {
+      showToast(
+        'error',
+        'Stok Admin Kosong',
+        'Stok akun generator dari Admin saat ini kosong. Silakan hubungi admin atau tunggu admin mengisi stok.'
+      );
       return;
     }
     if (remainingQuota <= 0) {
@@ -239,7 +263,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
       );
       return;
     }
-    const countToGenerate = Math.min(generateCount, remainingQuota);
+    const countToGenerate = Math.min(generateCount, remainingQuota, availableStock.length);
     if (countToGenerate <= 0) {
       showToast('warning', 'Jumlah Tidak Valid', 'Tentukan jumlah akun yang valid.');
       return;
@@ -255,51 +279,18 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         selectedPassword
       );
 
-      let newItems: GeneratedResultItem[] = [];
-      if (claimed.length > 0) {
-        recordGeneratedCountToday(claimed.length, currentUser?.uid);
-        newItems = claimed.map((c) => ({
-          id: c.id,
-          email: c.email,
-          password: selectedPassword,
-          generatedAt: new Date().toISOString(),
-        }));
-      } else {
-        const timestamp = new Date().toISOString();
-        for (let i = 0; i < countToGenerate; i++) {
-          const randomHex = Math.random().toString(36).substring(2, 8);
-          const generatedEmail = `user.${randomHex}${Math.floor(100 + Math.random() * 900)}@gmail.com`;
-          const fallbackDocRef = doc(collection(db, 'gmail_stock'));
-          await setDoc(fallbackDocRef, {
-            email: generatedEmail,
-            password: selectedPassword,
-            status: 'used',
-            claimedBy: currentUser?.uid || 'user',
-            claimedByName: userProfile?.displayName || 'Freelancer',
-            claimedByEmail: currentUser?.email || '',
-            claimedAt: timestamp,
-            addedAt: timestamp,
-          }).catch(() => {});
-
-          const emailKey = generatedEmail.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-          if (emailKey) {
-            setDoc(doc(db, 'claimed_emails', emailKey), {
-              email: generatedEmail.toLowerCase().trim(),
-              claimedBy: currentUser?.uid || 'user',
-              claimedByName: userProfile?.displayName || 'Freelancer',
-              claimedAt: timestamp,
-            }).catch(() => {});
-          }
-
-          newItems.push({
-            id: fallbackDocRef.id,
-            email: generatedEmail,
-            password: selectedPassword,
-            generatedAt: timestamp,
-          });
-        }
-        recordGeneratedCountToday(newItems.length, currentUser?.uid);
+      if (!claimed || claimed.length === 0) {
+        showToast('error', 'Stok Kosong', 'Tidak ada stok akun yang tersedia dari admin saat ini.');
+        return;
       }
+
+      recordGeneratedCountToday(claimed.length, currentUser?.uid);
+      const newItems: GeneratedResultItem[] = claimed.map((c) => ({
+        id: c.id,
+        email: c.email,
+        password: selectedPassword,
+        generatedAt: new Date().toISOString(),
+      }));
 
       const updated = filterExpiredStoredAccounts([...newItems, ...generatedList], submissions);
       setGeneratedList(updated);
@@ -323,10 +314,10 @@ export function StoranView({ onNavigate }: StoranViewProps) {
         } catch {}
       }
 
-      showToast('success', 'Generate Berhasil', `${newItems.length} akun Gmail berhasil digenerate.`);
-    } catch (e) {
+      showToast('success', 'Generate Berhasil', `Berhasil mengambil ${newItems.length} akun Gmail dari stok admin.`);
+    } catch (e: unknown) {
       console.warn('Generate error:', e);
-      showToast('error', 'Gagal', 'Terjadi kendala saat generate akun.');
+      showToast('error', 'Gagal Generate', e instanceof Error ? e.message : 'Terjadi kendala saat mengambil stok akun admin.');
     } finally {
       setGeneratingMore(false);
     }
@@ -390,13 +381,16 @@ export function StoranView({ onNavigate }: StoranViewProps) {
     setSubmitting(true);
     try {
       for (const email of cleanedEmails) {
-        const isFromGenerator = await verifyUserGeneratedEmail(email, currentUser.uid);
+        const isFromLocal = generatedList.some(
+          (g) => g.email.trim().toLowerCase() === email.toLowerCase()
+        );
+        const isFromGenerator = isFromLocal || (await verifyUserGeneratedEmail(email, currentUser.uid));
         if (!isFromGenerator) {
-          setInputError(`Gagal kirim: Akun "${email}" bukan hasil generate akun Anda. Nama email tidak sesuai!`);
+          setInputError(`Gagal kirim: Akun "${email}" bukan hasil generate akun Anda. Freelancer WAJIB menyetorkan akun dari hasil generate masing-masing!`);
           showToast(
             'error',
-            'Nama Tidak Sesuai',
-            `Akun ${email} bukan hasil generate Anda! Nama email tidak sesuai.`
+            'Wajib Hasil Generate Sendiri',
+            `Akun "${email}" bukan hasil generate akun Anda! Freelancer wajib menyetorkan akun dari hasil generate masing-masing.`
           );
           setSubmitting(false);
           return;
@@ -417,6 +411,12 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           adminNotes: `PW: ${selectedPassword}`,
         });
       }
+
+      setRecentlySubmittedEmails((prev) => {
+        const next = new Set(prev);
+        cleanedEmails.forEach((e) => next.add(e.toLowerCase()));
+        return next;
+      });
 
       notifyDataChange('storan');
       showToast(
@@ -507,19 +507,37 @@ export function StoranView({ onNavigate }: StoranViewProps) {
 
         {/* GENERATED GMAIL SECTION */}
         <div className="space-y-3 pt-1">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm sm:text-base font-black text-slate-900">
-              Generated Gmail
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-blue-600" />
+              <span>Generated Gmail</span>
             </h3>
-            <span className="text-xs text-slate-500 font-semibold">
-              Total: {totalGenerated} &bull; Belum distor: {totalBelumDistor}
-            </span>
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+              <span className="text-slate-500">
+                Total: {totalGenerated} &bull; Belum distor: <strong className="text-slate-900">{totalBelumDistor}</strong>
+              </span>
+              <span className="text-slate-300">&bull;</span>
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                availableStock.length > 0
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  : 'bg-rose-100 text-rose-800 border border-rose-300'
+              }`}>
+                Stok Admin: {availableStock.length} ready
+              </span>
+            </div>
           </div>
 
           {/* Generator Disabled Alert */}
           {settings.generatorOpen === false && (
             <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
               <span>Fitur Generate Gmail sedang dinonaktifkan sementara oleh Admin.</span>
+            </div>
+          )}
+
+          {/* Admin Stock Empty Alert */}
+          {settings.generatorOpen !== false && availableStock.length === 0 && (
+            <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-2">
+              <span>Stok akun generator dari Admin saat ini sedang kosong. Freelancer hanya dapat mengambil akun jika admin telah mengisi stok.</span>
             </div>
           )}
 
@@ -530,7 +548,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 Tentukan Jumlah Akun yang Di-generate:
               </label>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Maksimal generate: <strong>{maxAdminLimit} akun/hari</strong>. Sisa kuota: <strong>{remainingQuota} akun</strong>.
+                Maksimal generate: <strong>{maxAdminLimit} akun/hari</strong>. Sisa kuota Anda: <strong>{remainingQuota} akun</strong>.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -546,7 +564,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 <input
                   type="number"
                   min={1}
-                  max={Math.max(1, remainingQuota)}
+                  max={Math.max(1, Math.min(remainingQuota, availableStock.length || 1))}
                   value={generateCount}
                   onChange={(e) => {
                     const val = parseInt(e.target.value, 10);
@@ -571,10 +589,10 @@ export function StoranView({ onNavigate }: StoranViewProps) {
           {/* LIST GMAIL HASIL GENERATE */}
           {generatedList.length === 0 ? (
             <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-400 font-medium">
-              Belum ada akun hasil generate. Klik &quot;Generate&quot; untuk membuat akun baru.
+              Belum ada akun hasil generate. Klik &quot;Generate&quot; untuk mengambil akun dari stok admin.
             </div>
           ) : (
-            <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {generatedList.map((item) => {
                 const clean = item.email.trim().toLowerCase();
                 const isSubmitted = submittedEmailsSet.has(clean);
@@ -582,38 +600,49 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 return (
                   <div
                     key={item.id}
-                    className={`rounded-xl px-3 py-1.5 border flex items-center justify-between gap-2 transition ${
+                    className={`rounded-xl px-3.5 py-2.5 border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition ${
                       isSubmitted
-                        ? 'bg-emerald-50/70 border-emerald-200'
-                        : 'bg-white border-slate-200 hover:border-slate-300'
+                        ? 'bg-emerald-50/60 border-emerald-200'
+                        : 'bg-slate-50 border-slate-300 hover:border-slate-400'
                     }`}
                   >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
                       <span
-                        className={`font-mono text-[11px] font-bold truncate ${
-                          isSubmitted ? 'text-emerald-950 font-black' : 'text-slate-800'
+                        className={`font-mono text-xs sm:text-sm font-bold truncate ${
+                          isSubmitted ? 'text-emerald-950 line-through opacity-75' : 'text-slate-900'
                         }`}
                       >
                         {item.email}
                       </span>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide shrink-0 transition-colors ${
                           isSubmitted
                             ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                            : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            : 'bg-slate-200 text-slate-700 border border-slate-300'
                         }`}
                       >
-                        {isSubmitted ? 'di stor' : 'belum di stor'}
+                        {isSubmitted ? 'di STOR' : 'belum di STOR'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+                      {!isSubmitted && (
+                        <button
+                          type="button"
+                          onClick={() => handleUseEmailForStoran(item.email)}
+                          className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+                          title="Gunakan akun ini untuk stor"
+                        >
+                          <Send className="w-3 h-3" />
+                          <span>Pakai Stor</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleCopySingle(item.id, item.email)}
                         className={`p-1.5 rounded-lg border transition flex items-center justify-center cursor-pointer ${
                           isCopied
                             ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
-                            : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-600'
+                            : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700'
                         }`}
                         title="Salin Gmail"
                       >
@@ -627,7 +656,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                         type="button"
                         onClick={() => handleDeleteGenerated(item.id)}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                        title="Hapus"
+                        title="Hapus dari daftar"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -658,7 +687,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
             </button>
             <button
               type="button"
-              disabled={generatingMore || settings.generatorOpen === false || remainingQuota <= 0}
+              disabled={generatingMore || settings.generatorOpen === false || remainingQuota <= 0 || availableStock.length === 0}
               onClick={handleGenerateAccounts}
               className="flex-1 min-w-[130px] py-2 px-3 rounded-xl bg-[#1677E8] hover:bg-[#0D5FC7] text-white font-bold text-xs transition cursor-pointer active:scale-95 text-center shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
@@ -666,9 +695,13 @@ export function StoranView({ onNavigate }: StoranViewProps) {
               <span>
                 {generatingMore
                   ? 'Memproses...'
+                  : availableStock.length === 0
+                  ? 'Stok Admin Kosong'
+                  : remainingQuota <= 0
+                  ? `Batas Hari Ini (${maxAdminLimit}/${maxAdminLimit})`
                   : hasGeneratedOnce || generatedList.length > 0
-                  ? `Generate Lagi (${generateCount})`
-                  : `Generate (${generateCount})`}
+                  ? `Ambil dari Stok (${Math.min(generateCount, availableStock.length)})`
+                  : `Generate (${Math.min(generateCount, availableStock.length)} Akun)`}
               </span>
             </button>
           </div>

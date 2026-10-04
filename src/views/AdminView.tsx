@@ -38,6 +38,7 @@ import {
   Power,
   Send,
   CheckCircle2,
+  Check,
   XCircle,
   Clock,
   ChevronDown,
@@ -71,7 +72,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     deleteAccount,
     clearUsedAccounts,
     clearAllStock,
-    replenishStock,
     resetAllUsedToAvailable,
   } = useGmailStock(true);
 
@@ -127,14 +127,20 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const [stockActionLoading, setStockActionLoading] = useState(false);
   const [showConfirmClearUsed, setShowConfirmClearUsed] = useState(false);
   const [showConfirmClearAll, setShowConfirmClearAll] = useState(false);
+  const [stockDailyLimit, setStockDailyLimit] = useState<number>(settings.dailyGenerateLimit || 10);
+  const [savingDailyLimit, setSavingDailyLimit] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (settings.dailyGenerateLimit) {
+      setStockDailyLimit(settings.dailyGenerateLimit);
+    }
+  }, [settings.dailyGenerateLimit]);
 
   const [balanceModalUser, setBalanceModalUser] = useState<UserProfile | null>(null);
   const [balanceMode, setBalanceMode] = useState<'add' | 'set'>('add');
   const [balanceAmountInput, setBalanceAmountInput] = useState<string>('');
   const [includeTotalEarned, setIncludeTotalEarned] = useState<boolean>(true);
   const [savingBalance, setSavingBalance] = useState<boolean>(false);
-
-  const [isNavDrawerOpen, setIsNavDrawerOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -456,15 +462,16 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     }
   };
 
-  const handleAutoReplenish = async (amount: number) => {
-    setStockActionLoading(true);
+  const handleUpdateDailyLimit = async () => {
+    const limit = Math.max(1, Number(stockDailyLimit) || 10);
+    setSavingDailyLimit(true);
     try {
-      const added = await replenishStock(amount, settings.password1Name || 'zero1122');
-      showToast('success', 'Stok Ditambahkan', `Berhasil menambahkan ${added} akun Gmail ke stok.`);
+      await updateSettings({ dailyGenerateLimit: limit });
+      showToast('success', 'Batas Diperbarui', `Batas maksimal generate per user diubah menjadi ${limit} akun/hari.`);
     } catch (err: unknown) {
-      showToast('error', 'Gagal Tambah Stok', err instanceof Error ? err.message : String(err));
+      showToast('error', 'Gagal', err instanceof Error ? err.message : String(err));
     } finally {
-      setStockActionLoading(false);
+      setSavingDailyLimit(false);
     }
   };
 
@@ -589,10 +596,11 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
   const filteredStock = useMemo(() => {
     return gmailStockList.filter((item) => {
       if (!item) return false;
+      const isAvail = item.status !== 'used' && !item.claimedBy;
       const matchesFilter =
         stockFilter === 'All' ||
-        (stockFilter === 'available' && item.status === 'available') ||
-        (stockFilter === 'used' && item.status === 'used');
+        (stockFilter === 'available' && isAvail) ||
+        (stockFilter === 'used' && !isAvail);
       const q = (stockSearch || '').toLowerCase().trim();
       return (
         matchesFilter &&
@@ -645,20 +653,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-xs">
         <div className="flex items-center gap-3">
-          {/* TOMBOL GARIS 3 (HAMBURGER MENU UTAMA) */}
-          <button
-            type="button"
-            onClick={() => setIsNavDrawerOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all active:scale-95 cursor-pointer shrink-0"
-            title="Buka Menu Panel Admin (Garis 3)"
-          >
-            <Menu className="w-5 h-5" />
-            <span className="font-black">Menu Fitur</span>
-            <span className="hidden sm:inline-block px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-bold">
-              Garis 3
-            </span>
-          </button>
-
           <div>
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold border border-blue-200 mb-0.5">
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -971,15 +965,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => handleAutoReplenish(50)}
-                  disabled={stockActionLoading}
-                  className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>+50 Stok Otomatis</span>
-                </button>
-                <button
-                  type="button"
                   onClick={() => setShowAddSingleModal(true)}
                   className="px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/25 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
@@ -1037,6 +1022,55 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                   className="w-full py-1.5 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold transition disabled:opacity-40 cursor-pointer mt-1"
                 >
                   Reset Menjadi Tersedia
+                </button>
+              </div>
+            </div>
+
+            {/* PENGATURAN BATAS GENERATE USER / HARI */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-purple-50 via-indigo-50/50 to-blue-50 border border-purple-200/80 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-purple-600/30">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs sm:text-sm font-black text-slate-900">
+                      Batas Max Generate Akun Freelancer / Hari
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-200">
+                      Saat ini: {settings.dailyGenerateLimit || 10} akun/hari
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    User hanya bisa generate akun dari stok admin hingga batas ini per hari. Perubahan langsung aktif realtime untuk semua user.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-start md:self-center shrink-0">
+                <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-purple-200 shadow-2xs">
+                  <span className="text-xs font-bold text-slate-500">Max:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={500}
+                    value={stockDailyLimit}
+                    onChange={(e) => setStockDailyLimit(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    className="w-16 font-mono font-black text-sm text-purple-700 outline-none text-center"
+                  />
+                  <span className="text-xs font-bold text-slate-500">akun/hari</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleUpdateDailyLimit}
+                  disabled={savingDailyLimit}
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs transition shadow-sm shadow-purple-600/25 flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  {savingDailyLimit ? (
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4" />
+                  )}
+                  <span>Simpan Batas</span>
                 </button>
               </div>
             </div>
@@ -1112,13 +1146,23 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                             </td>
                             <td className="py-3 px-4">
                               <span
-                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
                                   isAvail
                                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                    : 'bg-amber-100 text-amber-800 border border-amber-300'
+                                    : 'bg-amber-100 text-amber-900 border border-amber-300'
                                 }`}
                               >
-                                {isAvail ? 'Tersedia' : 'Terpakai'}
+                                {isAvail ? (
+                                  <>
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    <span>Tersedia</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Clock className="w-3 h-3 text-amber-600" />
+                                    <span>Terpakai</span>
+                                  </>
+                                )}
                               </span>
                             </td>
                             <td className="py-3 px-4 text-slate-600">
@@ -1187,20 +1231,9 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                     Statistik &amp; Pusat Kendali AZGmail
                   </h2>
                   <p className="text-xs sm:text-sm text-blue-100 mt-1 max-w-xl">
-                    Ringkasan performa real-time, antrean verifikasi, pencairan saldo, dan akses instan ke semua fitur admin.
+                    Ringkasan performa real-time, antrean verifikasi, pencairan saldo, dan akses instan ke semua modul admin.
                   </p>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2 self-start md:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setIsNavDrawerOpen(true)}
-                  className="px-4 py-2.5 rounded-xl bg-white hover:bg-blue-50 text-blue-800 text-xs font-black shadow-lg transition flex items-center gap-2 cursor-pointer active:scale-95"
-                >
-                  <Menu className="w-4 h-4" />
-                  <span>Buka Menu Fitur (Garis 3)</span>
-                </button>
               </div>
             </div>
 
@@ -1392,128 +1425,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              </div>
-            </div>
-
-            {/* DIREKTORI SEMUA FITUR PANEL ADMIN */}
-            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <div>
-                  <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
-                    Direktori Lengkap Fitur Panel Admin
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Akses cepat ke seluruh menu dan modul kerja aplikasi
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsNavDrawerOpen(true)}
-                  className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
-                >
-                  <Menu className="w-3.5 h-3.5" />
-                  <span>Buka Drawer</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {[
-                  {
-                    id: 'all_stor',
-                    title: 'All STOR (Per User)',
-                    desc: 'Daftar grup storan terpisah rapi per pengguna',
-                    icon: Layers,
-                    count: `${submissionsList.length} total`,
-                    color: 'text-indigo-600 bg-indigo-50 border-indigo-200',
-                  },
-                  {
-                    id: 'yesterday_pending',
-                    title: 'Pendingan Kemarin',
-                    desc: 'Fokus storan tertunda dari hari sebelumnya',
-                    icon: History,
-                    count: `${submissionsList.filter((s) => (s.status === 'Pending' || s.status === 'Cek Admin') && isEarlierThanTodayWIB(s.createdAt)).length} item`,
-                    color: 'text-amber-600 bg-amber-50 border-amber-200',
-                  },
-                  {
-                    id: 'all_cek_admin',
-                    title: 'All Cek Admin',
-                    desc: 'Daftar semua akun berstatus sedang diperiksa',
-                    icon: ClipboardCheck,
-                    count: `${submissionsList.filter((s) => s.status === 'Cek Admin').length} akun`,
-                    color: 'text-cyan-600 bg-cyan-50 border-cyan-200',
-                  },
-                  {
-                    id: 'submissions',
-                    title: 'Antrean Satuan',
-                    desc: 'Filter status akun masuk dan audit satuan',
-                    icon: UploadCloud,
-                    count: `${submissionsList.filter((s) => s.status === 'Pending').length} pending`,
-                    color: 'text-blue-600 bg-blue-50 border-blue-200',
-                  },
-                  {
-                    id: 'withdrawals',
-                    title: 'Penarikan E-Wallet',
-                    desc: 'Proses pencairan DANA & GoPay dan bukti bayar',
-                    icon: Wallet,
-                    count: `${withdrawalsList.filter((w) => w.status === 'Pending').length} pending`,
-                    color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
-                  },
-                  {
-                    id: 'users',
-                    title: 'Kelola Pengguna',
-                    desc: 'Cari user, atur saldo manual, dan cek audit',
-                    icon: Users,
-                    count: `${usersList.length} user`,
-                    color: 'text-violet-600 bg-violet-50 border-violet-200',
-                  },
-                  {
-                    id: 'stock',
-                    title: 'Stok Generator',
-                    desc: 'Bank akun Gmail generator otomatis & massal',
-                    icon: Sparkles,
-                    count: `${availableStock.length} ready`,
-                    color: 'text-amber-600 bg-amber-50 border-amber-200',
-                  },
-                  {
-                    id: 'settings',
-                    title: 'Pengaturan Sistem',
-                    desc: 'Aturan beranda/STOR, harga komisi, dan password',
-                    icon: Settings,
-                    count: 'Sistem',
-                    color: 'text-slate-600 bg-slate-100 border-slate-200',
-                  },
-                ].map((card) => {
-                  const Icon = card.icon;
-                  return (
-                    <button
-                      key={card.id}
-                      type="button"
-                      onClick={() => setActiveTab(card.id as typeof activeTab)}
-                      className="p-4 rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition text-left bg-white flex flex-col justify-between gap-3 group cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${card.color}`}>
-                          <Icon className="w-5 h-5" />
-                        </div>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                          {card.count}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="text-xs font-black text-slate-900 group-hover:text-blue-600 transition">
-                          {card.title}
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
-                          {card.desc}
-                        </p>
-                      </div>
-                      <div className="text-[11px] font-bold text-blue-600 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                        <span>Buka Fitur</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </div>
-                    </button>
-                  );
-                })}
               </div>
             </div>
           </div>
@@ -2691,352 +2602,6 @@ export function AdminView({ onNavigate }: { onNavigate: (tab: NavigationTab) => 
           onClose={() => setShowBulkRejectModal(false)}
           submissions={submissionsList}
         />
-
-        {/* DRAWER MENU GARIS 3 (SEMUA FITUR PANEL ADMIN) */}
-        <AnimatePresence>
-          {isNavDrawerOpen && (
-            <div className="fixed inset-0 z-50 flex justify-start">
-              {/* BACKDROP */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsNavDrawerOpen(false)}
-                className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs cursor-pointer"
-              />
-
-              {/* DRAWER SIDEBAR */}
-              <motion.div
-                initial={{ x: '-100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '-100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-                className="relative w-full max-w-sm sm:max-w-md h-full bg-white shadow-2xl border-r border-slate-200 flex flex-col z-10 overflow-hidden"
-              >
-                {/* DRAWER HEADER */}
-                <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-700 via-indigo-700 to-sky-700 text-white flex items-center justify-between shadow-md">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-xs border border-white/20 flex items-center justify-center shrink-0">
-                      <Menu className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-black text-white tracking-tight flex items-center gap-1.5">
-                        <span>Menu Panel Admin</span>
-                      </h2>
-                      <p className="text-[11px] text-blue-100 font-medium">Semua fitur &amp; alat ada di sini</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsNavDrawerOpen(false)}
-                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
-                    title="Tutup Menu"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* DRAWER QUICK BADGE COUNTERS */}
-                <div className="grid grid-cols-3 gap-1.5 p-3 bg-slate-50 border-b border-slate-200/80 text-center">
-                  <div className="p-2 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
-                    <div className="text-[10px] font-bold text-slate-500">Pending STOR</div>
-                    <div className="text-sm font-black text-amber-600">
-                      {submissionsList.filter((s) => s.status === 'Pending').length}
-                    </div>
-                  </div>
-                  <div className="p-2 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
-                    <div className="text-[10px] font-bold text-slate-500">Cek Admin</div>
-                    <div className="text-sm font-black text-blue-600">
-                      {submissionsList.filter((s) => s.status === 'Cek Admin').length}
-                    </div>
-                  </div>
-                  <div className="p-2 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
-                    <div className="text-[10px] font-bold text-slate-500">Pending WD</div>
-                    <div className="text-sm font-black text-rose-600">
-                      {withdrawalsList.filter((w) => w.status === 'Pending').length}
-                    </div>
-                  </div>
-                </div>
-
-                {/* DRAWER BODY (SCROLLABLE LIST) */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {/* SEKSI: MENU NAVIGASI UTAMA */}
-                  <div className="space-y-1.5">
-                    <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-2">
-                      Navigasi Halaman Fitur
-                    </div>
-
-                    {[
-                      {
-                        id: 'stats',
-                        label: 'Statistik & Ringkasan',
-                        desc: 'Tampilan utama metrik & aktivitas',
-                        icon: TrendingUp,
-                        color: 'text-blue-600 bg-blue-50',
-                        badge: 'Tampilan Utama',
-                        badgeColor: 'bg-blue-100 text-blue-700',
-                      },
-                      {
-                        id: 'all_stor',
-                        label: 'All STOR (Per User)',
-                        desc: 'Grup storan terpisah rapi per pengguna',
-                        icon: Layers,
-                        color: 'text-indigo-600 bg-indigo-50',
-                        badge: `${submissionsList.length} total`,
-                        badgeColor: 'bg-slate-100 text-slate-700',
-                      },
-                      {
-                        id: 'yesterday_pending',
-                        label: 'Pendingan Kemarin',
-                        desc: 'Prioritas storan tertunda hari kemarin',
-                        icon: History,
-                        color: 'text-amber-600 bg-amber-50',
-                        badge: `${submissionsList.filter((s) => (s.status === 'Pending' || s.status === 'Cek Admin') && isEarlierThanTodayWIB(s.createdAt)).length}`,
-                        badgeColor: 'bg-amber-100 text-amber-800',
-                      },
-                      {
-                        id: 'all_cek_admin',
-                        label: 'All Cek Admin',
-                        desc: 'Semua antrean dalam pengecekan',
-                        icon: ClipboardCheck,
-                        color: 'text-cyan-600 bg-cyan-50',
-                        badge: `${submissionsList.filter((s) => s.status === 'Cek Admin').length}`,
-                        badgeColor: 'bg-cyan-100 text-cyan-800',
-                      },
-                      {
-                        id: 'submissions',
-                        label: 'Antrean Pending',
-                        desc: 'Verifikasi satuan & filter status',
-                        icon: UploadCloud,
-                        color: 'text-blue-600 bg-blue-50',
-                        badge: `${submissionsList.filter((s) => s.status === 'Pending').length}`,
-                        badgeColor: 'bg-amber-100 text-amber-800',
-                      },
-                      {
-                        id: 'withdrawals',
-                        label: 'Penarikan E-Wallet (WD)',
-                        desc: 'Pencairan DANA & GoPay pengguna',
-                        icon: Wallet,
-                        color: 'text-emerald-600 bg-emerald-50',
-                        badge: `${withdrawalsList.filter((w) => w.status === 'Pending').length} pending`,
-                        badgeColor: 'bg-rose-100 text-rose-800',
-                      },
-                      {
-                        id: 'users',
-                        label: 'Kelola Pengguna',
-                        desc: 'Data user, ubah saldo, & audit akun',
-                        icon: Users,
-                        color: 'text-violet-600 bg-violet-50',
-                        badge: `${usersList.length} user`,
-                        badgeColor: 'bg-slate-100 text-slate-700',
-                      },
-                      {
-                        id: 'stock',
-                        label: 'All Stok Generator',
-                        desc: 'Bank akun Gmail otomatis & import',
-                        icon: Sparkles,
-                        color: 'text-amber-600 bg-amber-50',
-                        badge: `${availableStock.length} ready`,
-                        badgeColor: 'bg-emerald-100 text-emerald-800',
-                      },
-                      {
-                        id: 'settings',
-                        label: 'Pengaturan Sistem',
-                        desc: 'Edit aturan, harga komisi & sandi',
-                        icon: Settings,
-                        color: 'text-slate-600 bg-slate-100',
-                        badge: 'Sistem',
-                        badgeColor: 'bg-slate-100 text-slate-700',
-                      },
-                    ].map((item) => {
-                      const Icon = item.icon;
-                      const isActive = activeTab === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            setActiveTab(item.id as typeof activeTab);
-                            setIsNavDrawerOpen(false);
-                          }}
-                          className={`w-full p-3 rounded-2xl flex items-center justify-between gap-3 transition cursor-pointer text-left ${
-                            isActive
-                              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                              : 'bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-800'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isActive ? 'bg-white/20 text-white' : item.color}`}>
-                              <Icon className="w-4 h-4" />
-                            </div>
-                            <div className="truncate">
-                              <div className={`text-xs font-black truncate ${isActive ? 'text-white' : 'text-slate-900'}`}>
-                                {item.label}
-                              </div>
-                              <div className={`text-[10px] truncate ${isActive ? 'text-blue-100' : 'text-slate-500'}`}>
-                                {item.desc}
-                              </div>
-                            </div>
-                          </div>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${isActive ? 'bg-white/20 text-white' : item.badgeColor}`}>
-                            {item.badge}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* SEKSI: AKSI CEPAT BULK */}
-                  <div className="space-y-2 pt-2 border-t border-slate-200/80">
-                    <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-2">
-                      Aksi Cepat Bulk Massal
-                    </div>
-                    <div className="grid grid-cols-1 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsNavDrawerOpen(false);
-                          setShowBulkCheckModal(true);
-                        }}
-                        className="w-full p-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-black flex items-center justify-between cursor-pointer transition"
-                      >
-                        <div className="flex items-center gap-2">
-                          <ClipboardCheck className="w-4 h-4" />
-                          <span>Cek Bulk Massal</span>
-                        </div>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsNavDrawerOpen(false);
-                          setShowBulkConfirmModal(true);
-                        }}
-                        className="w-full p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-black flex items-center justify-between cursor-pointer transition"
-                      >
-                        <div className="flex items-center gap-2">
-                          <ListCheck className="w-4 h-4" />
-                          <span>Terima Bulk Massal</span>
-                        </div>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsNavDrawerOpen(false);
-                          setShowBulkRejectModal(true);
-                        }}
-                        className="w-full p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-black flex items-center justify-between cursor-pointer transition"
-                      >
-                        <div className="flex items-center gap-2">
-                          <ListX className="w-4 h-4" />
-                          <span>Tolak Bulk Massal</span>
-                        </div>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* SEKSI: SAKLAR OPERASIONAL RINGKAS */}
-                  <div className="space-y-2 pt-2 border-t border-slate-200/80">
-                    <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 px-2 flex items-center justify-between">
-                      <span>Status Saklar Layanan</span>
-                      <span className="text-[10px] text-slate-500 font-normal">Hijau=Buka, Abu=Tutup</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-[11px]">
-                      <button
-                        type="button"
-                        onClick={() => updateSettings({ storanOpen: !settings.storanOpen })}
-                        className={`p-2 rounded-xl font-bold flex items-center justify-between transition cursor-pointer text-white ${
-                          settings.storanOpen ? 'bg-emerald-600' : 'bg-slate-500'
-                        }`}
-                      >
-                        <span>Semua STOR</span>
-                        <span className="text-[10px]">{settings.storanOpen ? 'BUKA' : 'TUTUP'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => updateSettings({ withdrawalOpen: settings.withdrawalOpen === false })}
-                        className={`p-2 rounded-xl font-bold flex items-center justify-between transition cursor-pointer text-white ${
-                          settings.withdrawalOpen !== false ? 'bg-emerald-600' : 'bg-slate-500'
-                        }`}
-                      >
-                        <span>Semua WD</span>
-                        <span className="text-[10px]">{settings.withdrawalOpen !== false ? 'BUKA' : 'TUTUP'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => updateSettings({ generatorOpen: settings.generatorOpen === false })}
-                        className={`p-2 rounded-xl font-bold flex items-center justify-between transition cursor-pointer text-white ${
-                          settings.generatorOpen !== false ? 'bg-emerald-600' : 'bg-slate-500'
-                        }`}
-                      >
-                        <span>Generator</span>
-                        <span className="text-[10px]">{settings.generatorOpen !== false ? 'BUKA' : 'TUTUP'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => updateSettings({ withdrawalDanaOpen: settings.withdrawalDanaOpen === false })}
-                        className={`p-2 rounded-xl font-bold flex items-center justify-between transition cursor-pointer text-white ${
-                          settings.withdrawalDanaOpen !== false ? 'bg-emerald-600' : 'bg-slate-500'
-                        }`}
-                      >
-                        <span>WD DANA</span>
-                        <span className="text-[10px]">{settings.withdrawalDanaOpen !== false ? 'BUKA' : 'TUTUP'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => updateSettings({ withdrawalGopayOpen: settings.withdrawalGopayOpen === false })}
-                        className={`p-2 rounded-xl font-bold flex items-center justify-between transition cursor-pointer text-white ${
-                          settings.withdrawalGopayOpen !== false ? 'bg-emerald-600' : 'bg-slate-500'
-                        }`}
-                      >
-                        <span>WD GoPay</span>
-                        <span className="text-[10px]">{settings.withdrawalGopayOpen !== false ? 'BUKA' : 'TUTUP'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const nextVal = settings.passwordZero1122Open === false;
-                          if (!nextVal && settings.passwordPrabujayaOpen === false) {
-                            showToast('warning', 'Peringatan', 'Minimal salah satu password harus tetap dibuka!');
-                            return;
-                          }
-                          updateSettings({ passwordZero1122Open: nextVal });
-                        }}
-                        className={`p-2 rounded-xl font-bold flex items-center justify-between transition cursor-pointer text-white ${
-                          settings.passwordZero1122Open !== false ? 'bg-emerald-600' : 'bg-slate-500'
-                        }`}
-                      >
-                        <span className="truncate">PW 1</span>
-                        <span className="text-[10px]">{settings.passwordZero1122Open !== false ? 'BUKA' : 'TUTUP'}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* DRAWER FOOTER */}
-                <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-                  <span className="truncate">Admin: {currentUser?.email}</span>
-                  <button
-                    type="button"
-                    onClick={() => setIsNavDrawerOpen(false)}
-                    className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold cursor-pointer"
-                  >
-                    Tutup
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
     </div>
   );
 }

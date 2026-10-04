@@ -30,6 +30,23 @@ export function formatIndonesianDateTime(isoOrDate: string | Date | number): str
   }
 }
 
+export function formatTimeWIB(isoOrDate: string | Date | number): string {
+  try {
+    const d = new Date(isoOrDate);
+    if (isNaN(d.getTime())) return '-';
+    return (
+      new Intl.DateTimeFormat('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(d) + ' WIB'
+    );
+  } catch {
+    return '-';
+  }
+}
+
 export function formatRelativeTime(isoOrDate: string | Date | number): string {
   try {
     const d = new Date(isoOrDate);

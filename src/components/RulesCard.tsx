@@ -9,7 +9,8 @@ interface RulesCardProps {
 
 export function RulesCard({ onNavigate, onClick }: RulesCardProps) {
   const { settings } = useSettings();
-  const activePassword = settings.gmailDefaultPassword || 'zero1122 / prabujaya';
+  const pw1 = settings.password1Name || 'zero1122';
+  const pw2 = settings.password2Name || 'prabujaya';
 
   const handleClick = () => {
     if (onClick) {
@@ -47,9 +48,9 @@ export function RulesCard({ onNavigate, onClick }: RulesCardProps) {
               </span>
             </div>
             <p className="text-[11px] sm:text-xs text-slate-500 truncate mt-0.5">
-              Password wajib:{' '}
+              Pilihan password:{' '}
               <strong className="font-mono text-orange-600 font-bold">
-                {activePassword}
+                {pw1} / {pw2}
               </strong>{' '}
               &bull; Klik untuk baca aturan lengkap
             </p>

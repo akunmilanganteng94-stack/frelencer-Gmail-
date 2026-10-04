@@ -10,7 +10,6 @@ import { useToast } from '../context/ToastContext';
 import { doc, runTransaction, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { processReferralOnSubmissionAccepted } from '../lib/referralHelper';
-import { getSubmissionPassword } from './AdminAllStorTab';
 import {
   Copy,
   Check,
@@ -23,6 +22,10 @@ import {
   ClipboardCheck,
   Loader2,
   RotateCcw,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  Table,
 } from 'lucide-react';
 
 interface AdminAllCekAdminTabProps {
@@ -40,6 +43,7 @@ interface AdminAllCekAdminTabProps {
 
 export function AdminAllCekAdminTab({
   submissions,
+  defaultPassword = 'zero1122',
   onOpenBulkCheckModal,
   onOpenBulkConfirmModal,
   onOpenBulkRejectModal,
@@ -56,10 +60,23 @@ export function AdminAllCekAdminTab({
   const [, setBulkConfirmProgress] = useState({ current: 0, total: 0 });
   const [showConfirmDirectModal, setShowConfirmDirectModal] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<'selected' | 'all'>('selected');
+  const [viewMode, setViewMode] = useState<'grouped_user' | 'flat_table'>('grouped_user');
+  const [expandedUserIds, setExpandedUserIds] = useState<Set<string>>(new Set());
 
   const getCleanEmail = (content: string) => {
     if (!content) return '';
     return content.split('|')[0].trim();
+  };
+
+  const getSubPassword = (sub: Submission) => {
+    if (sub.passwordUsed) return sub.passwordUsed;
+    if (sub.adminNotes && sub.adminNotes.includes('PW:')) {
+      const match = sub.adminNotes.match(/PW:\s*([^\s,]+)/i);
+      if (match && match[1]) return match[1];
+    }
+    const parts = sub.dataContent.split('|');
+    if (parts[1] && parts[1].trim()) return parts[1].trim();
+    return defaultPassword;
   };
 
   const allCekAdminSubs = useMemo(() => {
@@ -92,6 +109,48 @@ export function AdminAllCekAdminTab({
       return matchesSearch && matchesTiming;
     });
   }, [allCekAdminSubs, searchQuery, timingFilter]);
+
+  // Group by user
+  const userGroups = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        userId: string;
+        userName: string;
+        userEmail: string;
+        items: Submission[];
+        totalReward: number;
+      }
+    >();
+
+    for (const sub of filteredSubs) {
+      const uid = sub.userId || 'unknown';
+      if (!map.has(uid)) {
+        map.set(uid, {
+          userId: uid,
+          userName: sub.userName || 'Freelancer',
+          userEmail: sub.userEmail || '',
+          items: [],
+          totalReward: 0,
+        });
+      }
+      const g = map.get(uid)!;
+      g.items.push(sub);
+      g.totalReward += sub.rewardAmount || 3000;
+    }
+
+    return Array.from(map.values()).sort((a, b) => b.items.length - a.items.length);
+  }, [filteredSubs]);
+
+  const toggleUserExpand = (uid: string) => {
+    const next = new Set(expandedUserIds);
+    if (next.has(uid)) {
+      next.delete(uid);
+    } else {
+      next.add(uid);
+    }
+    setExpandedUserIds(next);
+  };
 
   const handleCopyText = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -177,7 +236,6 @@ export function AdminAllCekAdminTab({
           if (subDoc.data().status === 'Diterima' || subDoc.data().status === 'Ditolak') return;
 
           const userDoc = await transaction.get(userRef);
-
           transaction.update(subRef, {
             status: 'Diterima',
             reviewedAt: new Date().toISOString(),
@@ -253,7 +311,7 @@ export function AdminAllCekAdminTab({
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-blue-100 mt-0.5">
-                Pemeriksaan akun Gmail yang disetor freelancer. Konfirmasi satu per satu atau langsung konfirmasi bulk.
+                Pemeriksaan akun Gmail yang disetor freelancer. Dipisahkan per user dan terorganisir.
               </p>
             </div>
           </div>
@@ -262,7 +320,6 @@ export function AdminAllCekAdminTab({
               type="button"
               onClick={onOpenBulkConfirmModal}
               className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black shadow-md shadow-emerald-950/20 transition flex items-center gap-2 cursor-pointer active:scale-95"
-              title="Buka modal input teks massal untuk konfirmasi akun"
             >
               <ListCheck className="w-4 h-4" />
               <span>Modal Konfirmasi Bulk</span>
@@ -272,7 +329,6 @@ export function AdminAllCekAdminTab({
                 type="button"
                 onClick={onOpenBulkCheckModal}
                 className="px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/25 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95"
-                title="Buka modal cek bulk untuk memindahkan akun Pending ke Cek Admin"
               >
                 <ClipboardCheck className="w-4 h-4" />
                 <span>Input Cek Bulk</span>
@@ -283,7 +339,6 @@ export function AdminAllCekAdminTab({
                 type="button"
                 onClick={onOpenBulkRejectModal}
                 className="px-3.5 py-2.5 rounded-xl bg-rose-500/80 hover:bg-rose-600 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95"
-                title="Buka modal tolak massal"
               >
                 <ListX className="w-4 h-4" />
                 <span>Tolak Bulk</span>
@@ -335,7 +390,6 @@ export function AdminAllCekAdminTab({
             onClick={handleCopyAllEmails}
             disabled={allCekAdminSubs.length === 0}
             className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
-            title="Salin seluruh email yang berstatus Cek Admin (1 per baris)"
           >
             <Copy className="w-3 h-3" />
             <span>Semua Gmail ({allCekAdminSubs.length})</span>
@@ -392,70 +446,163 @@ export function AdminAllCekAdminTab({
                 </button>
               ))}
             </div>
+            <div className="flex p-0.5 bg-slate-100 rounded-xl border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setViewMode('grouped_user')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === 'grouped_user'
+                    ? 'bg-blue-600 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Pisah per User ({userGroups.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('flat_table')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === 'flat_table'
+                    ? 'bg-blue-600 text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Table className="w-3.5 h-3.5" />
+                <span>Tabel</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* MULTI SELECTION ACTION BAR */}
-        {selectedIds.size > 0 && (
-          <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-150">
-            <div className="flex items-center gap-2.5">
-              <span className="w-7 h-7 rounded-xl bg-indigo-600 text-white font-black text-xs flex items-center justify-center">
-                {selectedIds.size}
-              </span>
-              <span className="text-xs font-bold text-indigo-950">
-                {selectedIds.size} akun Gmail terpilih ({formatRupiah(selectedRewardTotal)})
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const emails = selectedSubsList.map((s) => getCleanEmail(s.dataContent));
-                  navigator.clipboard.writeText(emails.join('\n'));
-                  showToast('info', 'Tersalin', `${emails.length} Gmail terpilih disalin.`);
-                }}
-                className="px-3 py-1.5 rounded-xl bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-              >
-                <Copy className="w-3 h-3" />
-                <span>Salin Terpilih</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setConfirmTarget('selected');
-                  setShowConfirmDirectModal(true);
-                }}
-                className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Konfirmasi Terpilih ({selectedIds.size} Akun)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedIds(new Set())}
-                className="px-2.5 py-1.5 rounded-xl bg-transparent hover:bg-indigo-100 text-indigo-600 text-xs font-semibold cursor-pointer"
-              >
-                Batal Pilih
-              </button>
-            </div>
+        {/* PISAH PER USER */}
+        {viewMode === 'grouped_user' && (
+          <div className="space-y-4 pt-2">
+            {userGroups.length === 0 ? (
+              <div className="text-center py-12 px-4 rounded-2xl bg-slate-50 border border-slate-200/60 space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+                  <ClipboardCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">
+                    Tidak Ada Akun dalam Antrean Cek Admin
+                  </h3>
+                </div>
+              </div>
+            ) : (
+              userGroups.map((group, groupIdx) => {
+                const isExpanded = !expandedUserIds.has(group.userId);
+                return (
+                  <div
+                    key={group.userId}
+                    className="bg-white rounded-2xl border border-blue-200/80 shadow-2xs overflow-hidden"
+                  >
+                    <div className="p-3.5 sm:p-4 bg-blue-50/50 border-b border-blue-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center">
+                          {groupIdx + 1}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-sm text-slate-900">{group.userName}</span>
+                            <span className="px-2 py-0.2 rounded-full text-[10px] font-black bg-blue-200 text-blue-900">
+                              {group.items.length} Akun Cek Admin
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-mono">{group.userEmail}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const emails = group.items.map((i) => getCleanEmail(i.dataContent)).join('\n');
+                            navigator.clipboard.writeText(emails);
+                            showToast('info', 'Disalin', `${group.items.length} akun disalin.`);
+                          }}
+                          className="px-2.5 py-1 bg-white hover:bg-blue-100/60 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 transition cursor-pointer"
+                        >
+                          Salin
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleUserExpand(group.userId)}
+                          className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="p-3 space-y-2">
+                        {group.items.map((sub, itemIdx) => {
+                          const email = getCleanEmail(sub.dataContent);
+                          const isProcessing = processingSubId === sub.id;
+                          const pw = getSubPassword(sub);
+                          return (
+                            <div
+                              key={sub.id}
+                              className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-mono text-slate-400 text-[10px] w-5">
+                                  #{itemIdx + 1}
+                                </span>
+                                <span className="font-mono font-bold text-slate-900 select-all truncate">
+                                  {email}
+                                </span>
+                                <span className="px-2 py-0.2 rounded bg-amber-100 text-amber-900 font-mono font-bold text-[10px]">
+                                  PW: {pw}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-end gap-1.5 self-end sm:self-center">
+                                <button
+                                  type="button"
+                                  disabled={isProcessing}
+                                  onClick={() => onAcceptSubmission(sub)}
+                                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-50"
+                                >
+                                  {isProcessing ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                  )}
+                                  <span>Terima</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isProcessing}
+                                  onClick={() => onRejectSubmission(sub)}
+                                  className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-50"
+                                >
+                                  <XCircle className="w-3.5 h-3.5" />
+                                  <span>Tolak</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isProcessing}
+                                  onClick={() => handleResetToPending(sub)}
+                                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                                  title="Kembalikan status akun ke Pending"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
 
-        {/* TABLE */}
-        {filteredSubs.length === 0 ? (
-          <div className="text-center py-12 px-4 rounded-2xl bg-slate-50 border border-slate-200/60 space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
-              <ClipboardCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-800">
-                {allCekAdminSubs.length === 0
-                  ? 'Tidak Ada Akun dalam Antrean Cek Admin'
-                  : 'Tidak Ada Akun yang Cocok dengan Filter'}
-              </h3>
-            </div>
-          </div>
-        ) : (
+        {/* TABEL LENGKAP */}
+        {viewMode === 'flat_table' && (
           <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-extrabold uppercase tracking-wider">
@@ -482,6 +629,7 @@ export function AdminAllCekAdminTab({
                   const isProcessing = processingSubId === sub.id;
                   const isChecked = selectedIds.has(sub.id);
                   const isKemarin = isEarlierThanTodayWIB(sub.createdAt);
+                  const pw = getSubPassword(sub);
 
                   return (
                     <tr
@@ -533,27 +681,9 @@ export function AdminAllCekAdminTab({
                         </div>
                       </td>
                       <td className="px-4 py-3.5 font-mono">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`px-2 py-0.5 rounded border font-bold text-xs ${
-                            getSubmissionPassword(sub) === 'prabujaya'
-                              ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
-                              : 'bg-blue-50 border-blue-200 text-blue-800'
-                          }`}>
-                            {getSubmissionPassword(sub)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleCopyText(getSubmissionPassword(sub), `pw-${sub.id}`)}
-                            className="text-slate-400 hover:text-indigo-600 transition cursor-pointer"
-                            title="Salin Password"
-                          >
-                            {copiedId === `pw-${sub.id}` ? (
-                              <Check className="w-3 h-3 text-emerald-600" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                          </button>
-                        </div>
+                        <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-bold">
+                          {pw}
+                        </span>
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="text-slate-900 font-bold truncate max-w-[150px]">
@@ -567,47 +697,39 @@ export function AdminAllCekAdminTab({
                         <div>{formatIndonesianDateTime(sub.checkedAt || sub.createdAt)}</div>
                       </td>
                       <td className="px-4 py-3.5 text-right">
-                        {(sub.status === 'Diterima' || sub.status === 'Ditolak') ? (
-                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">
-                            Riwayat {sub.status}
-                          </span>
-                        ) : (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              disabled={isProcessing}
-                              onClick={() => onAcceptSubmission(sub)}
-                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-50"
-                              title="Terima akun dan cairkan saldo ke user"
-                            >
-                              {isProcessing ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                              )}
-                              <span>Terima</span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isProcessing}
-                              onClick={() => onRejectSubmission(sub)}
-                              className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-50"
-                              title="Tolak akun dengan alasan"
-                            >
-                              <XCircle className="w-3.5 h-3.5" />
-                              <span>Tolak</span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isProcessing}
-                              onClick={() => handleResetToPending(sub)}
-                              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-                              title="Kembalikan status akun ke Pending"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            disabled={isProcessing}
+                            onClick={() => onAcceptSubmission(sub)}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-50"
+                          >
+                            {isProcessing ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            )}
+                            <span>Terima</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isProcessing}
+                            onClick={() => onRejectSubmission(sub)}
+                            className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-50"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>Tolak</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isProcessing}
+                            onClick={() => handleResetToPending(sub)}
+                            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                            title="Kembalikan status akun ke Pending"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -620,7 +742,7 @@ export function AdminAllCekAdminTab({
 
       {showConfirmDirectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-5 animate-in zoom-in-95 duration-150">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-5">
             <div className="flex items-center gap-3 text-emerald-600">
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
                 <CheckCircle2 className="w-6 h-6" />

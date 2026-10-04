@@ -34,6 +34,7 @@ import { motion, AnimatePresence } from 'motion/react';
 interface GmailGeneratorProps {
   onOpenContactAdmin?: () => void;
   submittedEmails?: string[];
+  userSubmissions?: { dataContent: string; createdAt: string }[];
   onSelectEmailForStoran?: (email: string) => void;
   embedded?: boolean;
 }
@@ -150,7 +151,82 @@ export async function verifyUserGeneratedEmail(email: string, userId?: string): 
     console.warn('Gagal verifikasi email generate di database Firestore:', err);
   }
 
+  try {
+    const emailKey = normalizedTarget.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const claimedSnap = await getDoc(doc(db, 'claimed_emails', emailKey));
+    if (claimedSnap.exists()) {
+      const cData = claimedSnap.data();
+      if (cData.claimedBy === userId) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  } catch (errClaimed) {
+    console.warn('Gagal cek claimed_emails:', errClaimed);
+  }
+
   return false;
+}
+
+export function filterExpiredStoredAccounts(
+  accounts: GeneratedResultItem[],
+  submissions: { dataContent: string; createdAt: string }[]
+): GeneratedResultItem[] {
+  if (!Array.isArray(accounts)) return [];
+  const now = Date.now();
+  const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+  const submissionTimeMap = new Map<string, number>();
+
+  if (Array.isArray(submissions)) {
+    submissions.forEach((sub) => {
+      const email = (sub.dataContent || '').split('|')[0].trim().toLowerCase();
+      const time = new Date(sub.createdAt).getTime();
+      if (!isNaN(time) && email) {
+        const prev = submissionTimeMap.get(email);
+        if (!prev || time > prev) {
+          submissionTimeMap.set(email, time);
+        }
+      }
+    });
+  }
+
+  return accounts.filter((item) => {
+    const cleanEmail = (item.email || '').trim().toLowerCase();
+    const submittedTime = submissionTimeMap.get(cleanEmail);
+    if (!submittedTime) {
+      return true;
+    }
+    const elapsed = now - submittedTime;
+    return elapsed < TWENTY_FOUR_HOURS_MS;
+  });
+}
+
+export function getStoredAccountRemainingHours(
+  email: string,
+  submissions: { dataContent: string; createdAt: string }[]
+): number | null {
+  const cleanEmail = email.trim().toLowerCase();
+  let latestTime: number | null = null;
+
+  if (Array.isArray(submissions)) {
+    submissions.forEach((sub) => {
+      const subEmail = (sub.dataContent || '').split('|')[0].trim().toLowerCase();
+      if (subEmail === cleanEmail) {
+        const t = new Date(sub.createdAt).getTime();
+        if (!isNaN(t) && (latestTime === null || t > latestTime)) {
+          latestTime = t;
+        }
+      }
+    });
+  }
+
+  if (latestTime === null) return null;
+  const elapsed = Date.now() - latestTime;
+  const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+  const remainingMs = TWENTY_FOUR_HOURS_MS - elapsed;
+  if (remainingMs <= 0) return 0;
+  return Math.ceil(remainingMs / (60 * 60 * 1000));
 }
 
 export function getSavedGeneratedAccounts(userId?: string): GeneratedResultItem[] {
@@ -193,6 +269,7 @@ export function recordGeneratedCountToday(count: number, userId?: string) {
 export function GmailGenerator({
   onOpenContactAdmin,
   submittedEmails = [],
+  userSubmissions = [],
   onSelectEmailForStoran,
   embedded = false,
 }: GmailGeneratorProps) {
@@ -200,7 +277,6 @@ export function GmailGenerator({
   const { showToast } = useToast();
   const { currentUser } = useAuth();
   const { claimAccounts } = useGmailStock();
-
   const [count, setCount] = useState<number>(1);
   const [generating, setGenerating] = useState<boolean>(false);
   const [results, setResults] = useState<GeneratedResultItem[]>([]);
@@ -210,7 +286,7 @@ export function GmailGenerator({
     getGeneratedCountToday(currentUser?.uid)
   );
 
-  const activePassword = settings.storanPassword1 || 'zero1122';
+  const activePassword = settings.gmailDefaultPassword || settings.password1Name || 'zero1122';
   const isFeatureOpen = settings.generatorOpen !== false;
   const dailyLimit =
     typeof settings.dailyGenerateLimit === 'number' && settings.dailyGenerateLimit > 0
@@ -235,20 +311,15 @@ export function GmailGenerator({
       if (raw) {
         const parsed: GeneratedResultItem[] = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          const unsubmitted = parsed.filter(
-            (item) =>
-              !submittedEmails.some(
-                (sub) => sub.trim().toLowerCase() === item.email.trim().toLowerCase()
-              )
-          );
-          setResults(unsubmitted);
-          localStorage.setItem(storageKey, JSON.stringify(unsubmitted));
+          const valid = filterExpiredStoredAccounts(parsed, userSubmissions);
+          setResults(valid);
+          localStorage.setItem(storageKey, JSON.stringify(valid));
         }
       }
     } catch (e) {
       console.warn('Gagal memuat akun yang tersimpan:', e);
     }
-  }, [storageKey, submittedEmails]);
+  }, [storageKey, userSubmissions]);
 
   const handleAdjustCount = (newCount: number) => {
     const maxAllowed = Math.max(1, Math.min(25, remainingQuota > 0 ? remainingQuota : 1));
@@ -318,11 +389,9 @@ export function GmailGenerator({
       setResults((prev) => {
         const existingEmails = new Set(prev.map((r) => r.email.toLowerCase()));
         const newUnique = mapped.filter((m) => !existingEmails.has(m.email.toLowerCase()));
-        const updated = [...prev, ...newUnique].filter(
-          (item) =>
-            !submittedEmails.some(
-              (sub) => sub.trim().toLowerCase() === item.email.trim().toLowerCase()
-            )
+        const updated = filterExpiredStoredAccounts(
+          [...prev, ...newUnique],
+          userSubmissions
         );
         try {
           localStorage.setItem(storageKey, JSON.stringify(updated));
@@ -433,7 +502,6 @@ export function GmailGenerator({
             </p>
           </div>
         </div>
-
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
           <div
             className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold flex items-center gap-1 ${
@@ -494,7 +562,7 @@ export function GmailGenerator({
           <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
-              Batas kuota generate harian Anda ({dailyLimit} akun) telah tercapai hari ini. Kuota akan direset otomatis setiap hari.
+              Batas kuota generate harian Anda ({dailyLimit} akun) telah tercapai hari ini. Kuota akan direset otomatis setiap hari (24 jam).
             </span>
           </div>
         )}
@@ -561,7 +629,6 @@ export function GmailGenerator({
                   </span>
                 </div>
               </div>
-
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
@@ -586,16 +653,19 @@ export function GmailGenerator({
               {results.map((item, idx) => {
                 const isEmailCopied =
                   copiedItem?.id === item.id && copiedItem?.type === 'Email';
+                const isPasswordCopied =
+                  copiedItem?.id === item.id && copiedItem?.type === 'Password';
                 const isStored = submittedEmails.some(
                   (submitted) => submitted.trim().toLowerCase() === item.email.trim().toLowerCase()
                 );
+                const remainingHours = getStoredAccountRemainingHours(item.email, userSubmissions);
 
                 return (
                   <div
                     key={item.id || idx}
                     className={`p-2.5 sm:p-3 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
                       isStored
-                        ? 'bg-slate-50 border-slate-200 opacity-70'
+                        ? 'bg-slate-50 border-slate-200 opacity-80'
                         : 'bg-gray-100 border-gray-300 hover:border-gray-400 text-gray-800'
                     }`}
                   >
@@ -612,22 +682,30 @@ export function GmailGenerator({
                           <Mail className="w-3.5 h-3.5 text-gray-500 shrink-0" />
                           <span>{item.email}</span>
                         </span>
-
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 text-xs font-mono font-bold shadow-2xs"
+                          title="Password akun Gmail ini"
+                        >
+                          <Lock className="w-3 h-3 text-amber-600 shrink-0" />
+                          <span>PW: {item.password || activePassword}</span>
+                        </span>
                         {isStored ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                          <span
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs"
+                            title="Akun sudah distorkan. Otomatis terhapus setelah 24 jam."
+                          >
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            <span>di stor</span>
+                            <span>di stor {remainingHours !== null ? `(hapus dlm ${remainingHours}j)` : ''}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-gray-200 text-gray-700 border border-gray-300 shadow-2xs">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gray-200 text-gray-700 border border-gray-300 shadow-2xs">
                             <Clock className="w-3 h-3 text-gray-500" />
                             <span>belum di STOR</span>
                           </span>
                         )}
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+                    <div className="flex flex-wrap items-center gap-1.5 self-end sm:self-center shrink-0">
                       {!isStored && onSelectEmailForStoran && (
                         <button
                           type="button"
@@ -639,7 +717,6 @@ export function GmailGenerator({
                           <span>Pilih Stor</span>
                         </button>
                       )}
-
                       <button
                         type="button"
                         onClick={() => handleCopyText(item.email, item.id, 'Email')}
@@ -653,7 +730,19 @@ export function GmailGenerator({
                         )}
                         <span>{isEmailCopied ? 'Tersalin' : 'Salin Gmail'}</span>
                       </button>
-
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(item.password || activePassword, item.id, 'Password')}
+                        className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold rounded-lg border border-amber-200 transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                        title="Salin Password Akun"
+                      >
+                        {isPasswordCopied ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <Lock className="w-3.5 h-3.5 text-amber-600" />
+                        )}
+                        <span>{isPasswordCopied ? 'Tersalin' : 'Salin PW'}</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => {

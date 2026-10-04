@@ -19,25 +19,6 @@ export function MisiReferralBanner({ onNavigate, className = '' }: MisiReferralB
   useEffect(() => {
     if (!currentUser) return;
 
-    let listFromRef: ReferralItem[] = [];
-    let listFromUsers: ReferralItem[] = [];
-
-    const updateCounts = () => {
-      const map = new Map<string, ReferralItem>();
-      for (const item of listFromRef) {
-        map.set(item.invitedUid || item.id, item);
-      }
-      for (const uItem of listFromUsers) {
-        if (!map.has(uItem.invitedUid)) {
-          map.set(uItem.invitedUid, uItem);
-        }
-      }
-      const combined = Array.from(map.values());
-      setTotalCount(combined.length);
-      setCompletedCount(combined.filter((r) => r.status === 'completed').length);
-      setLoading(false);
-    };
-
     const qRef = query(
       collection(db, 'referrals'),
       where('inviterUid', '==', currentUser.uid)
@@ -49,45 +30,18 @@ export function MisiReferralBanner({ onNavigate, className = '' }: MisiReferralB
         snapshot.forEach((docSnap) => {
           list.push({ id: docSnap.id, ...(docSnap.data() as Omit<ReferralItem, 'id'>) });
         });
-        listFromRef = list;
-        updateCounts();
+        setTotalCount(list.length);
+        setCompletedCount(list.filter((r) => r.status === 'completed').length);
+        setLoading(false);
       },
-      () => {
-        updateCounts();
-      }
-    );
-
-    const qUsers = query(
-      collection(db, 'users'),
-      where('referredBy', '==', currentUser.uid)
-    );
-    const unsubUsers = onSnapshot(
-      qUsers,
-      (snapshot) => {
-        const list: ReferralItem[] = [];
-        snapshot.forEach((docSnap) => {
-          list.push({
-            id: docSnap.id,
-            inviterUid: currentUser.uid,
-            inviterEmail: currentUser.email || '',
-            invitedUid: docSnap.id,
-            invitedEmail: docSnap.data().email || '',
-            invitedName: docSnap.data().displayName || 'Freelancer',
-            status: 'pending_submission',
-            createdAt: docSnap.data().createdAt || new Date().toISOString(),
-          });
-        });
-        listFromUsers = list;
-        updateCounts();
-      },
-      () => {
-        updateCounts();
+      (err) => {
+        console.warn('Referrals banner notice:', err);
+        setLoading(false);
       }
     );
 
     return () => {
       unsubRef();
-      unsubUsers();
     };
   }, [currentUser]);
 
@@ -107,6 +61,7 @@ export function MisiReferralBanner({ onNavigate, className = '' }: MisiReferralB
       className={`group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-white via-blue-50/50 to-sky-50/70 border border-blue-200/80 hover:border-blue-400/80 p-3 sm:p-3.5 shadow-2xs hover:shadow-xs transition-all duration-200 cursor-pointer select-none active:scale-[0.99] ${className}`}
     >
       <div className="absolute right-0 top-0 w-36 h-36 bg-gradient-to-br from-[#38bdf8]/15 via-blue-500/10 to-transparent rounded-full blur-xl pointer-events-none" />
+
       <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-[#1e40af] via-[#2563eb] to-[#38bdf8] text-white flex items-center justify-center shadow-xs shadow-blue-500/25 shrink-0 group-hover:scale-105 transition-transform">
@@ -145,7 +100,6 @@ export function MisiReferralBanner({ onNavigate, className = '' }: MisiReferralB
               </div>
             </div>
           </div>
-
           <div className="flex items-center gap-1.5">
             <span className="hidden md:inline text-xs font-bold text-blue-700 group-hover:underline">
               Buka Misi

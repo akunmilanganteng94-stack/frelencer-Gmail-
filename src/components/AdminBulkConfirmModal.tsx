@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import {
   CheckCircle2,
@@ -20,14 +20,12 @@ interface AdminBulkConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
   submissions: Submission[];
-  initialPasswordMode?: 'ALL' | 'zero1122' | 'prabujaya';
 }
 
 export function AdminBulkConfirmModal({
   isOpen,
   onClose,
   submissions,
-  initialPasswordMode = 'ALL',
 }: AdminBulkConfirmModalProps) {
   const { showToast } = useToast();
   const [inputText, setInputText] = useState('');
@@ -75,48 +73,6 @@ export function AdminBulkConfirmModal({
       .map((s) => getCleanEmailFromSubmission(s.dataContent))
       .filter(Boolean);
   }, [cekAdminSubs]);
-
-  const getSubPw = (s: Submission) => {
-    if (s.storanPassword) return s.storanPassword;
-    const n = (s.adminNotes || '').toLowerCase();
-    if (n.includes('prabujaya')) return 'prabujaya';
-    if (n.includes('zero1122')) return 'zero1122';
-    if (s.dataContent.includes('|')) {
-      const p = s.dataContent.split('|')[1]?.trim().toLowerCase();
-      if (p === 'prabujaya') return 'prabujaya';
-      if (p === 'zero1122') return 'zero1122';
-    }
-    return 'zero1122';
-  };
-
-  const pendingZeroEmails = useMemo(() => {
-    return submissions
-      .filter((s) => (s.status === 'Pending' || s.status === 'Cek Admin') && getSubPw(s) === 'zero1122')
-      .map((s) => getCleanEmailFromSubmission(s.dataContent))
-      .filter(Boolean);
-  }, [submissions]);
-
-  const pendingPrabuEmails = useMemo(() => {
-    return submissions
-      .filter((s) => (s.status === 'Pending' || s.status === 'Cek Admin') && getSubPw(s) === 'prabujaya')
-      .map((s) => getCleanEmailFromSubmission(s.dataContent))
-      .filter(Boolean);
-  }, [submissions]);
-
-  useEffect(() => {
-    if (isOpen) {
-      if (initialPasswordMode === 'zero1122') {
-        setInputText(pendingZeroEmails.join('\n'));
-      } else if (initialPasswordMode === 'prabujaya') {
-        setInputText(pendingPrabuEmails.join('\n'));
-      } else {
-        setInputText('');
-      }
-      setStep('input');
-      setProcessedCount(0);
-      setProcessedTotalReward(0);
-    }
-  }, [isOpen, initialPasswordMode, pendingZeroEmails, pendingPrabuEmails]);
 
   const parsedEmails = useMemo(() => {
     if (!inputText.trim()) return [];
@@ -211,7 +167,6 @@ export function AdminBulkConfirmModal({
 
           const reward =
             typeof sub.rewardAmount === 'number' && sub.rewardAmount > 0 ? sub.rewardAmount : 3000;
-
           const userDoc = await transaction.get(userRef);
 
           transaction.update(subRef, {
@@ -329,7 +284,7 @@ export function AdminBulkConfirmModal({
                   <span>Petunjuk Input Massal:</span>
                 </div>
                 <p>
-                  Tempel daftar alamat Gmail yang ingin Anda konfirmasi terima. Masukkan <strong>1 baris = 1 akun Gmail</strong>. Sistem akan mencocokkan akun tersebut dengan storan berstatus <strong>Pending / Cek Admin</strong>, lalu otomatis mengubah status menjadi <strong>Diterima</strong> dan menambahkan saldo pengguna.
+                  Tempel daftar alamat Gmail yang ingin Anda konfirmasi terima. Masukkan <strong>1 baris = 1 akun Gmail</strong>. Sistem akan mencocokkan akun tersebut dengan storan berstatus <strong>Pending</strong>, lalu otomatis mengubah status menjadi <strong>Diterima</strong> dan menambahkan saldo pengguna.
                 </p>
               </div>
 
@@ -356,7 +311,6 @@ export function AdminBulkConfirmModal({
                     <span>Semua Kemarin ({pendingYesterdayEmails.length})</span>
                   </button>
                 </div>
-
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
                   <span className="text-[10px] font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded">Hari Ini:</span>
                   <button
@@ -375,7 +329,6 @@ export function AdminBulkConfirmModal({
                     <span>Semua Hari Ini ({pendingTodayEmails.length})</span>
                   </button>
                 </div>
-
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
                   <span className="text-[10px] font-bold text-indigo-900 bg-indigo-100 px-2 py-0.5 rounded">Cek Admin:</span>
                   <button
@@ -392,38 +345,6 @@ export function AdminBulkConfirmModal({
                   >
                     <CheckCircle2 className="w-3 h-3" />
                     <span>Semua Cek Admin ({cekAdminEmails.length})</span>
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-200/60">
-                  <span className="text-[10px] font-bold text-slate-800 bg-slate-200 px-2 py-0.5 rounded">Per Password:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (pendingZeroEmails.length === 0) {
-                        showToast('info', 'Kosong', 'Tidak ada antrean pending untuk password zero1122.');
-                        return;
-                      }
-                      setInputText(pendingZeroEmails.join('\n'));
-                      showToast('success', 'Dimuat', `${pendingZeroEmails.length} akun zero1122 dimuat.`);
-                    }}
-                    className="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>zero1122 ({pendingZeroEmails.length})</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (pendingPrabuEmails.length === 0) {
-                        showToast('info', 'Kosong', 'Tidak ada antrean pending untuk password prabujaya.');
-                        return;
-                      }
-                      setInputText(pendingPrabuEmails.join('\n'));
-                      showToast('success', 'Dimuat', `${pendingPrabuEmails.length} akun prabujaya dimuat.`);
-                    }}
-                    className="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>prabujaya ({pendingPrabuEmails.length})</span>
                   </button>
                 </div>
               </div>
@@ -522,13 +443,8 @@ export function AdminBulkConfirmModal({
                         className="p-2.5 flex items-center justify-between gap-3 bg-slate-50/50 hover:bg-white"
                       >
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-slate-900 truncate">
-                              {item.email}
-                            </span>
-                            <span className="px-1.5 py-0.2 rounded font-mono font-black text-[10px] bg-blue-100 text-blue-800 border border-blue-200 shrink-0">
-                              {getSubPw(item.submission)}
-                            </span>
+                          <div className="font-mono font-bold text-slate-900 truncate">
+                            {item.email}
                           </div>
                           <div className="text-[11px] text-slate-500">
                             Pengirim: {item.submission.userName} ({item.submission.userEmail})
@@ -573,6 +489,7 @@ export function AdminBulkConfirmModal({
                   Sebanyak <strong>{processedCount} akun Gmail</strong> telah disetujui. Total saldo sebesar <strong>{formatRupiah(processedTotalReward)}</strong> telah langsung ditambahkan ke masing-masing akun pengguna.
                 </p>
               </div>
+
               <div className="pt-3 flex justify-center gap-2">
                 <button
                   type="button"

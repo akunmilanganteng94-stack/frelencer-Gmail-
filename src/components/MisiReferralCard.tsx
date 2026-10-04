@@ -12,12 +12,12 @@ import {
   Check,
   Share2,
   Gift,
-  CheckCircle2,
   Clock,
   Sparkles,
   ChevronDown,
   ChevronUp,
   Info,
+  CheckCircle2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -48,26 +48,14 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
       ).catch(console.warn);
     }
 
-    let listFromRef: ReferralItem[] = [];
-    let listFromUsers: ReferralItem[] = [];
-
-    const syncList = () => {
-      const map = new Map<string, ReferralItem>();
-      for (const item of listFromRef) {
-        map.set(item.invitedUid || item.id, item);
-      }
-      for (const uItem of listFromUsers) {
-        if (!map.has(uItem.invitedUid)) {
-          map.set(uItem.invitedUid, uItem);
-        }
-      }
-      const list = Array.from(map.values()).sort(
+    const syncList = (list: ReferralItem[]) => {
+      const sorted = [...list].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
-      setReferrals(list);
+      setReferrals(sorted);
       setLoading(false);
 
-      const completedCount = list.filter((r) => r.status === 'completed').length;
+      const completedCount = sorted.filter((r) => r.status === 'completed').length;
       const currentMilestones = userProfile?.referralRewardMilestones || [];
       const earnedMilestonesCount = Math.floor(completedCount / 20);
 
@@ -119,42 +107,16 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
         snapshot.forEach((docSnap) => {
           list.push({ id: docSnap.id, ...(docSnap.data() as Omit<ReferralItem, 'id'>) });
         });
-        listFromRef = list;
-        syncList();
+        syncList(list);
       },
-      () => syncList()
-    );
-
-    const qUsers = query(
-      collection(db, 'users'),
-      where('referredBy', '==', currentUser.uid)
-    );
-    const unsubUsers = onSnapshot(
-      qUsers,
-      (snapshot) => {
-        const list: ReferralItem[] = [];
-        snapshot.forEach((docSnap) => {
-          const uData = docSnap.data();
-          list.push({
-            id: docSnap.id,
-            inviterUid: currentUser.uid,
-            inviterEmail: currentUser.email || '',
-            invitedUid: docSnap.id,
-            invitedEmail: uData.email || '',
-            invitedName: uData.displayName || 'Freelancer',
-            status: 'pending_submission',
-            createdAt: uData.createdAt || new Date().toISOString(),
-          });
-        });
-        listFromUsers = list;
-        syncList();
-      },
-      () => syncList()
+      (err) => {
+        console.warn('Referrals card notice:', err);
+        setLoading(false);
+      }
     );
 
     return () => {
       unsubRef();
-      unsubUsers();
     };
   }, [currentUser, userProfile?.referralRewardMilestones, referralCode, userProfile?.displayName]);
 
@@ -192,6 +154,7 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
       className={`rounded-3xl bg-white border border-blue-200/80 p-5 sm:p-6 shadow-sm relative overflow-hidden space-y-4 ${className}`}
     >
       <div className="absolute top-0 right-0 w-60 h-60 bg-gradient-to-br from-blue-400/10 via-sky-400/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#1e40af] via-blue-600 to-[#38bdf8] text-white flex items-center justify-center shadow-md shadow-blue-500/25 shrink-0">
@@ -211,6 +174,7 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
             </p>
           </div>
         </div>
+
         <button
           type="button"
           onClick={handleShareWhatsApp}
@@ -335,7 +299,6 @@ export function MisiReferralCard({ variant = 'full', className = '' }: MisiRefer
             <span>Daftar Undangan ({referrals.length} Teman)</span>
             {showFriendsList ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
-
           <AnimatePresence>
             {showFriendsList && (
               <motion.div

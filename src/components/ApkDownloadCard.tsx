@@ -78,6 +78,7 @@ export function ApkDownloadCard({
     >
       <div className="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-emerald-300/20 blur-xl pointer-events-none" />
       <div className="absolute -left-6 -top-6 w-28 h-28 rounded-full bg-teal-400/20 blur-lg pointer-events-none" />
+
       <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center shrink-0 shadow-xs">

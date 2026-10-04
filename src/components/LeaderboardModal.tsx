@@ -32,12 +32,9 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isOpen || !currentUser) {
-      setLoading(false);
-      return;
-    }
-
+    if (!isOpen) return;
     setLoading(true);
+
     const q = query(
       collection(db, 'users'),
       orderBy('totalEarned', 'desc'),
@@ -69,7 +66,7 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
     );
 
     return () => unsubscribe();
-  }, [isOpen, currentUser]);
+  }, [isOpen]);
 
   const getRankBadge = (index: number) => {
     if (index === 0) {

@@ -71,24 +71,8 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
       ).catch(console.warn);
     }
 
-    let refItemsFromReferrals: ReferralItem[] = [];
-    let refItemsFromUsers: ReferralItem[] = [];
-
-    const mergeAndProcess = () => {
-      const map = new Map<string, ReferralItem>();
-      for (const item of refItemsFromReferrals) {
-        if (item.invitedUid) {
-          map.set(item.invitedUid, item);
-        } else {
-          map.set(item.id, item);
-        }
-      }
-      for (const uItem of refItemsFromUsers) {
-        if (!map.has(uItem.invitedUid)) {
-          map.set(uItem.invitedUid, uItem);
-        }
-      }
-      const combined = Array.from(map.values()).sort(
+    const mergeAndProcess = (list: ReferralItem[]) => {
+      const combined = [...list].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
       setReferrals(combined);
@@ -97,6 +81,7 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
       const completedCount = combined.filter((r) => r.status === 'completed').length;
       const currentMilestones = userProfile?.referralRewardMilestones || [];
       const earnedMilestonesCount = Math.floor(completedCount / 20);
+
       let needsSync = false;
       for (let m = 1; m <= earnedMilestonesCount; m++) {
         if (!currentMilestones.includes(m * 20)) {
@@ -143,7 +128,6 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
       collection(db, 'referrals'),
       where('inviterUid', '==', currentUser.uid)
     );
-
     const unsubReferrals = onSnapshot(
       qReferrals,
       (snapshot) => {
@@ -151,44 +135,16 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
         snapshot.forEach((docSnap) => {
           list.push({ id: docSnap.id, ...(docSnap.data() as Omit<ReferralItem, 'id'>) });
         });
-        refItemsFromReferrals = list;
-        mergeAndProcess();
+        mergeAndProcess(list);
       },
-      () => mergeAndProcess()
-    );
-
-    const qUsers = query(
-      collection(db, 'users'),
-      where('referredBy', '==', currentUser.uid)
-    );
-
-    const unsubUsers = onSnapshot(
-      qUsers,
-      (snapshot) => {
-        const list: ReferralItem[] = [];
-        snapshot.forEach((docSnap) => {
-          const uData = docSnap.data();
-          list.push({
-            id: docSnap.id,
-            inviterUid: currentUser.uid,
-            inviterEmail: currentUser.email || '',
-            invitedUid: docSnap.id,
-            invitedEmail: uData.email || '',
-            invitedName: uData.displayName || uData.email?.split('@')[0] || 'Member Freelancer',
-            referralCodeUsed: uData.referredByCode || referralCode,
-            status: 'pending_submission',
-            createdAt: uData.createdAt || new Date().toISOString(),
-          });
-        });
-        refItemsFromUsers = list;
-        mergeAndProcess();
-      },
-      () => mergeAndProcess()
+      (err) => {
+        console.warn('Referrals load notice:', err);
+        setLoading(false);
+      }
     );
 
     return () => {
       unsubReferrals();
-      unsubUsers();
     };
   }, [currentUser, userProfile?.referralRewardMilestones, referralCode, userProfile?.displayName, showToast]);
 
@@ -261,7 +217,6 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
             </h1>
           </div>
         </div>
-
         <div className="flex items-center gap-2 self-start sm:self-center">
           <button
             type="button"
@@ -301,7 +256,6 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
               Bagikan kode referral Anda ke rekan freelancer. Ketika teman melakukan storan Gmail pertama yang berstatus <strong>Diterima</strong>, referral akan terhitung berhasil. Setiap mencapai kelipatan 20 teman berhasil, bonus <strong>Rp 10.000 otomatis masuk</strong> ke saldo Anda!
             </p>
           </div>
-
           <div className="bg-white/15 backdrop-blur-md rounded-xl p-3 sm:p-3.5 border border-white/25 text-center shrink-0 self-start md:self-center shadow-inner">
             <span className="text-[10px] font-bold text-sky-100 uppercase tracking-wider block">
               Bonus Tiap 20 Teman
@@ -336,7 +290,6 @@ export function ReferralView({ onNavigate }: ReferralViewProps) {
               </button>
             </div>
           </div>
-
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"

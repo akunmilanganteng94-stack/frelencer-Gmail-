@@ -56,6 +56,9 @@ export function HomeView({ onNavigate }: HomeViewProps) {
   const [isAnnouncementDismissed, setIsAnnouncementDismissed] = useState(false);
   const [announcementPage, setAnnouncementPage] = useState(0);
 
+  const pw1 = settings.password1Name || 'zero1122';
+  const pw2 = settings.password2Name || 'prabujaya';
+
   // Realtime Submissions Listener
   useEffect(() => {
     if (!currentUser) return;
@@ -131,7 +134,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
     const raw = settings.announcement || '';
     if (!raw.trim()) {
       return [
-        'Storan OPEN setiap Senin - Jumat\nJam operasional: 07.00 - 17.00 WIB\nPilihan Password wajib Gmail: zero1122 atau prabujaya.',
+        `Storan OPEN setiap Senin - Jumat\nJam operasional: 07.00 - 17.00 WIB\nPilihan password wajib: ${pw1} atau ${pw2}.`,
       ];
     }
     const parts = raw.split(/\n\s*---\s*\n/);
@@ -139,7 +142,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       return parts.map((p) => p.trim());
     }
     return [raw];
-  }, [settings.announcement]);
+  }, [settings.announcement, pw1, pw2]);
 
   const totalAnnouncementPages = announcementPages.length;
   const currentAnnouncementText =
@@ -350,7 +353,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               Syarat &amp; Ketentuan
             </h3>
             <p className="text-xs text-[#64748B] mt-0.5">
-              Baca ketentuan penggunaan platform
+              Pilihan password: {pw1} &amp; {pw2}
             </p>
           </div>
         </div>
@@ -372,7 +375,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             <Check className="w-5 h-5 stroke-[2.8]" />
           </div>
         </div>
-
         <div className="bg-white rounded-[22px] p-3.5 sm:p-4 shadow-sm border border-blue-100/50 flex items-center justify-between">
           <div>
             <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-slate-400 uppercase">
@@ -386,7 +388,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             <Clock className="w-5 h-5 stroke-[2.8]" />
           </div>
         </div>
-
         <div className="bg-white rounded-[22px] p-3.5 sm:p-4 shadow-sm border border-blue-100/50 flex items-center justify-between">
           <div>
             <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-slate-400 uppercase">
@@ -400,7 +401,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             <X className="w-5 h-5 stroke-[2.8]" />
           </div>
         </div>
-
         <div className="bg-white rounded-[22px] p-3.5 sm:p-4 shadow-sm border border-blue-100/50 flex items-center justify-between">
           <div>
             <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-slate-400 uppercase">

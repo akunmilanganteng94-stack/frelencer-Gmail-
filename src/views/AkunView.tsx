@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, FormEvent, ChangeEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 import { formatIndonesianDateTime } from '../lib/utils';
 import { NavigationTab, Submission } from '../types';
@@ -23,7 +22,6 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => void }) {
   const { userProfile, currentUser, isAdmin, logoutUser, updateProfileName, changePassword } = useAuth();
-  const { settings } = useSettings();
   const { showToast } = useToast();
   const [copiedUid, setCopiedUid] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -34,15 +32,10 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
   const [passError, setPassError] = useState('');
-
-  // Submissions state for Statistik Total
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-
-  // Avatar state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  // Load avatar from localStorage
   useEffect(() => {
     if (currentUser?.uid) {
       const savedAvatar = localStorage.getItem(`user_avatar_${currentUser.uid}`);
@@ -54,7 +47,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
     }
   }, [currentUser]);
 
-  // Load Submissions realtime for authentic user stats
   useEffect(() => {
     if (!currentUser) return;
     const qSubs = query(
@@ -77,7 +69,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
     };
   }, [currentUser]);
 
-  // Statistik Realtime
   const totalStoran = submissions.length;
   const totalDiterima = submissions.filter((s) => s.status === 'Diterima').length;
   const totalDitolak = submissions.filter((s) => s.status === 'Ditolak').length;
@@ -176,7 +167,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
 
   return (
     <div className="max-w-[480px] sm:max-w-md md:max-w-lg mx-auto space-y-4 select-none pb-12">
-      {/* Hidden file input for photo upload */}
       <input
         type="file"
         ref={fileInputRef}
@@ -364,7 +354,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
             Statistik Total
           </h3>
         </div>
-
         <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
           <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100">
             <span className="text-[11px] font-bold text-slate-500 block">
@@ -374,7 +363,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
               {totalStoran}
             </div>
           </div>
-
           <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100">
             <span className="text-[11px] font-bold text-slate-500 block">
               Diterima
@@ -383,7 +371,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
               {totalDiterima}
             </div>
           </div>
-
           <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100">
             <span className="text-[11px] font-bold text-slate-500 block">
               Ditolak
@@ -392,7 +379,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
               {totalDitolak}
             </div>
           </div>
-
           <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-slate-100">
             <span className="text-[11px] font-bold text-slate-500 block">
               Pending
@@ -414,7 +400,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
             Keamanan Akun
           </h3>
         </div>
-
         <button
           type="button"
           onClick={() => {
@@ -488,7 +473,6 @@ export function AkunView({ onNavigate }: { onNavigate: (tab: NavigationTab) => v
                   <X className="w-5 h-5" />
                 </button>
               </div>
-
               <form onSubmit={handleSaveName} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">

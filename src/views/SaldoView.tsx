@@ -34,7 +34,6 @@ export function SaldoView() {
   const { userProfile, currentUser } = useAuth();
   const { settings } = useSettings();
   const { showToast } = useToast();
-
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -75,10 +74,9 @@ export function SaldoView() {
   const parsedAmount = parseInt(amountInput.replace(/[^0-9]/g, ''), 10) || 0;
   const hasPerakan = parsedAmount > 0 && parsedAmount % 1000 !== 0;
 
-  const bothWalletsClosed = settings.withdrawalDanaOpen === false && settings.withdrawalGopayOpen === false;
-  const isDanaOpen = bothWalletsClosed ? true : settings.withdrawalDanaOpen !== false;
-  const isGopayOpen = bothWalletsClosed ? true : settings.withdrawalGopayOpen !== false;
-  const isAnyWithdrawalOpen = settings.withdrawalOpen !== false;
+  const isDanaOpen = settings.withdrawalDanaOpen !== false;
+  const isGopayOpen = settings.withdrawalGopayOpen !== false;
+  const isAnyWithdrawalOpen = settings.withdrawalOpen !== false && (isDanaOpen || isGopayOpen);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -114,7 +112,6 @@ export function SaldoView() {
       showToast('error', 'Akun Dibatasi', 'Akun Anda sedang dibatasi. Tidak dapat melakukan penarikan.');
       return;
     }
-
     const currentBalance = userProfile?.balance || 0;
     if (currentBalance < minWithdrawal) {
       showToast(
@@ -124,7 +121,6 @@ export function SaldoView() {
       );
       return;
     }
-
     if (isDanaOpen) {
       setMethod('DANA');
     } else if (isGopayOpen) {
@@ -229,9 +225,7 @@ export function SaldoView() {
         transaction.set(newWithdrawalRef, withdrawalPayload);
       });
 
-      // Notify admin in realtime
       notifyDataChange('withdrawal');
-
       showToast(
         'success',
         'Penarikan Berhasil Diajukan',
@@ -434,6 +428,7 @@ export function SaldoView() {
                       </div>
                     </div>
                   </div>
+
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     <span className="text-[10px] text-slate-400">
                       {formatIndonesianDateTime(w.createdAt)}
@@ -454,6 +449,7 @@ export function SaldoView() {
                     </span>
                   </div>
                 </div>
+
                 {w.status === 'Ditolak' && w.rejectionReason && (
                   <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-[11px] text-rose-800 flex items-start gap-1.5">
                     <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
@@ -605,7 +601,6 @@ export function SaldoView() {
                       })}
                     </div>
                   </div>
-
                   <div className="sm:col-span-7">
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Nomor {method}

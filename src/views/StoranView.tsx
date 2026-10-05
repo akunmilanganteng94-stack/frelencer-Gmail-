@@ -13,6 +13,7 @@ import {
   getGeneratedCountToday,
   verifyUserGeneratedEmail,
   filterExpiredStoredAccounts,
+  getStoredAccountRemainingHours,
   GeneratedResultItem,
 } from '../components/GmailGenerator';
 import { useGmailStock } from '../hooks/useGmailStock';
@@ -140,6 +141,10 @@ export function StoranView({ onNavigate }: StoranViewProps) {
 
   useEffect(() => {
     loadGeneratedList();
+    const timer = setInterval(() => {
+      loadGeneratedList();
+    }, 30000);
+    return () => clearInterval(timer);
   }, [currentUser, submissions]);
 
   // Set of submitted emails for this user
@@ -298,20 +303,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
 
       if (currentUser?.uid) {
         localStorage.setItem(`gmail_gen_saved_${currentUser.uid}`, JSON.stringify(updated));
-        const allKey = `gmail_gen_all_${currentUser.uid}`;
-        const newEmailsLower = newItems.map((n) => n.email.trim().toLowerCase());
-        try {
-          const rawHistory = localStorage.getItem(allKey);
-          const historyArr: string[] = rawHistory ? JSON.parse(rawHistory) : [];
-          const combined = Array.from(new Set([...historyArr, ...newEmailsLower]));
-          localStorage.setItem(allKey, JSON.stringify(combined));
-        } catch {}
-        try {
-          const userRef = doc(db, 'users', currentUser.uid);
-          await updateDoc(userRef, {
-            generatedEmails: arrayUnion(...newEmailsLower),
-          }).catch(() => {});
-        } catch {}
       }
 
       showToast('success', 'Generate Berhasil', `Berhasil mengambil ${newItems.length} akun Gmail dari stok admin.`);
@@ -516,14 +507,6 @@ export function StoranView({ onNavigate }: StoranViewProps) {
               <span className="text-slate-500">
                 Total: {totalGenerated} &bull; Belum distor: <strong className="text-slate-900">{totalBelumDistor}</strong>
               </span>
-              <span className="text-slate-300">&bull;</span>
-              <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                availableStock.length > 0
-                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                  : 'bg-rose-100 text-rose-800 border border-rose-300'
-              }`}>
-                Stok Admin: {availableStock.length} ready
-              </span>
             </div>
           </div>
 
@@ -564,7 +547,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 <input
                   type="number"
                   min={1}
-                  max={Math.max(1, Math.min(remainingQuota, availableStock.length || 1))}
+                  max={Math.max(1, remainingQuota)}
                   value={generateCount}
                   onChange={(e) => {
                     const val = parseInt(e.target.value, 10);
@@ -597,6 +580,7 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                 const clean = item.email.trim().toLowerCase();
                 const isSubmitted = submittedEmailsSet.has(clean);
                 const isCopied = copiedItemId === item.id;
+                const expiryInfo = getStoredAccountRemainingHours(item.email, submissions, item.generatedAt);
                 return (
                   <div
                     key={item.id}
@@ -620,8 +604,15 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                             ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                             : 'bg-slate-200 text-slate-700 border border-slate-300'
                         }`}
+                        title={
+                          isSubmitted
+                            ? 'Akun sudah distorkan. Riwayat generate hilang dalam 24 jam setelah stor.'
+                            : 'Akun belum distorkan. Otomatis hilang setelah 3 hari.'
+                        }
                       >
-                        {isSubmitted ? 'di STOR' : 'belum di STOR'}
+                        {isSubmitted
+                          ? `di STOR ${expiryInfo ? `(${expiryInfo.text})` : ''}`
+                          : `belum di STOR ${expiryInfo ? `(${expiryInfo.text})` : ''}`}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
@@ -700,8 +691,8 @@ export function StoranView({ onNavigate }: StoranViewProps) {
                   : remainingQuota <= 0
                   ? `Batas Hari Ini (${maxAdminLimit}/${maxAdminLimit})`
                   : hasGeneratedOnce || generatedList.length > 0
-                  ? `Ambil dari Stok (${Math.min(generateCount, availableStock.length)})`
-                  : `Generate (${Math.min(generateCount, availableStock.length)} Akun)`}
+                  ? `Generate Lagi (${generateCount} Akun)`
+                  : `Generate (${generateCount} Akun)`}
               </span>
             </button>
           </div>

@@ -215,8 +215,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = Boolean(
     currentUser &&
-      ((currentUser.email && ADMIN_EMAILS.includes(currentUser.email.toLowerCase().trim())) ||
-        (userProfile && userProfile.uid === currentUser.uid && userProfile.role === 'admin'))
+      userProfile &&
+      userProfile.uid === currentUser.uid &&
+      userProfile.role === 'admin'
   );
 
   const loginUser = async (email: string, pass: string) => {

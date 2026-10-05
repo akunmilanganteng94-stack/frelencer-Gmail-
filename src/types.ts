@@ -19,6 +19,9 @@ export interface UserProfile {
   inviterName?: string;
   totalInvited?: number;
   referralRewardMilestones?: number[];
+  savedEwalletMethod?: WithdrawalMethod;
+  savedEwalletNumber?: string;
+  savedEwalletName?: string;
 }
 
 export type ReferralStatus = 'pending_submission' | 'completed';

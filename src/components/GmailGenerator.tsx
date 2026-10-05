@@ -175,7 +175,8 @@ export function filterExpiredStoredAccounts(
 ): GeneratedResultItem[] {
   if (!Array.isArray(accounts)) return [];
   const now = Date.now();
-  const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+  const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000; // 24 jam jika sudah STOR
+  const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000; // 3 hari jika belum STOR
   const submissionTimeMap = new Map<string, number>();
 
   if (Array.isArray(submissions)) {
@@ -194,39 +195,72 @@ export function filterExpiredStoredAccounts(
   return accounts.filter((item) => {
     const cleanEmail = (item.email || '').trim().toLowerCase();
     const submittedTime = submissionTimeMap.get(cleanEmail);
-    if (!submittedTime) {
-      return true;
+
+    // 1. Jika sudah di STOR: riwayat generate nya hilang dalam 24 jam setelah stor
+    if (submittedTime) {
+      const elapsed = now - submittedTime;
+      return elapsed < TWENTY_FOUR_HOURS_MS;
     }
-    const elapsed = now - submittedTime;
-    return elapsed < TWENTY_FOUR_HOURS_MS;
+
+    // 2. Jika belum di STOR: otomatis hilang setelah 3 hari sejak di-generate
+    if (!item.generatedAt) {
+      item.generatedAt = new Date().toISOString();
+    }
+    const genTime = new Date(item.generatedAt).getTime();
+    if (!isNaN(genTime)) {
+      const elapsed = now - genTime;
+      return elapsed < THREE_DAYS_MS;
+    }
+
+    return true;
   });
 }
 
 export function getStoredAccountRemainingHours(
   email: string,
-  submissions: { dataContent: string; createdAt: string }[]
-): number | null {
+  submissions: { dataContent: string; createdAt: string }[],
+  generatedAt?: string
+): { text: string; isStored: boolean } | null {
   const cleanEmail = email.trim().toLowerCase();
-  let latestTime: number | null = null;
+  let latestSubmitTime: number | null = null;
 
   if (Array.isArray(submissions)) {
     submissions.forEach((sub) => {
       const subEmail = (sub.dataContent || '').split('|')[0].trim().toLowerCase();
       if (subEmail === cleanEmail) {
         const t = new Date(sub.createdAt).getTime();
-        if (!isNaN(t) && (latestTime === null || t > latestTime)) {
-          latestTime = t;
+        if (!isNaN(t) && (latestSubmitTime === null || t > latestSubmitTime)) {
+          latestSubmitTime = t;
         }
       }
     });
   }
 
-  if (latestTime === null) return null;
-  const elapsed = Date.now() - latestTime;
-  const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
-  const remainingMs = TWENTY_FOUR_HOURS_MS - elapsed;
-  if (remainingMs <= 0) return 0;
-  return Math.ceil(remainingMs / (60 * 60 * 1000));
+  const now = Date.now();
+  // 1. Jika sudah di STOR: hilang dlm 24 jam setelah stor
+  if (latestSubmitTime !== null) {
+    const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+    const remainingMs = TWENTY_FOUR_HOURS_MS - (now - latestSubmitTime);
+    if (remainingMs <= 0) return { text: 'kedaluwarsa', isStored: true };
+    const h = Math.ceil(remainingMs / (60 * 60 * 1000));
+    return { text: `hapus dlm ${h}j`, isStored: true };
+  }
+
+  // 2. Jika belum di STOR: hilang dlm 3 hari
+  const genTime = generatedAt ? new Date(generatedAt).getTime() : now;
+  if (!isNaN(genTime)) {
+    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+    const remainingMs = THREE_DAYS_MS - (now - genTime);
+    if (remainingMs <= 0) return { text: 'kedaluwarsa', isStored: false };
+    const hours = Math.ceil(remainingMs / (60 * 60 * 1000));
+    if (hours > 24) {
+      const days = Math.ceil(hours / 24);
+      return { text: `hapus dlm ${days} hari`, isStored: false };
+    }
+    return { text: `hapus dlm ${hours}j`, isStored: false };
+  }
+
+  return null;
 }
 
 export function getSavedGeneratedAccounts(userId?: string): GeneratedResultItem[] {
@@ -306,19 +340,24 @@ export function GmailGenerator({
   }, [currentUser?.uid]);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        const parsed: GeneratedResultItem[] = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          const valid = filterExpiredStoredAccounts(parsed, userSubmissions);
-          setResults(valid);
-          localStorage.setItem(storageKey, JSON.stringify(valid));
+    const runFilter = () => {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+          const parsed: GeneratedResultItem[] = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const valid = filterExpiredStoredAccounts(parsed, userSubmissions);
+            setResults(valid);
+            localStorage.setItem(storageKey, JSON.stringify(valid));
+          }
         }
+      } catch (e) {
+        console.warn('Gagal memuat akun yang tersimpan:', e);
       }
-    } catch (e) {
-      console.warn('Gagal memuat akun yang tersimpan:', e);
-    }
+    };
+    runFilter();
+    const timer = setInterval(runFilter, 30000);
+    return () => clearInterval(timer);
   }, [storageKey, userSubmissions]);
 
   const handleAdjustCount = (newCount: number) => {
@@ -376,23 +415,6 @@ export function GmailGenerator({
 
       recordGeneratedCountToday(mapped.length, currentUser?.uid);
       setTodayGenerated((prev) => prev + mapped.length);
-
-      try {
-        const existingAllRaw = localStorage.getItem(historyKey);
-        const existingAll: string[] = existingAllRaw ? JSON.parse(existingAllRaw) : [];
-        const newEmails = mapped.map((m) => m.email.toLowerCase().trim());
-        const combinedAll = Array.from(new Set([...existingAll, ...newEmails]));
-        localStorage.setItem(historyKey, JSON.stringify(combinedAll));
-
-        if (currentUser?.uid) {
-          const userRef = doc(db, 'users', currentUser.uid);
-          await updateDoc(userRef, {
-            generatedEmails: arrayUnion(...newEmails),
-          });
-        }
-      } catch (errHistory) {
-        console.warn('Gagal simpan riwayat generator:', errHistory);
-      }
 
       setResults((prev) => {
         const existingEmails = new Set(prev.map((r) => r.email.toLowerCase()));
@@ -666,7 +688,11 @@ export function GmailGenerator({
                 const isStored = submittedEmails.some(
                   (submitted) => submitted.trim().toLowerCase() === item.email.trim().toLowerCase()
                 );
-                const remainingHours = getStoredAccountRemainingHours(item.email, userSubmissions);
+                const expiryInfo = getStoredAccountRemainingHours(
+                  item.email,
+                  userSubmissions,
+                  item.generatedAt
+                );
 
                 return (
                   <div
@@ -700,15 +726,18 @@ export function GmailGenerator({
                         {isStored ? (
                           <span
                             className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs"
-                            title="Akun sudah distorkan. Otomatis terhapus setelah 24 jam."
+                            title="Akun sudah distorkan. Riwayat generate hilang dalam 24 jam setelah stor."
                           >
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            <span>di STOR {remainingHours !== null ? `(hapus dlm ${remainingHours}j)` : ''}</span>
+                            <span>di STOR {expiryInfo ? `(${expiryInfo.text})` : ''}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-200 text-slate-700 border border-slate-300 shadow-2xs">
+                          <span
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-200 text-slate-700 border border-slate-300 shadow-2xs"
+                            title="Akun belum distorkan. Otomatis hilang setelah 3 hari."
+                          >
                             <Clock className="w-3 h-3 text-slate-500" />
-                            <span>belum di STOR</span>
+                            <span>belum di STOR {expiryInfo ? `(${expiryInfo.text})` : ''}</span>
                           </span>
                         )}
                       </div>

@@ -218,13 +218,13 @@ export function AdminBulkConfirmModal({
       showToast(
         'warning',
         'Konfirmasi Sebagian',
-        `${successCount} berhasil, ${failureCount} gagal diproses.`
+        `Total berhasil: ${successCount}, gagal: ${failureCount}. Total saldo masuk: ${formatRupiah(totalRewardPaid)}.`
       );
     } else {
       showToast(
         'success',
         'Konfirmasi Bulk Berhasil',
-        `${successCount} akun Gmail berhasil diterima dan saldo pengguna telah diperbarui.`
+        `Total ${successCount} akun Gmail berhasil diterima! Total saldo ditambahkan: ${formatRupiah(totalRewardPaid)}.`
       );
     }
   };
@@ -387,6 +387,26 @@ export function AdminBulkConfirmModal({
 
           {step === 'preview' && (
             <div className="space-y-4">
+              {/* BANNER TOTAL TERIMA BULK */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-wider text-emerald-200">
+                    Total Yang Akan Diterima
+                  </div>
+                  <div className="text-2xl font-black tracking-tight mt-0.5">
+                    {matchAnalysis.readyToAccept.length} Akun Gmail
+                  </div>
+                </div>
+                <div className="sm:text-right border-t sm:border-t-0 sm:border-l border-emerald-500/50 pt-2 sm:pt-0 sm:pl-4">
+                  <div className="text-[11px] font-black uppercase tracking-wider text-emerald-200">
+                    Total Saldo Masuk Pengguna
+                  </div>
+                  <div className="text-2xl font-black tracking-tight text-white drop-shadow-xs mt-0.5">
+                    +{formatRupiah(matchAnalysis.totalRewardToPay)}
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
                   <div className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
@@ -490,6 +510,26 @@ export function AdminBulkConfirmModal({
                 </p>
               </div>
 
+              {/* CARD TOTAL HASIL TERIMA BULK */}
+              <div className="max-w-md mx-auto grid grid-cols-2 gap-3 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-200">
+                <div className="text-center p-2">
+                  <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wide">
+                    Total Akun Diterima
+                  </div>
+                  <div className="text-2xl font-black text-emerald-700 mt-1">
+                    {processedCount} Akun
+                  </div>
+                </div>
+                <div className="text-center p-2 border-l border-emerald-200">
+                  <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wide">
+                    Total Saldo Ditransfer
+                  </div>
+                  <div className="text-2xl font-black text-emerald-700 mt-1">
+                    +{formatRupiah(processedTotalReward)}
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-3 flex justify-center gap-2">
                 <button
                   type="button"
@@ -553,10 +593,9 @@ export function AdminBulkConfirmModal({
                     </>
                   ) : (
                     <>
-                      <Check className="w-4 h-4" />
+                      <Check className="w-4 h-4 stroke-[3]" />
                       <span>
-                        Konfirmasi Terima {matchAnalysis.readyToAccept.length} Akun (
-                        {formatRupiah(matchAnalysis.totalRewardToPay)})
+                        Konfirmasi Terima (Total: {matchAnalysis.readyToAccept.length} Akun &bull; {formatRupiah(matchAnalysis.totalRewardToPay)})
                       </span>
                     </>
                   )}

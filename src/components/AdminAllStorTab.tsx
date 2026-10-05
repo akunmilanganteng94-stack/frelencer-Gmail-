@@ -272,7 +272,12 @@ export function AdminAllStorTab({
     for (const item of pendingItems) {
       await onAcceptSubmission(item);
     }
-    showToast('success', 'Semua Diterima', `${pendingItems.length} akun pending user ${userName} berhasil diterima!`);
+    const totalReward = pendingItems.reduce((acc, curr) => acc + (curr.rewardAmount || 3000), 0);
+    showToast(
+      'success',
+      'Semua Diterima',
+      `Total: ${pendingItems.length} akun pending user ${userName} berhasil diterima! (Total Saldo: ${formatRupiah(totalReward)})`
+    );
   };
 
   return (
